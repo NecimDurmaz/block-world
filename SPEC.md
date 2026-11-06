@@ -81,7 +81,8 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 - **Arazi:** 4 oktavlı değer gürültüsü (`fbm`) ile yükseklik haritası, `h = 6 + fbm^1.4 * 34`.
   - `h ≤ 14`: üstte 3 blok kum, altı taş.
   - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
-- **Göller:** Arazi kurulduktan sonra `y ≤ WATER_LEVEL = 12` olan bütün boşluklar suyla dolar (alçak kumlu bölgeler göl olur). Akan su yok.
+- **Mağaralar:** Arazi kurulduktan hemen sonra, her sütunda `y = 2` ile yüzeyin 4 altı arasında iki 3B değer gürültüsünün (`valueNoise3`) aynı anda 0,5'e yakın olduğu hücreler (`a² + b² < CAVE_RADIUS²`, `CAVE_RADIUS = 0.075`) oyulur; kıvrımlı tüneller çıkar (yer altının ~%8'i). Tüneller yamaçlarda alçak komşu sütunlara ağız açar. Mağaralar aydınlıktır (ışık hesabı yok).
+- **Göller:** `y ≤ WATER_LEVEL = 12`'de arazi yüzeyinin üstünde kalan boşluklar suyla dolar (alçak kumlu bölgeler göl olur); mağaralar kuru kalır. Akan su yok.
 - **Bitkiler:** Ağaçlardan sonra, üstü boş her çimen sütununun %12'sine uzun ot, %2'sine çiçek (yarı yarıya gelincik ve karahindiba) konur (`mulberry32(SEED + 11)`).
 - **Cevherler:** Arazi kurulduktan sonra chunk başına ~8 kömür damarı (y 1–30) ve ~4 demir damarı (y 1–20), her biri 3–8 blokluk rastgele yürüyüş; yalnızca taşın yerini alır (`mulberry32(SEED + 7)`). Yalnızca yeni üretilen dünyada; kayıttan yüklenen dünya değişmez.
 - **Ağaçlar:** 160 deneme; yalnızca çimen üstüne. 4–5 blok kütük, üstünde yaprak kümesi.
@@ -283,7 +284,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Vurma:** Sol tuşa basıldığı anda `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
 - **`hurtMob(m, amount, dirX, dirZ)`:** elle vuruş `FIST_DAMAGE = 1`. 0,5 sn hasarsızlık, 0,3 sn kırmızı (`emissive`), vuruş yönünde 5 blok/sn geri itilme (yerdeyse 4 blok/sn hoplama), 4 sn boyunca oyuncudan 2 kat hızla kaçma (`flee`).
 - **Ölüm:** Can 0 olunca `dying = 0.5`: canlı 0,5 sn'de yana 90° devrilir, kırmızı kalır, sonra `removeMob()` ile sahneden ve diziden silinir (geometri ve malzemeler serbest bırakılır).
-- **Düşmanlar (`hostile`):** Gece (`daylight < 0,5`) her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta bir sütunun en üstüne (açık hava; yaprak ya da su üstü olmaz) doğar; bir meşaleye `TORCH_SAFE = 8` bloktan yakın yerde doğmaz (`torchNearby`). `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür. Görüş kesilse de `CHASE_MEMORY = 5` sn kovalamayı sürdürür (`memory`); sonra dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
+- **Düşmanlar (`hostile`):** Her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta doğmaya çalışır (`trySpawnHostile`): gece yarı yarıya bir sütunun en üstüne (açık hava; yaprak ya da su üstü olmaz, `surfaceSpot`), aksi halde (gündüz her zaman) o sütundaki üstü kapalı, iki blok boş, altı katı bir mağara hücresine (`caveSpot`); bir meşaleye `TORCH_SAFE = 8` bloktan yakın yerde doğmaz (`torchNearby`). `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür. Görüş kesilse de `CHASE_MEMORY = 5` sn kovalamayı sürdürür (`memory`); sonra dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
 - **Bacak animasyonu:** çapraz bacaklar (0 ile 3, 1 ile 2) birlikte sallanır; iki bacaklılarda 0 ileri, 1 geri.
 
 | Tür (`kind`) | Ad | Can | Kutu (`w` × `h`) | Hız | Model | Doğma |
@@ -410,7 +411,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -471,7 +472,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 24 | Kapı ve cam | Yapıldı |
 | 25 | Çiçek, uzun ot ve süs bitkileri | Yapıldı |
 | 26 | Buğday tarımı ve ekmek | Yapıldı |
-| 27 | Mağaralar | Yapılmadı |
+| 27 | Mağaralar | Yapıldı |
 | 28 | Ses efektleri | Yapılmadı |
 | 29 | Kırılma parçacıkları | Yapılmadı |
 | 30 | Duraklat menüsü ve ayarlar | Yapılmadı |

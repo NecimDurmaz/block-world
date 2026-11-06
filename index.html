@@ -421,6 +421,22 @@
     const a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
     return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
   }
+  // 3B değer gürültüsü (mağaralar için): köşe değerleri arasında yumuşak üç doğrusal karışım
+  function hash3(x, y, z) {
+    let h = (Math.imul(x, 374761393) + Math.imul(y, 1442695041) + Math.imul(z, 668265263) + SEED) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  function valueNoise3(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const s = t => t * t * (3 - 2 * t);
+    const fx = s(x - xi), fy = s(y - yi), fz = s(z - zi);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const corner = (dx, dy, dz) => hash3(xi + dx, yi + dy, zi + dz);
+    const plane = dy => lerp(lerp(corner(0, dy, 0), corner(1, dy, 0), fx), lerp(corner(0, dy, 1), corner(1, dy, 1), fx), fz);
+    return lerp(plane(0), plane(1), fy);
+  }
   function fbm(x, z) {
     let sum = 0, amp = 0.5, freq = 1;
     for (let o = 0; o < 4; o++) { sum += valueNoise(x * freq, z * freq) * amp; amp *= 0.5; freq *= 2; }
@@ -439,9 +455,21 @@
       set(x, y, z, b);
     }
   }
-  // Göller: y ≤ 12 olan bütün boşluklar suyla dolar.
+  // Mağaralar: iki 3B gürültünün aynı anda 0,5'e yakın olduğu yerler kıvrımlı tüneller oluşturur.
+  // y = 2 ile yüzeyin 4 altı arasında oyulur; yamaçlarda alçak komşu sütunlara ağız açar.
+  const CAVE_RADIUS = 0.075;
+  for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
+    const top = heights[z * SX + x] - 4;
+    for (let y = 2; y <= top; y++) {
+      const a = valueNoise3(x / 14, y / 9, z / 14) - 0.5, b = valueNoise3(x / 14 + 57, y / 9 + 31, z / 14 + 83) - 0.5;
+      if (a * a + b * b < CAVE_RADIUS * CAVE_RADIUS) set(x, y, z, AIR);
+    }
+  }
+  // Göller: y ≤ 12'de, arazi yüzeyinin üstünde kalan boşluklar suyla dolar (mağaralar kuru kalır).
   const WATER_LEVEL = 12;
-  for (let y = 1; y <= WATER_LEVEL; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) if (get(x, y, z) === AIR) set(x, y, z, B.water);
+  for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
+    for (let y = heights[z * SX + x] + 1; y <= WATER_LEVEL; y++) if (get(x, y, z) === AIR) set(x, y, z, B.water);
+  }
 
   // Cevher damarları: chunk başına kömür ~8 (y ≤ 30), demir ~4 (y ≤ 20); 3–8 blokluk, yalnızca taşın içinde.
   const oreRnd = mulberry32(SEED + 7);
@@ -1714,24 +1742,39 @@
   const CREEPER_FUSE = 1.5, CREEPER_TRIGGER = 3, CREEPER_CANCEL = 5, EXPLOSION_RADIUS = 3, EXPLOSION_DAMAGE = 12;
   let hostileSpawnTimer = 0;
   const hostileCount = () => mobs.filter(m => m.type.hostile && m.dying <= 0).length;
+  // Gece açık havaya, her zaman mağaraya (gökyüzü görmeyen, meşalesiz boşluğa) doğabilir.
   function updateHostileSpawning(dt) {
     hostileSpawnTimer += dt;
     if (hostileSpawnTimer < 10) return;
     hostileSpawnTimer = 0;
-    if (daylight(clock.time) >= 0.5 || hostileCount() >= MAX_HOSTILES) return;
+    trySpawnHostile(daylight(clock.time) < 0.5);
+  }
+  function trySpawnHostile(night) {
+    if (hostileCount() >= MAX_HOSTILES) return null;
     for (let i = 0; i < 20; i++) {
       const angle = Math.random() * Math.PI * 2, distance = 16 + Math.random() * 16;
       const x = Math.floor(player.x + Math.cos(angle) * distance), z = Math.floor(player.z + Math.sin(angle) * distance);
       if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1) continue;
-      // Sütunun en üstü: üstünde blok yok, yani açık hava
-      const y = surfaceY(x, z), ground = get(x, y - 1, z);
-      if (y >= SY - 2 || !isSolid(ground) || ground === B.leaves) continue;
-      if (torchNearby(x, y, z)) continue;
-      // Gece düşmanları: %40 iskelet, %20 örümcek, %15 creeper, kalanı zombi
+      const spot = (night && Math.random() < 0.5 ? surfaceSpot(x, z) : null) || caveSpot(x, z);
+      if (!spot || torchNearby(x, spot, z)) continue;
+      // Düşmanlar: %40 iskelet, %20 örümcek, %15 creeper, kalanı zombi
       const roll = Math.random();
-      spawnMob(roll < 0.4 ? 'skeleton' : roll < 0.6 ? 'spider' : roll < 0.75 ? 'creeper' : 'zombie', x + 0.5, y, z + 0.5);
-      return;
+      return spawnMob(roll < 0.4 ? 'skeleton' : roll < 0.6 ? 'spider' : roll < 0.75 ? 'creeper' : 'zombie', x + 0.5, spot, z + 0.5);
     }
+    return null;
+  }
+  // Sütunun en üstü (açık hava); uygun değilse null
+  function surfaceSpot(x, z) {
+    const y = surfaceY(x, z), ground = get(x, y - 1, z);
+    return y < SY - 2 && isSolid(ground) && ground !== B.leaves ? y : null;
+  }
+  // Sütunda, üstü kapalı (mağara) ve iki blok boş, altı katı rastgele bir hücre; yoksa null
+  function caveSpot(x, z) {
+    const spots = [];
+    for (let y = 2; y < surfaceY(x, z) - 2; y++) {
+      if (get(x, y, z) === AIR && get(x, y + 1, z) === AIR && isSolid(get(x, y - 1, z))) spots.push(y);
+    }
+    return spots.length ? spots[Math.floor(Math.random() * spots.length)] : null;
   }
   // Canlının gözünden oyuncunun gözüne 0,25 blok adımlarla bakar; arada blok varsa görmez.
   function canSeePlayer(m) {
@@ -2470,7 +2513,7 @@
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
   Object.assign(window.game, { getSpawnPoint: () => spawnPoint, isSleeping: () => sleepTimer > 0 });
-  Object.assign(window.game, { crops });
+  Object.assign(window.game, { crops, trySpawnHostile });
   Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance, raycast, torchNearby, torchLight: (x, y, z) => torchLightAt(torchesNear(x - 8, z - 8, x + 8, z + 8), x, y, z) });
 
   // ---------- Kayıt ----------

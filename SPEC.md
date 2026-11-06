@@ -29,9 +29,11 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `crosshair` | Ekran ortasındaki artı işareti (önden kamerada gizlenir) |
    | `info` | Sol üstte gün, saat ve konum: `Gün 1 · 07:12 · X 48 · Y 13 · Z 48` |
    | `blockname` | Hotbar üstünde 1,5 sn görünen bildirim (blok adı, kamera adı) |
-   | `hotbar` | 9 yuvalı blok çubuğu |
+   | `hotbar` | 9 yuvalı hotbar: eşya simgesi, sol üstte yuva numarası, sağ altta adet |
    | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
+   | `inventory` | E ile açılan envanter paneli: çanta (`#inv-bag`, 27 yuva) ve hotbar satırı (`#inv-hotbar`) |
+   | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
    | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), kayıt durumu (`#save-note`) |
    | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
@@ -42,7 +44,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Bölüm başlığı | İçerik |
    | --- | --- |
    | Dokular | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
-   | Bloklar | `BLOCKS` tanımları, `B` kısaltmaları, `HOTBAR` sırası |
+   | Bloklar | `BLOCKS` tanımları, `B` kısaltmaları |
    | Dünya üretimi | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
    | Three.js sahnesi | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
    | Gün döngüsü | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
@@ -50,11 +52,12 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()` (canlıya vurma dahil), `placeBlock()` |
-   | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
+   | HUD | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
    | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | Oklar | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
    | Eşyalar | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
+   | Envanter | `inventory`, `addItem()`, `takeFromSlot()`, `throwSelected()`, envanter paneli (`clickSlot()`, `openInventory()`, `closeInventory()`), `renderInventory()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
@@ -87,9 +90,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 8 | `brick` | Tuğla | `brick` |
 | 9 | `cobble` | Kırık taş | `cobble` |
 
-Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
-
-**Hotbar sırası (1–9):** Çimen, Toprak, Taş, Kırık taş, Tahta, Kütük, Tuğla, Kum, Yaprak. Bloklar sınırsızdır.
+Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
 
 ### Dokular
 
@@ -163,8 +164,10 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
 | Sol tık | Bloğu kır ya da canlıya vur (yedek modda: sürüklemeden kısa tık) |
-| Sağ tık | Blok koy |
-| 1–9 / tekerlek | Blok seç |
+| Sağ tık | Seçili yuvadaki bloğu koy (canlıların ya da oyuncunun içine konmaz) |
+| 1–9 / tekerlek | Hotbar yuvası seç |
+| E | Envanteri aç / kapat (Esc de kapatır) |
+| Q | Seçili yığından 1 tanesini bakılan yöne at |
 | V | Kamera: arkadan → gözden → önden |
 | Esc | Duraklat (fare kilidi bırakılınca panel açılır) |
 
@@ -240,11 +243,20 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 - **`itemIcon(key)`:** HUD için data URL (bloklarda yan doku).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok. Creeper patlayınca bir şey düşmez.
 - **Yerdeki eşya** (`drops`): `{ key, x, y, z, w: 0.125, h: 0.25, vx, vy, vz, age, mesh }`. Bloklar 0,25'lik küp (atlas dokusuyla, gece kararır), diğerleri 0,4'lük çift yüzlü düz simge. Hafif bir sıçrayışla düşer, yerde sürtünmeyle durur, döner ve hafifçe inip kalkar. `ITEM_LIFETIME = 300` sn sonra kaybolur. Kaydedilmez.
-- **Toplama:** Oyuncunun gövde merkezine `PICKUP_RANGE = 1.5` bloktan yakınsa ona doğru 6 blok/sn çekilir, 0,6 bloktan yakında toplanır ve "+1 Ad" bildirimi çıkar. Toplananlar şimdilik `collected` sayacında tutulur (madde 14'te envantere geçer).
+- **Toplama:** Oyuncunun gövde merkezine `PICKUP_RANGE = 1.5` bloktan yakınsa ona doğru 6 blok/sn çekilir, 0,6 bloktan yakında envantere eklenir (`addItem`) ve "+1 Ad" bildirimi çıkar. Envantere sığmazsa yerde kalır. `pickupDelay` dolmadan toplanmaz (Q ile atılan ya da envanter kapanınca sığmayan eşyalar için 1,5 sn).
+
+## Envanter
+
+- `inventory`: 36 yuva; 0–8 hotbar, 9–35 çanta. Yuva `{ key, count }` ya da `null`. Yığın sınırı `maxStack(key)`: aletler (`ITEMS[key].tool`) 1, diğerleri 64.
+- Yeni oyuncu boş envanterle başlar; blok koymak için önce kazmak gerekir.
+- **`addItem(key, count)`:** önce aynı türdeki dolmamış yuvalara, sonra ilk boş yuvaya koyar (hotbar önce); sığmayan adedi döndürür.
+- **Blok koyma:** seçili yuvada blok eşyası varsa konur ve adet 1 azalır; 0 olunca yuva boşalır.
+- **Envanter paneli (E):** Fare kilidi bırakılır ama oyun durmaz (dünya, canlılar ve zaman işler); oyuncu yürümez, dünyaya tıklanamaz. Sol tık: boş elde yığını alır; elde yığın varken boş yuvaya bırakır, aynı türse sığdığı kadar birleştirir, farklı türse yer değiştirir. Sağ tık: boş elde yığının yarısını (yukarı yuvarlayarak) alır; elde yığın varken boş ya da aynı türdeki yuvaya 1 tane bırakır. Kapanınca eldeki yığın envantere döner, sığmayan yere atılır; fare yeniden kilitlenir.
+- **Q:** seçili yığından 1 tanesini bakış yönünde 5 blok/sn fırlatır.
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `collected`, `dropItem` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -258,6 +270,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
   | `selected` | Seçili hotbar yuvası (0–8) |
+  | `inventory` | 36 yuva: `{ key, count }` ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
   | `time`, `day` | `clock.time`, `clock.day` |
 
   Yeni özellikler kendi alanlarını bu nesneye ekler ve bu tabloya yazar. Alanların anlamı değişirse `SAVE_VERSION` artırılır; sürümü uymayan kayıt yok sayılır.
@@ -288,7 +301,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 11 | Creeper | Yapıldı |
 | 12 | Düşmanların gün ışığında yanması | Yapıldı |
 | 13 | Eşya düşmesi ve toplama | Yapıldı |
-| 14 | Sınırlı hotbar ve envanter ekranı | Yapılmadı |
+| 14 | Sınırlı hotbar ve envanter ekranı | Yapıldı |
 | 15 | Blok kırma süresi ve çatlama | Yapılmadı |
 | 16 | Üretim ve çalışma masası | Yapılmadı |
 | 17 | Aletler | Yapılmadı |

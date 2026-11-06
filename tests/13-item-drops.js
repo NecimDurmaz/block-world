@@ -23,7 +23,7 @@ const spinning = !!drop && drop.mesh.rotation.y > 0.5;
 // Üstüne yürü
 Object.assign(p, { x: 40.5, z: 42.5 });
 await wait(800);
-const picked = !g.drops.includes(drop) && g.collected.dirt === 1;
+const picked = !g.drops.includes(drop) && g.inventory.some(slot => slot && slot.key === 'dirt' && slot.count === 1);
 
 // İneği öldür: biftek düşer
 const cow = g.mobs.find(m => m.kind === 'cow');
@@ -33,4 +33,4 @@ await wait(400);
 click();
 await wait(1200);
 const beef = g.drops.filter(d => d.key === 'raw_beef').length;
-return { ok: isSmallCube && spinning && picked && beef >= 1 && beef <= 3, isSmallCube, spinning, picked, collected: { ...g.collected }, beef };
+return { ok: isSmallCube && spinning && picked && beef >= 1 && beef <= 3, isSmallCube, spinning, picked, beef };

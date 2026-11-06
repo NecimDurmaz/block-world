@@ -34,8 +34,17 @@
   #crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
   #crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
   #hotbar { position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; background: var(--hud-bg); border-radius: var(--ew-radius); }
-  .slot { width: 44px; height: 44px; border: 2px solid transparent; border-radius: var(--ew-radius-btn); background-size: cover; image-rendering: pixelated; position: relative; cursor: pointer; }
-  .slot span { position: absolute; left: 3px; top: 1px; font-size: 11px; font-weight: 500; text-shadow: 0 1px 2px #000; }
+  .slot { width: 44px; height: 44px; border: 2px solid transparent; border-radius: var(--ew-radius-btn); background: center / 34px no-repeat; image-rendering: pixelated; position: relative; cursor: pointer; }
+  .slot .num { position: absolute; left: 3px; top: 1px; font-size: 11px; font-weight: 500; text-shadow: 0 1px 2px #000; }
+  .count { position: absolute; right: 3px; bottom: 1px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; font-variant-numeric: tabular-nums; }
+  #inventory { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(28, 46, 95, 0.35); }
+  .inv-panel { max-width: none; width: auto; gap: 12px; }
+  .inv-panel h2 { margin: 0; color: var(--ew-primary); font-size: 18px; font-weight: 700; }
+  .inv-grid { display: grid; grid-template-columns: repeat(9, 40px); gap: 4px; }
+  .inv-hotbar { padding-top: 12px; border-top: 1px solid var(--ew-border); }
+  .inv-slot { width: 40px; height: 40px; box-sizing: border-box; background: #eceef4 center / 30px no-repeat; image-rendering: pixelated; border: 1px solid #c6cddd; border-radius: var(--ew-radius-btn); position: relative; cursor: pointer; }
+  .inv-slot:hover { border-color: var(--ew-primary); }
+  #held { position: fixed; width: 30px; height: 30px; pointer-events: none; background: center / 30px no-repeat; image-rendering: pixelated; transform: translate(-50%, -50%); }
   .slot.active { border-color: var(--hud-fg); box-shadow: 0 0 0 2px var(--ew-primary); }
   #status { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
   #hearts { display: flex; gap: 2px; }
@@ -73,6 +82,14 @@
 <div id="hotbar"></div>
 <div id="status"><div id="hearts"></div></div>
 <div id="hurt"></div>
+<div id="inventory" hidden>
+  <div class="panel inv-panel">
+    <h2>Envanter</h2>
+    <div class="inv-grid" id="inv-bag"></div>
+    <div class="inv-grid inv-hotbar" id="inv-hotbar"></div>
+  </div>
+</div>
+<div id="held" hidden><span class="count"></span></div>
 <div id="death" hidden>
   <div class="panel">
     <h1>Öldün!</h1>
@@ -88,9 +105,11 @@
       <kbd>Fare</kbd><span>Etrafına bak</span>
       <kbd>Boşluk</kbd><span>Zıpla</span>
       <kbd>W-W / Shift</kbd><span>Koş</span>
-      <kbd>Sol tık</kbd><span>Bloğu kır</span>
+      <kbd>Sol tık</kbd><span>Bloğu kır, canlıya vur</span>
       <kbd>Sağ tık</kbd><span>Blok koy</span>
-      <kbd>1–9 / Tekerlek</kbd><span>Blok seç</span>
+      <kbd>1–9 / Tekerlek</kbd><span>Hotbar'dan seç</span>
+      <kbd>E</kbd><span>Envanter</span>
+      <kbd>Q</kbd><span>Seçili eşyadan birini at</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
@@ -186,7 +205,6 @@
     { name: 'Kırık taş', top: TILE.cobble, side: TILE.cobble, bottom: TILE.cobble },
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9 };
-  const HOTBAR = [B.grass, B.dirt, B.stone, B.cobble, B.planks, B.log, B.brick, B.sand, B.leaves];
 
   // ---------- Dünya üretimi ----------
   const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
@@ -506,7 +524,7 @@
   // ---------- Girdi ----------
   const keys = {};
   const VIEWS = ['Arkadan', 'Gözden', 'Önden'];
-  let selected = 0, playing = false, dead = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0;
+  let selected = 0, playing = false, dead = false, inventoryOpen = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0;
   const overlay = document.getElementById('overlay');
   const canvas = renderer.domElement;
 
@@ -520,7 +538,10 @@
     if (e.code === 'Space') e.preventDefault();
     if (/^Digit[1-9]$/.test(e.code)) selectSlot(+e.code.slice(5) - 1);
     if (e.code === 'KeyV' && !e.repeat) { view = (view + 1) % VIEWS.length; toast('Kamera: ' + VIEWS[view]); }
-    if (e.code === 'Escape' && fallbackLook) pause();
+    if (e.code === 'KeyE' && !e.repeat && playing) inventoryOpen ? closeInventory() : openInventory();
+    if (e.code === 'KeyQ' && !e.repeat && playing && !inventoryOpen) throwSelected();
+    if (e.code === 'Escape' && inventoryOpen) closeInventory();
+    else if (e.code === 'Escape' && fallbackLook) pause();
   });
   window.addEventListener('keyup', e => {
     keys[e.code] = false;
@@ -555,7 +576,8 @@
   document.getElementById('play').addEventListener('click', start);
   document.addEventListener('pointerlockerror', useFallback);
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas && !fallbackLook) pause();
+    // Envanter açılırken fare kilidi bilerek bırakılır; oyun durmaz.
+    if (document.pointerLockElement !== canvas && !fallbackLook && !inventoryOpen) pause();
   });
 
   let drag = null;
@@ -565,7 +587,7 @@
     else if (fallbackLook && drag) { look(e.movementX, e.movementY); drag.moved += Math.abs(e.movementX) + Math.abs(e.movementY); }
   });
   canvas.addEventListener('mousedown', e => {
-    if (!playing) return;
+    if (!playing || inventoryOpen) return;
     if (document.pointerLockElement === canvas) { e.button === 0 ? breakBlock() : e.button === 2 && placeBlock(); }
     else { fallbackLook = true; if (e.button === 2) placeBlock(); else drag = { moved: 0 }; }
   });
@@ -575,8 +597,8 @@
   });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   window.addEventListener('wheel', e => {
-    if (!playing) return;
-    selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + HOTBAR.length) % HOTBAR.length);
+    if (!playing || inventoryOpen) return;
+    selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + HOTBAR_SIZE) % HOTBAR_SIZE);
   }, { passive: true });
 
   // ---------- Blok kırma / koyma ----------
@@ -628,23 +650,26 @@
     const p = player;
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
-    set(x, y, z, HOTBAR[selected]);
+    const slot = inventory[selected];
+    if (!slot || !ITEMS[slot.key].block) return;
+    if (mobs.some(m => x < m.x + m.w && x + 1 > m.x - m.w && y < m.y + m.h && y + 1 > m.y && z < m.z + m.w && z + 1 > m.z - m.w)) return;
+    set(x, y, z, ITEMS[slot.key].block);
     rebuildAround(x, z);
+    takeFromSlot(selected, 1);
   }
 
   // ---------- HUD ----------
   const hotbar = document.getElementById('hotbar');
   const blockName = document.getElementById('blockname');
   const info = document.getElementById('info');
-  HOTBAR.forEach((b, i) => {
+  const HOTBAR_SIZE = 9;
+  for (let i = 0; i < HOTBAR_SIZE; i++) {
     const s = document.createElement('div');
     s.className = 'slot';
-    s.style.backgroundImage = `url(${tileImage(BLOCKS[b].side)})`;
-    s.innerHTML = `<span>${i + 1}</span>`;
-    s.title = BLOCKS[b].name;
+    s.innerHTML = `<span class="num">${i + 1}</span><span class="count"></span>`;
     s.addEventListener('click', () => selectSlot(i));
     hotbar.appendChild(s);
-  });
+  }
   let nameTimer;
   function toast(text) {
     blockName.textContent = text;
@@ -655,9 +680,8 @@
   function selectSlot(i) {
     selected = i;
     [...hotbar.children].forEach((s, j) => s.classList.toggle('active', j === i));
-    toast(BLOCKS[HOTBAR[i]].name);
+    if (inventory[i]) toast(ITEMS[inventory[i].key].name);
   }
-  selectSlot(0);
 
   // ---------- Can ----------
   // Kalp: 7x6 piksellik şekil, 1 piksel koyu çerçeveyle 9x9 tuvale çizilir.
@@ -1335,25 +1359,24 @@
   function dropItem(key, x, y, z) {
     const mesh = dropMesh(key);
     scene.add(mesh);
-    drops.push({ key, x, y, z, w: 0.125, h: 0.25, vx: (Math.random() - 0.5) * 2, vy: 3, vz: (Math.random() - 0.5) * 2, onGround: false, age: 0, mesh });
+    const d = { key, x, y, z, w: 0.125, h: 0.25, vx: (Math.random() - 0.5) * 2, vy: 3, vz: (Math.random() - 0.5) * 2, onGround: false, age: 0, pickupDelay: 0, mesh };
+    drops.push(d);
+    return d;
   }
   function removeDrop(d) {
     scene.remove(d.mesh);
     d.mesh.geometry.dispose();
     drops.splice(drops.indexOf(d), 1);
   }
-  // Toplanan eşyalar; madde 14'te envantere taşınacak.
-  const collected = {};
-  function collectItem(key) {
-    collected[key] = (collected[key] || 0) + 1;
-    return true;
-  }
+  // Envantere sığarsa toplanır; sığmazsa yerde kalır.
+  const collectItem = key => addItem(key, 1) === 0;
   function updateDrops(dt) {
     for (const d of [...drops]) {
       d.age += dt;
       if (d.age > ITEM_LIFETIME) { removeDrop(d); continue; }
       const dx = player.x - d.x, dy = player.y + 0.9 - d.y, dz = player.z - d.z, dist = Math.hypot(dx, dy, dz);
-      if (!dead && dist < PICKUP_RANGE) {
+      d.pickupDelay = Math.max(0, (d.pickupDelay || 0) - dt);
+      if (!dead && dist < PICKUP_RANGE && !d.pickupDelay) {
         // Oyuncuya doğru çekilir; yeterince yaklaşınca toplanır.
         if (dist < 0.6 && collectItem(d.key)) { toast('+1 ' + ITEMS[d.key].name); removeDrop(d); continue; }
         d.x += dx / dist * 6 * dt; d.y += dy / dist * 6 * dt; d.z += dz / dist * 6 * dt;
@@ -1371,7 +1394,118 @@
       d.mesh.rotation.y = d.age * 2;
     }
   }
-  Object.assign(window.game, { drops, collected, dropItem });
+  Object.assign(window.game, { drops, dropItem });
+
+  // ---------- Envanter ----------
+  // 36 yuva: 0–8 hotbar, 9–35 çanta. Yuva: { key, count } ya da null.
+  const INVENTORY_SIZE = 36;
+  const inventory = new Array(INVENTORY_SIZE).fill(null);
+  const maxStack = key => ITEMS[key].tool ? 1 : 64;
+  let held = null; // envanter ekranında farenin tuttuğu yığın
+
+  // Önce aynı türdeki yuvalara, sonra ilk boş yuvaya koyar. Sığmayan adedi döndürür.
+  function addItem(key, count) {
+    for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
+      const s = inventory[i];
+      if (s && s.key === key && s.count < maxStack(key)) {
+        const n = Math.min(count, maxStack(key) - s.count);
+        s.count += n; count -= n;
+      }
+    }
+    for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
+      if (!inventory[i]) {
+        const n = Math.min(count, maxStack(key));
+        inventory[i] = { key, count: n }; count -= n;
+      }
+    }
+    renderInventory();
+    return count;
+  }
+  function takeFromSlot(i, n) {
+    const s = inventory[i];
+    s.count -= n;
+    if (s.count <= 0) inventory[i] = null;
+    renderInventory();
+  }
+  // Q: seçili yığından birini bakılan yöne fırlatır; 1,5 sn geri toplanmaz.
+  function throwSelected() {
+    const s = inventory[selected];
+    if (!s) return;
+    const d = dropItem(s.key, player.x + aim.d.x * 0.6, player.y + EYE - 0.3, player.z + aim.d.z * 0.6);
+    d.vx = aim.d.x * 5; d.vy = aim.d.y * 5 + 2; d.vz = aim.d.z * 5;
+    d.pickupDelay = 1.5;
+    takeFromSlot(selected, 1);
+  }
+
+  const invEl = document.getElementById('inventory');
+  const heldEl = document.getElementById('held');
+  const invSlotEls = [];
+  for (let i = 0; i < INVENTORY_SIZE; i++) {
+    const el = document.createElement('div');
+    el.className = 'inv-slot';
+    el.innerHTML = '<span class="count"></span>';
+    el.addEventListener('mousedown', e => { e.preventDefault(); clickSlot(i, e.button === 2); });
+    el.addEventListener('contextmenu', e => e.preventDefault());
+    document.getElementById(i < HOTBAR_SIZE ? 'inv-hotbar' : 'inv-bag').appendChild(el);
+    invSlotEls[i] = el;
+  }
+  document.addEventListener('mousemove', e => { heldEl.style.left = e.clientX + 'px'; heldEl.style.top = e.clientY + 'px'; });
+
+  const paintSlot = (el, s) => {
+    el.style.backgroundImage = s ? `url(${itemIcon(s.key)})` : 'none';
+    el.querySelector('.count').textContent = s && s.count > 1 ? s.count : '';
+    el.title = s ? ITEMS[s.key].name : '';
+  };
+  function renderInventory() {
+    for (let i = 0; i < HOTBAR_SIZE; i++) paintSlot(hotbar.children[i], inventory[i]);
+    for (let i = 0; i < INVENTORY_SIZE; i++) paintSlot(invSlotEls[i], inventory[i]);
+    paintSlot(heldEl, held);
+    heldEl.hidden = !held;
+  }
+  // Sol tık: yığını al / bırak / aynı türse birleştir / farklıysa değiştir. Sağ tık: yarısını al ya da bir tane bırak.
+  function clickSlot(i, right) {
+    const s = inventory[i];
+    if (!held) {
+      if (!s) return;
+      const n = right ? Math.ceil(s.count / 2) : s.count;
+      held = { key: s.key, count: n };
+      takeFromSlot(i, n);
+      return;
+    }
+    if (!s || s.key === held.key) {
+      const n = Math.min(right ? 1 : held.count, maxStack(held.key) - (s ? s.count : 0));
+      if (n <= 0) return;
+      inventory[i] = { key: held.key, count: (s ? s.count : 0) + n };
+      held.count -= n;
+      if (!held.count) held = null;
+    } else if (!right) {
+      inventory[i] = held;
+      held = s;
+    }
+    renderInventory();
+  }
+  function openInventory() {
+    inventoryOpen = true;
+    for (const k in keys) keys[k] = false;
+    invEl.hidden = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  function closeInventory() {
+    if (held) {
+      const left = addItem(held.key, held.count);
+      for (let n = 0; n < left; n++) dropItem(held.key, player.x, player.y + 1, player.z).pickupDelay = 1.5;
+      held = null;
+    }
+    inventoryOpen = false;
+    invEl.hidden = true;
+    renderInventory();
+    if (!fallbackLook) {
+      try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
+    }
+  }
+  renderInventory();
+  selectSlot(0);
+  Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -1409,6 +1543,7 @@
         player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
         health: player.health,
         selected,
+        inventory: inventory.map(s => s && { key: s.key, count: s.count }),
         time: clock.time,
         day: clock.day,
       }, SAVE_KEY);
@@ -1425,6 +1560,9 @@
     Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
     player.health = save.health > 0 ? save.health : MAX_HEALTH;
     renderHearts();
+    // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
+    (save.inventory || []).forEach((s, i) => { inventory[i] = s && ITEMS[s.key] ? { key: s.key, count: s.count } : null; });
+    renderInventory();
     selectSlot(save.selected);
     clock.time = save.time;
     clock.day = save.day;
@@ -1472,7 +1610,7 @@
     last = now;
     const p = player;
 
-    if (playing) {
+    if (playing && !inventoryOpen) {
       const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
       const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
       let mx = 0, mz = 0;

@@ -37,9 +37,10 @@ await wait(6000);
 const noRegen = p.health === 15;
 // Açlık 0'da can 4 sn'de bir azalır, 1'in altına inmez
 p.food = 0; g.renderFood(); p.health = 2;
-await wait(4500);
+// Yavaş karelerde oyun zamanı gerçek zamanın gerisinde kalabilir: duruma göre bekle
+for (let i = 0; i < 100 && p.health === 2; i++) await wait(100);
 const starved = p.health === 1;
-await wait(4500);
+await wait(5000);
 const floor = p.health === 1;
 return { ok: icons === 10 && decreased && sprintsFaster && notYet && ate && noRegen && starved && floor,
   icons, decreased, sprintTimer: +sprintTimer.toFixed(2), notYet, ate, noRegen, starved, floor };

@@ -12,7 +12,8 @@ Bu liste, `index.html` oyununa bir yapay zekâ asistanına **tek tek** yaptırı
 > - Dış kütüphane olarak yalnızca zaten yüklü olan Three.js r128 (cdnjs) kullanılacak. Yeni kütüphane ekleme.
 > - Dış resim, model veya ses dosyası yok. Dokular mevcut atlas gibi canvas ile kodla çizilecek (16×16 piksel). Sesler WebAudio API ile kodla üretilecek.
 > - Dil kuralı: dosya adları ve koddaki tüm adlar (değişken, fonksiyon, sabit, sınıf, CSS sınıfı ve id, IndexedDB veritabanı, depo ve anahtar adları) İngilizce olacak. Yalnızca oyuncunun gördüğü arayüz yazıları Türkçe olacak.
-> - Arayüzdeki tüm yazılar Türkçe olacak. Mevcut renk değişkenlerini (`--ew-primary` vb.) ve HUD stilini kullan.
+> - Arayüzdeki tüm yazılar Türkçe olacak.
+> - Oyun içi arayüz (hotbar, envanter, paneller, ipuçları, sohbet) ve eşya simgeleri Minecraft'taki gibi görünür: gri kabartmalı paneller, çukur yuvalar, piksel yazı tipi, üzerine gelince ad ipucu; bloklar izometrik küp, eşyalar koyu kenarlı 16×16 piksel. Ayrıntılar AGENTS.md "Görsel" bölümünde. Başlangıç/ayarlar menüleri marka renklerinde kalır.
 > - Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W / Shift), çarpışma, blok kırma/koyma, 1–9 hotbar, tekerlek, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
 > - Kodu mevcut düzene uy: her betik `// ---------- Başlık ----------` satırıyla başlar, sabitler ilgili dosyanın başında.
 > - Yeni bir tuş eklersen başlangıç panelindeki tuş listesine de ekle.
@@ -476,6 +477,36 @@ Bu maddeler listenin geri kalanından sonra gelir; her biri öncekilerden biraz 
   - Madde 35'teki zombi domuz adamlar kale çevresinde de doğar.
 - **Kabul ölçütü:** Nether'de koyu tuğlalı köprüler ve odalar bulunuyor; doğurucunun yanında blaze'ler çıkıp üçlü ateş topu atıyor; öldürülen blaze'den çubuk düşüyor.
 - **Bağımlılık:** 7, 34, 35
+
+---
+
+## 8. Sohbet ve rehberler
+
+### 45. Sohbet ve komutlar
+- **Minecraft'ta:** T ile sohbet açılır; `/` ile başlayan komutlarla eşya alınır, saat değiştirilir, ışınlanılır.
+- **Bu oyunda:**
+  - T sohbeti, `/` sohbeti `/` yazılı olarak açar; Enter gönderir, Esc kapatır. Sohbet açıkken oyun durmaz ama oyuncu hareket etmez. Mesajlar sol altta, Minecraft gibi yarı saydam satırlarda görünür ve 10 sn sonra solar (sohbet açıkken hepsi görünür).
+  - Komutlar: `/help`, `/give <eşya> [adet]`, `/god` (hasar ve açlık yok, aç/kapat), `/heal`, `/feed`, `/time set day|night|noon|midnight`, `/tp <x> <y> <z>`, `/clear`, `/summon <canlı>`, `/spawnpoint`. Eşya ve canlı adları İngilizce anahtar ya da Türkçe ad olarak yazılabilir. Hatalı komutta açıklayıcı Türkçe mesaj.
+- **Kabul ölçütü:** `/give diamond`… gibi bilinmeyen eşyada hata, `/give stone_pickaxe` ile kazma geliyor; `/god` açıkken zombi vurunca can gitmiyor.
+- **Bağımlılık:** 14
+
+### 46. Adım adım rehber
+- **Minecraft'ta:** Yeni başlayanlar için oyun içi ipuçları ve ilerleme hedefleri vardır.
+- **Bu oyunda:**
+  - Hiç Minecraft oynamamış birine oyunu adım adım öğreten, oyunla bütünleşik bir rehber: sağ üstte Minecraft tarzı küçük bir görev kartı, o anki adımı ve nasıl yapılacağını (hangi tuş, ne nereye) Türkçe anlatır.
+  - Adımlar oyundaki gerçek olaylarla otomatik ilerler (ör. "Bir ağaca bak ve sol tuşu basılı tutarak bir kütük kır" → kütük envantere girince tamamlanır). Önerilen sıra: etrafa bak ve yürü, kütük kır, envanteri aç (E), tahta yap, çalışma masası yap ve koy, çubuk ve tahta kazma yap, taş kaz, taş kazma yap, hayvandan et al ve ye, meşale yap, yatak yap ve gece uyu, kömür ve demir bul, fırında demir erit, demir kazma ve çakmak yap, obsidyen bul ve portal kur, Nether'e geç.
+  - Her adımda kısa bir ipucu satırı; tamamlanınca küçük "Tamamlandı" bildirimi ve ses. Rehber H tuşuyla gizlenip gösterilir; ayarlardan kapatılabilir. İlerleme kayda yazılır.
+- **Kabul ölçütü:** Yeni dünyada rehber ilk adımı gösteriyor; kütük kırınca bir sonraki adıma geçiyor; sayfa yenilenince kaldığı adımdan devam ediyor.
+- **Bağımlılık:** 4, 14, 16 (sonraki adımlar ilgili maddelere)
+
+### 47. Üretim rehberi (tarif kitabı)
+- **Minecraft'ta:** Envanterdeki tarif kitabı yapılabilecek eşyaları listeler ve tarifi gösterir.
+- **Bu oyunda:**
+  - Envanter panelinde (ve çalışma masasında) bir "Tarifler" düğmesi; açılınca tariflerle yapılabilen bütün eşyalar simgeleriyle bir ızgarada listelenir (Minecraft tarzı yuvalar, üzerine gelince ad ipucu). Fırında pişirilenler de "Fırın" sekmesinde listelenir.
+  - Bir eşyaya tıklayınca tarifi 3×3 ızgarada (2×2'ye sığıyorsa bunu da belirterek) malzeme simgeleriyle ve çıkan adetle gösterilir; malzemelerin üzerine gelince adları görünür. Envanterde malzemeler yeterliyse "Izgaraya yerleştir" düğmesi malzemeleri üretim ızgarasına diz.
+  - Arama kutusu: Türkçe ada göre süzer.
+- **Kabul ölçütü:** Tarifler açılınca bütün üretilebilir eşyalar görünüyor; demir kazmaya tıklayınca 3 demir külçe ve 2 çubuğun dizilişi görünüyor; malzemeler varken tek tıkla ızgaraya diziliyor.
+- **Bağımlılık:** 16
 
 ---
 

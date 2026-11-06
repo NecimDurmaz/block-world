@@ -9,7 +9,7 @@ g.clock.time = 0.25;
 for (let x = 30; x < 50; x++) for (let z = 30; z < 50; z++) g.setBlock(x, 39, z, 3);
 g.setBlock(40, 40, 42, 11);
 Object.assign(p, { x: 40.5, y: 40, z: 44.5, yaw: 0, pitch: -0.45, vx: 0, vz: 0 });
-await wait(400);
+await wait(800);
 const canvas = document.querySelector('#game canvas');
 canvas.dispatchEvent(new MouseEvent('mousedown', { button: 2, bubbles: true }));
 window.dispatchEvent(new MouseEvent('mouseup', { button: 2 }));

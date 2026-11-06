@@ -1,5 +1,6 @@
 /* Tam ekran oyun alanı; HUD ve başlangıç paneli üstte katman olarak durur. Tek (koyu) görünüm. */
 :root {
+  --mc-font: 'Pixelify Sans', 'Courier New', monospace; /* envanter, hotbar ve sohbet: Minecraft görünümü */
   --ew-primary: #40598e;
   --ew-primary-dark: #32487b;
   --ew-secondary: #b52e31;
@@ -25,32 +26,35 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #crosshair::before, #crosshair::after { content: ""; position: absolute; background: var(--hud-fg); mix-blend-mode: difference; }
 #crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
 #crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
-#hotbar { position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; background: var(--hud-bg); border-radius: var(--ew-radius); }
-.slot { width: 44px; height: 44px; border: 2px solid transparent; border-radius: var(--ew-radius-btn); background: center / 34px no-repeat; image-rendering: pixelated; position: relative; cursor: pointer; }
-.slot .num { position: absolute; left: 3px; top: 1px; font-size: 11px; font-weight: 500; text-shadow: 0 1px 2px #000; }
-.count { position: absolute; right: 3px; bottom: 1px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; font-variant-numeric: tabular-nums; }
+#hotbar { position: fixed; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; padding: 2px; background: rgba(0, 0, 0, 0.45); border: 2px solid #1a1a1a; box-shadow: inset 0 0 0 2px #8b8b8b; }
+.slot { width: 44px; height: 44px; box-sizing: border-box; border: 2px solid #5a5a5a; background: center / 30px no-repeat; image-rendering: pixelated; position: relative; cursor: pointer; }
+.slot .num { display: none; }
+.count { position: absolute; right: 2px; bottom: -1px; font: 16px var(--mc-font); color: #fff; text-shadow: 2px 2px 0 #3f3f3f; line-height: 1; }
 #inventory { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(28, 46, 95, 0.35); }
-.inv-panel { max-width: none; width: auto; gap: 12px; }
-.inv-panel h2 { margin: 0; color: var(--ew-primary); font-size: 18px; font-weight: 700; }
-.inv-grid { display: grid; grid-template-columns: repeat(9, 40px); gap: 4px; }
-.inv-hotbar { padding-top: 12px; border-top: 1px solid var(--ew-border); }
-.craft { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--ew-border); }
-.craft-grid { display: grid; grid-template-columns: repeat(3, 40px); gap: 4px; }
-.craft-grid.small { grid-template-columns: repeat(2, 40px); }
-.craft-arrow { font-size: 24px; color: var(--ew-text-muted); }
-.furnace { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--ew-border); }
+.panel.inv-panel { max-width: none; width: auto; gap: 10px; background: #c6c6c6; border: 2px solid #000; border-radius: 4px; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #555; padding: 14px; color-scheme: light; }
+.inv-panel h2 { margin: 0; color: #3f3f3f; font: 20px var(--mc-font); }
+.inv-grid { display: grid; grid-template-columns: repeat(9, 36px); gap: 0; }
+.inv-hotbar { margin-top: 8px; }
+.craft { display: flex; align-items: center; gap: 14px; padding-bottom: 4px; }
+.craft-grid { display: grid; grid-template-columns: repeat(3, 36px); gap: 0; }
+.craft-grid.small { grid-template-columns: repeat(2, 36px); }
+.craft-arrow { font: 30px var(--mc-font); color: #8b8b8b; }
+.furnace { display: flex; align-items: center; gap: 16px; padding-bottom: 4px; }
 .furnace-col { display: grid; gap: 4px; justify-items: center; }
-.flame { width: 14px; height: 14px; background: #e5e8ec; display: flex; align-items: flex-end; border-radius: 2px; }
+.flame { width: 14px; height: 14px; background: #8b8b8b; display: flex; align-items: flex-end; }
 .flame i { display: block; width: 100%; background: #e8601c; }
-.progress { width: 56px; height: 10px; background: #e5e8ec; border-radius: 2px; overflow: hidden; }
-.progress i { display: block; height: 100%; background: var(--ew-primary); }
-.inv-slot { width: 40px; height: 40px; box-sizing: border-box; background: #eceef4 center / 30px no-repeat; image-rendering: pixelated; border: 1px solid #c6cddd; border-radius: var(--ew-radius-btn); position: relative; cursor: pointer; }
-.inv-slot:hover { border-color: var(--ew-primary); }
-.dur { position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; background: #212121; display: none; }
+.progress { width: 48px; height: 10px; background: #8b8b8b; overflow: hidden; }
+.progress i { display: block; height: 100%; background: #fff; }
+.inv-slot { width: 36px; height: 36px; box-sizing: border-box; background: #8b8b8b center / 28px no-repeat; image-rendering: pixelated; border: 2px solid; border-color: #373737 #fff #fff #373737; position: relative; cursor: pointer; }
+.inv-slot:hover { background-color: #c5c5c5; }
+.dur { position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: #000; display: none; }
 .dur i { display: block; height: 100%; }
-#held { position: fixed; width: 30px; height: 30px; pointer-events: none; background: center / 30px no-repeat; image-rendering: pixelated; transform: translate(-50%, -50%); }
-.slot.active { border-color: var(--hud-fg); box-shadow: 0 0 0 2px var(--ew-primary); }
-#status { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
+#craft-result { width: 48px; height: 48px; background-size: 36px; }
+/* Minecraft ipucu kutusu: koyu mor zemin, mor çerçeve */
+#tooltip { position: fixed; pointer-events: none; z-index: 5; padding: 3px 6px 5px; background: rgba(16, 0, 16, 0.94); border: 2px solid #28007f; box-shadow: 0 0 0 1px #100010; font: 18px var(--mc-font); color: #fff; text-shadow: 2px 2px 0 #3f3f3f; white-space: nowrap; }
+#held { position: fixed; width: 28px; height: 28px; pointer-events: none; background: center / 28px no-repeat; image-rendering: pixelated; transform: translate(-50%, -50%); z-index: 3; }
+.slot.active { border: 3px solid #fff; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #a0a0a0; z-index: 1; }
+#status { position: fixed; left: 50%; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
 #hearts { display: flex; gap: 2px; }
 #food { display: flex; flex-direction: row-reverse; gap: 2px; margin-left: auto; }
 #food i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
@@ -62,7 +66,7 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #sleep { position: fixed; inset: 0; pointer-events: none; background: #05070d; opacity: 0; transition: opacity 0.6s; }
 #underwater { position: fixed; inset: 0; pointer-events: none; background: rgba(30, 80, 170, 0.35); }
 #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
-#blockname { position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
+#blockname { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font: 18px var(--mc-font); text-shadow: 2px 2px 0 #3f3f3f; }
 #info { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 12px; font-variant-numeric: tabular-nums; padding: 4px 8px; background: var(--hud-bg); border-radius: var(--ew-radius-btn); }
 #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(28, 46, 95, 0.55); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .panel { color-scheme: light; background: var(--ew-bg); color: var(--ew-text); border: 1px solid var(--ew-border); border-radius: var(--ew-radius); box-shadow: 0 0 6px 2px rgba(161, 161, 161, 0.22); padding: 24px; max-width: 420px; width: 100%; display: grid; gap: 16px; }

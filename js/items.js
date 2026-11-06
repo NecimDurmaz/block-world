@@ -18,7 +18,6 @@ const ITEM_ART = {
   door: ['Kapı', { b: '#96693c', d: '#5c4024', g: '#a9cbe0' }, ['..dddd..', '..dggd..', '..dggd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dddd..']],
   wheat: ['Buğday', { y: '#d6b44a', d: '#a8842a' }, ['......yy', '.....yd.', '....yy..', '...yd...', '..yy....', '.d......', 'd.......', '........']],
   bread: ['Ekmek', { b: '#c8883e', d: '#8a5a24', l: '#e8b870' }, ['........', '..bbbb..', '.blblbb.', 'bbbbbbbd', 'bbbbbbbd', '.dddddd.', '........', '........']],
-  wooden_hoe: ['Tahta çapa', { h: '#b08a52', d: '#7a5a32', s: '#6b4a2b' }, ['..hhhh..', '..d..s..', '....s...', '...s....', '..s.....', '.s......', 's.......', '........']],
   wheat_seeds: ['Buğday tohumu', { g: '#5f9a3a', d: '#3f6a22' }, ['........', '..g..d..', '....g...', '.d....g.', '...g....', '.g...d..', '....g...', '........']],
   bed: ['Yatak', { w: '#ececec', r: '#a8282a', b: '#7a5a32' }, ['........', '........', 'wwrrrrrr', 'wwrrrrrr', 'bbbbbbbb', 'b......b', '........', '........']],
   stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
@@ -32,45 +31,84 @@ const ITEM_ART = {
   apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
   coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
 };
+// Minecraft simgelerindeki koyu kenar: dolu bir komşusu olan saydam pikseller o komşunun koyu tonuyla boyanır.
+function outlineIcon(c) {
+  const ctx = c.getContext('2d'), img = ctx.getImageData(0, 0, 16, 16), d = img.data, out = new Uint8ClampedArray(d);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const i = (y * 16 + x) * 4;
+    if (d[i + 3]) continue;
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+      if (nx < 0 || ny < 0 || nx > 15 || ny > 15) continue;
+      const j = (ny * 16 + nx) * 4;
+      if (!d[j + 3]) continue;
+      out[i] = d[j] * 0.3; out[i + 1] = d[j + 1] * 0.3; out[i + 2] = d[j + 2] * 0.3; out[i + 3] = 255;
+      break;
+    }
+  }
+  ctx.putImageData(new ImageData(out, 16, 16), 0, 0);
+  return c;
+}
 for (const [key, [name, palette, rows]] of Object.entries(ITEM_ART)) {
   const c = document.createElement('canvas'); c.width = c.height = 16;
   const ic = c.getContext('2d');
+  // 8x8 desen, 1 piksel kenar payıyla 7x7 hücreye sığacak şekilde 2 kat çizilir; sonra koyu kenar eklenir.
   rows.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
-  ITEMS[key] = { name, canvas: c };
+  ITEMS[key] = { name, canvas: outlineIcon(c) };
+}
+// Aletler: Minecraft'taki gibi sol alttan sağ üste çapraz sap ve sağ üstte baş; koyu kenarlı 16x16.
+function drawTool(kind, head, dark) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d');
+  const px = (x, y, color) => { g.fillStyle = color; g.fillRect(x, y, 1, 1); };
+  const stickLength = { pickaxe: 9, axe: 9, shovel: 8, hoe: 9, sword: 3 }[kind];
+  for (let i = 0; i <= stickLength; i++) { px(2 + i, 13 - i, '#9a6e3e'); px(2 + i, 14 - i, '#5e4022'); }
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (kind === 'pickaxe') {
+      // Sapın ucunu ortalayan yay biçimli baş
+      const r = Math.hypot(x - 2, y - 13), a = Math.atan2(13 - y, x - 2) * 180 / Math.PI;
+      if (r >= 9.2 && r <= 11.4 && a >= 6 && a <= 84) px(x, y, r > 10.3 ? head : dark);
+    } else if (kind === 'axe') {
+      // Sap ucunun solunda geniş ağız
+      // Sapın ucunun sol üstünde kalın ağız: satır -> [ilk x, son x]
+      const rows = { 1: [7, 9], 2: [5, 10], 3: [4, 10], 4: [4, 9], 5: [5, 8], 6: [6, 7] };
+      const r = rows[y];
+      if (r && x >= r[0] && x <= r[1]) px(x, y, x <= r[0] + 1 ? head : x >= 9 ? dark : head);
+    } else if (kind === 'shovel') {
+      // Sapın ucunda yuvarlak kürek ağzı
+      if (Math.hypot(x - 12, y - 3.5) <= 3.2) px(x, y, x - y > 8 ? head : dark);
+    } else if (kind === 'hoe') {
+      // Sap ucundan sola uzanan yatay ağız
+      if ((y === 2 && x >= 7 && x <= 12) || (y === 3 && x >= 7 && x <= 9)) px(x, y, y === 2 ? head : dark);
+    } else if (kind === 'sword') {
+      // Uzun çapraz bıçak, dik siper
+      const t = x - 6, onBlade = t >= 0 && t <= 8 && (y === 9 - t || y === 10 - t) && x <= 14;
+      if (onBlade) px(x, y, y === 9 - t ? head : dark);
+      if ((x === 3 && y === 9) || (x === 4 && y === 10) || (x === 6 && y === 12) || (x === 7 && y === 13)) px(x, y, '#3a2a1a');
+    }
+  }
+  return outlineIcon(c);
 }
 // Aletler: 2 seviye x 4 tür. tool: tür, speed: doğru blokta hız çarpanı, durability: kullanım hakkı, damage: vuruş hasarı.
 const TOOL_TIERS = {
-  wooden: { name: 'Tahta', tier: 1, head: '#b08a52', dark: '#7a5a32', speed: 2, durability: 60, material: 'planks' },
-  stone: { name: 'Taş', tier: 2, head: '#9a9a9a', dark: '#626262', speed: 4, durability: 132, material: 'cobble' },
+  wooden: { name: 'Tahta', tier: 1, head: '#c4995a', dark: '#8a6536', speed: 2, durability: 60, material: 'planks' },
+  stone: { name: 'Taş', tier: 2, head: '#a5a5a5', dark: '#6e6e6e', speed: 4, durability: 132, material: 'cobble' },
 };
 // damage: [tahta, taş]. Desen: M malzeme, S çubuk.
 const TOOL_KINDS = {
-  pickaxe: { name: 'kazma', damage: [2, 3], pattern: ['MMM', '.S.', '.S.'],
-    art: ['.hhhhh..', 'd...sd..', '...s.h..', '..s..d..', '.s......', 's.......', '........', '........'] },
-  axe: { name: 'balta', damage: [3, 3], pattern: ['MM', 'MS', '.S'],
-    art: ['...hh...', '..hhhh..', '..hdsh..', '...sd...', '..s.....', '.s......', 's.......', '........'] },
-  shovel: { name: 'kürek', damage: [2, 2], pattern: ['M', 'S', 'S'],
-    art: ['.....hh.', '....hhhh', '.....hdh', '....s.h.', '...s....', '..s.....', '.s......', 's.......'] },
-  sword: { name: 'kılıç', damage: [4, 5], pattern: ['M', 'M', 'S'],
-    art: ['.......h', '......hd', '.....hd.', '....hd..', '.s.hd...', '..sd....', '.s.s....', 's.......'] },
+  pickaxe: { name: 'kazma', damage: [2, 3], pattern: ['MMM', '.S.', '.S.'] },
+  axe: { name: 'balta', damage: [3, 3], pattern: ['MM', 'MS', '.S'] },
+  shovel: { name: 'kürek', damage: [2, 2], pattern: ['M', 'S', 'S'] },
+  sword: { name: 'kılıç', damage: [4, 5], pattern: ['M', 'M', 'S'] },
 };
 for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) Object.entries(TOOL_KINDS).forEach(([kindKey, kind]) => {
-  const c = document.createElement('canvas'); c.width = c.height = 16;
-  const ic = c.getContext('2d');
-  const palette = { h: tier.head, d: tier.dark, s: '#6b4a2b' };
-  kind.art.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
   ITEMS[`${tierKey}_${kindKey}`] = {
-    name: `${tier.name} ${kind.name}`, canvas: c, tool: kindKey, speed: tier.speed,
+    name: `${tier.name} ${kind.name}`, canvas: drawTool(kindKey, tier.head, tier.dark), tool: kindKey, speed: tier.speed,
     durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1], tier: tier.tier,
   };
 });
 // Demir kazma (yalnızca kazma; obsidyeni kırabilen tek alet)
-ITEMS.iron_pickaxe = (() => {
-  const c = document.createElement('canvas'); c.width = c.height = 16;
-  const ic = c.getContext('2d'), palette = { h: '#e2e2e2', d: '#a8a8a8', s: '#6b4a2b' };
-  TOOL_KINDS.pickaxe.art.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
-  return { name: 'Demir kazma', canvas: c, tool: 'pickaxe', speed: 6, durability: 250, damage: 4, tier: 3 };
-})();
+ITEMS.iron_pickaxe = { name: 'Demir kazma', canvas: drawTool('pickaxe', '#f0f0f0', '#b4b4b4'), tool: 'pickaxe', speed: 6, durability: 250, damage: 4, tier: 3 };
+ITEMS.wooden_hoe = { name: 'Tahta çapa', canvas: drawTool('hoe', TOOL_TIERS.wooden.head, TOOL_TIERS.wooden.dark), tool: 'hoe', tier: 1, speed: 1, durability: 60, damage: 1 };
 // Yemekler: doldurduğu açlık puanı
 Object.assign(ITEMS.raw_beef, { food: 3 });
 Object.assign(ITEMS.raw_pork, { food: 3 });
@@ -82,14 +120,29 @@ Object.assign(ITEMS.rotten_flesh, { food: 2 });
 Object.assign(ITEMS.apple, { food: 4 });
 Object.assign(ITEMS.bread, { food: 5 });
 Object.assign(ITEMS.flint_and_steel, { durability: 64 });
-Object.assign(ITEMS.wooden_hoe, { tool: 'hoe', tier: 1, speed: 1, durability: 60, damage: 1 });
 ITEMS.furnace_lit.hidden = true; // yalnızca dünyada; kırılınca fırın düşer
 const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};
 
 // HUD'da kullanılacak simge (data URL)
+// Bloklar Minecraft envanterindeki gibi izometrik küp olarak çizilir: üst yüz en açık, sol yüz biraz, sağ yüz daha koyu.
+function blockIcon(def) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  const face = (tile, a, b, cc, d, e, f, shadow) => {
+    g.setTransform(a, b, cc, d, e, f);
+    g.drawImage(atlas, tile * T, 0, T, T, 0, 0, T, T);
+    if (shadow) { g.fillStyle = `rgba(0, 0, 0, ${shadow})`; g.fillRect(0, 0, T, T); }
+  };
+  // Köşeler: üst (32, 2), sağ (62, 17), alt (32, 32), sol (2, 17); yan yüzler 30 piksel aşağı iner.
+  face(def.top, 30 / 16, 15 / 16, -30 / 16, 15 / 16, 32, 2, 0);
+  face(def.side, 30 / 16, 15 / 16, 0, 30 / 16, 2, 17, 0.25);
+  face(def.side, 30 / 16, -15 / 16, 0, 30 / 16, 32, 32, 0.45);
+  return c.toDataURL();
+}
 const iconCache = {};
 function itemIcon(key) {
-  if (!iconCache[key]) iconCache[key] = ITEMS[key].block ? tileImage(BLOCKS[ITEMS[key].block].side) : ITEMS[key].canvas.toDataURL();
+  if (!iconCache[key]) iconCache[key] = ITEMS[key].block ? blockIcon(BLOCKS[ITEMS[key].block]) : ITEMS[key].canvas.toDataURL();
   return iconCache[key];
 }
 
@@ -168,3 +221,5 @@ function renderDrops() {
   }
 }
 Object.assign(window.game, { drops, dropItem });
+
+Object.assign(window.game, { itemIcon });

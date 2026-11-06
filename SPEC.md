@@ -45,6 +45,7 @@ tests/              otomatik testler
    | `low-health` | Can 4 ve altındayken ekran kenarını koyu kırmızıya karartan katman |
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
+   | `tooltip` | Yuvanın üzerine gelince eşya adını gösteren Minecraft ipucu kutusu |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
    | `overlay` | Başlangıç / duraklatma menüsü. `#menu-main`: tuş listesi (`.keys`), "Oyna" / oyun başladıktan sonra "Devam et" (`#play`, kayıt okunana kadar pasif), "Ayarlar" (`#open-settings`), "Kaydet" (`#save-now`, oyun başladıktan sonra), "Yeni dünya" (`#reset`, kırmızı), kayıt durumu (`#save-note`). `#menu-settings`: ayar denetimleri ve "Geri" |
    | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
@@ -380,14 +381,15 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `charcoal` | Odun kömürü |
   | `iron_ingot` | Demir külçe |
 
-- **`itemIcon(key)`:** HUD için data URL (bloklarda yan doku).
+- **Simgeler (Minecraft üslubu):** `itemIcon(key)` HUD için data URL üretir. Bloklar izometrik küp olarak çizilir (`blockIcon`: atlas dokularından üst, sol ve sağ yüz; yanlar gölgeli). Diğer eşyalar 16×16'dır ve `outlineIcon` ile koyu kenar alır; aletler `drawTool(kind, head, dark)` ile çapraz sap ve türüne göre baş olarak çizilir.
+- **Görünüm:** Hotbar, envanter, üretim ve fırın Minecraft gibidir (bkz. AGENTS.md "Görsel"): gri kabartmalı panel, çukur yuvalar, piksel yazı tipi (`--mc-font`). Yuvanın üzerine gelince eşya adı `#tooltip` ipucu kutusunda görünür (`dataset.name`).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok. Creeper patlayınca bir şey düşmez.
 - **Yerdeki eşya** (`drops`): `{ key, x, y, z, w: 0.125, h: 0.25, vx, vy, vz, age, mesh }`. Bloklar 0,25'lik küp (atlas dokusuyla, gece kararır), diğerleri 0,4'lük çift yüzlü düz simge. Hafif bir sıçrayışla düşer, yerde sürtünmeyle durur, döner ve hafifçe inip kalkar. `ITEM_LIFETIME = 300` sn sonra kaybolur. Kaydedilmez.
 - **Toplama:** Oyuncunun gövde merkezine `PICKUP_RANGE = 1.5` bloktan yakınsa ona doğru 6 blok/sn çekilir, 0,6 bloktan yakında envantere eklenir (`addItem`) ve "+1 Ad" bildirimi çıkar. Envantere sığmazsa yerde kalır. `pickupDelay` dolmadan toplanmaz (Q ile atılan ya da envanter kapanınca sığmayan eşyalar için 1,5 sn).
 
 ## Envanter
 
-- `inventory`: 36 yuva; 0–8 hotbar, 9–35 çanta. Yuva `{ key, count }` ya da `null`. Yığın sınırı `maxStack(key)`: aletler (`ITEMS[key].tool`) 1, diğerleri 64.
+- `inventory`: 36 yuva; 0–8 hotbar, 9–35 çanta. Yuva `{ key, count }` ya da `null`. Yığın sınırı `maxStack(key)`: aletler ve dayanıklılığı olan eşyalar (çakmak) 1, diğerleri 64.
 - Yeni oyuncu boş envanterle başlar; blok koymak için önce kazmak gerekir.
 - **`addItem(key, count)`:** önce aynı türdeki dolmamış yuvalara, sonra ilk boş yuvaya koyar (hotbar önce); sığmayan adedi döndürür.
 - **Blok koyma:** seçili yuvada blok eşyası varsa konur ve adet 1 azalır; 0 olunca yuva boşalır.
@@ -557,3 +559,6 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 42 | Sonsuz dünya | Yapılmadı |
 | 43 | Köyler ve köylü ticareti | Yapılmadı |
 | 44 | Nether kalesi ve blaze | Yapılmadı |
+| 45 | Sohbet ve komutlar | Yapılmadı |
+| 46 | Adım adım rehber | Yapılmadı |
+| 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |

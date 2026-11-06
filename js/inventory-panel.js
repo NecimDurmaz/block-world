@@ -4,7 +4,7 @@
 const paintSlot = (el, s) => {
   el.style.backgroundImage = s ? `url(${itemIcon(s.key)})` : 'none';
   el.querySelector('.count').textContent = s && s.count > 1 ? s.count : '';
-  el.title = s ? ITEMS[s.key].name : '';
+  el.dataset.name = s ? ITEMS[s.key].name : '';
   // Aşınmış aletin dayanıklılık çubuğu: yeşilden kırmızıya
   const bar = el.querySelector('.dur'), max = s && ITEMS[s.key].durability;
   const worn = max && s.durability < max;
@@ -73,8 +73,21 @@ function closeInventory() {
   inventoryOpen = false;
   openFurnaceKey = null;
   invEl.hidden = true;
+  tooltipEl.hidden = true;
   renderInventory();
   if (!fallbackLook) {
     try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
   }
 }
+
+// Minecraft gibi: fare dolu bir yuvanın üstündeyken eşyanın adı imlecin yanında görünür (elde eşya yokken).
+const tooltipEl = document.getElementById('tooltip');
+document.addEventListener('mousemove', e => {
+  const slot = e.target.closest?.('.inv-slot, .slot');
+  const name = slot?.dataset.name;
+  tooltipEl.hidden = !name || !!held;
+  if (tooltipEl.hidden) return;
+  tooltipEl.textContent = name;
+  tooltipEl.style.left = e.clientX + 14 + 'px';
+  tooltipEl.style.top = e.clientY - 28 + 'px';
+});

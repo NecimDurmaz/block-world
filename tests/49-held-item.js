@@ -20,6 +20,6 @@ press('Digit4'); await wait(100);
 const pick = g.heldView();
 press('Digit5'); await wait(100);
 const empty = g.heldView();
-const ok = dirt.cube && !dirt.icon && coal.icon && !coal.cube && poppy.icon && pick.icon && !empty.cube && !empty.icon;
+const ok = dirt.cube === true && dirt.icon === false && coal.icon === true && coal.cube === false && poppy.icon && pick.icon && !empty.cube && !empty.icon;
 press('Digit1'); await wait(300);
 return { ok, dirt, coal, poppy, pick, empty };

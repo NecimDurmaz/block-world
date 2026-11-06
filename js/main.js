@@ -80,6 +80,7 @@ function frame(now) {
       updateAnimalSpawning(dt);
       updateHostileSpawning(dt);
     } else updateNetherSpawning(dt);
+    updateBow(dt);
     updateProjectiles(dt);
     updateParticles(dt);
     updateDrops(dt);
@@ -131,7 +132,8 @@ function frame(now) {
     camera.position.copy(eye).addScaledVector(dir, dist);
     camera.lookAt(eye);
   }
-  const fov = settings.fov + ((sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 10 : 0);
+  // Koşarken genişler, yay gerilirken daralır
+  const fov = settings.fov + ((sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 10 : 0) - bowCharge * 10;
   if (Math.abs(camera.fov - fov) > 0.1) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); }
 
   // Model ve yürüme animasyonu
@@ -149,8 +151,11 @@ function frame(now) {
   head.rotation.x = p.pitch;
   legR.rotation.x = swing; legL.rotation.x = -swing;
   armL.rotation.x = swing - crouch * 0.4; armR.rotation.x = -swing + pk * 1.4 - crouch * 0.4;
+  // Yay gerilirken iki kol öne uzanır
+  if (bowCharge > 0) armL.rotation.x = armR.rotation.x = Math.PI / 2 + p.pitch;
 
-  fpArm.position.set(0.45 + Math.sin(walkPhase) * 0.03 * walkAmp, -0.42 + Math.abs(Math.cos(walkPhase)) * 0.03 * walkAmp + pk * 0.12, -0.75 - pk * 0.25);
+  // Yay gerilirken kol geri çekilir
+  fpArm.position.set(0.45 + Math.sin(walkPhase) * 0.03 * walkAmp, -0.42 + Math.abs(Math.cos(walkPhase)) * 0.03 * walkAmp + pk * 0.12, -0.75 - pk * 0.25 + bowCharge * 0.25);
   fpArm.rotation.set(1.75 + pk * 0.4, 0.35, 0);
 
   document.getElementById('crosshair').hidden = view === 2;

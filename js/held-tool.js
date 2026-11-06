@@ -39,7 +39,7 @@ armR.add(tpBlock);
 // Çapraz modelli bloklar (bitkiler) ve küpü olmayan bloklar düz simge olarak tutulur.
 const heldAsCube = s => {
   const id = ITEMS[s.key].block;
-  return id && !BLOCKS[id].model && !isTorch(id);
+  return !!id && !BLOCKS[id].model && !isTorch(id);
 };
 function heldTexture(s) {
   if (!toolTextures[s.key]) {

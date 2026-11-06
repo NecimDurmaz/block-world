@@ -96,7 +96,7 @@ canvas.addEventListener('mousedown', e => {
   if (!playing || inventoryOpen || chatOpen || controlOpen) return;
   if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
   if (e.button === 0) { mining = true; attackMob(); }
-  else if (e.button === 2) { using = true; if (!heldFood()) placeBlock(); }
+  else if (e.button === 2) { using = true; if (!heldFood() && !heldBow()) placeBlock(); }
 });
 window.addEventListener('mouseup', e => {
   if (e.button === 0) mining = false;

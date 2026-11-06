@@ -31,6 +31,7 @@ const ITEM_ART = {
   charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
   apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
   diamond: ['Elmas', { c: '#6ff0e0', d: '#2bb5a8', w: '#e8fffc' }, ['........', '..cccc..', '.cwcccc.', 'cwccccdc', '.cccccd.', '..cccd..', '...cd...', '........']],
+  string: ['İp', { w: '#f0f0f0' }, ['........', '.w......', '..w.....', '..w.....', '...w....', '...ww...', '.....w..', '......w.']],
   coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
 };
 // Minecraft simgelerindeki koyu kenar: dolu bir komşusu olan saydam pikseller o komşunun koyu tonuyla boyanır.

@@ -1,7 +1,8 @@
 // ---------- Oklar ----------
-// İskelet okları.
+// İskelet ve oyuncu okları (oyuncu okları bow.js'te atılır).
 
-// 20 blok/sn, hafif yerçekimi. Oyuncuya değerse 3 hasar; bloğa değerse 3 sn takılı kalıp kaybolur.
+// İskelet oku: 20 blok/sn, hafif yerçekimi. Oyuncuya değerse 3 hasar; bloğa değerse 3 sn takılı kalıp kaybolur.
+// Oyuncu oku (fromPlayer): kendi yerçekimi, canlıya hasar; saplanınca 60 sn kalır ve geri toplanabilir.
 const ARROW_SPEED = 20, ARROW_GRAVITY = 6, ARROW_DAMAGE = 3, SKELETON_SHOT_INTERVAL = 2;
 const projectiles = [];
 const arrowMaterials = {
@@ -31,12 +32,14 @@ function updateProjectiles(dt) {
   for (const a of [...projectiles]) {
     a.life -= dt;
     if (a.fireball) updateFireball(a, dt);
-    else if (!a.stuck) {
+    else if (a.stuck) { if (a.fromPlayer) pickUpArrow(a); }
+    else {
       const steps = 4;
       for (let i = 0; i < steps; i++) {
-        a.vy -= ARROW_GRAVITY * dt / steps;
+        a.vy -= (a.gravity || ARROW_GRAVITY) * dt / steps;
         a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;
-        if (isSolid(get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { a.stuck = true; a.life = 3; break; }
+        if (isSolid(get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { a.stuck = true; a.life = a.fromPlayer ? STUCK_ARROW_LIFE : 3; break; }
+        if (a.fromPlayer) { if (arrowHitsMob(a)) break; continue; }
         const p = player;
         if (!dead && a.x > p.x - p.w && a.x < p.x + p.w && a.y > p.y && a.y < p.y + p.h && a.z > p.z - p.w && a.z < p.z + p.w) {
           damagePlayer(ARROW_DAMAGE, a.x - a.vx, a.z - a.vz);

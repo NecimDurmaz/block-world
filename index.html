@@ -46,6 +46,12 @@
   .craft-grid { display: grid; grid-template-columns: repeat(3, 40px); gap: 4px; }
   .craft-grid.small { grid-template-columns: repeat(2, 40px); }
   .craft-arrow { font-size: 24px; color: var(--ew-text-muted); }
+  .furnace { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--ew-border); }
+  .furnace-col { display: grid; gap: 4px; justify-items: center; }
+  .flame { width: 14px; height: 14px; background: #e5e8ec; display: flex; align-items: flex-end; border-radius: 2px; }
+  .flame i { display: block; width: 100%; background: #e8601c; }
+  .progress { width: 56px; height: 10px; background: #e5e8ec; border-radius: 2px; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--ew-primary); }
   .inv-slot { width: 40px; height: 40px; box-sizing: border-box; background: #eceef4 center / 30px no-repeat; image-rendering: pixelated; border: 1px solid #c6cddd; border-radius: var(--ew-radius-btn); position: relative; cursor: pointer; }
   .inv-slot:hover { border-color: var(--ew-primary); }
   .dur { position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; background: #212121; display: none; }
@@ -93,7 +99,16 @@
 <div id="inventory" hidden>
   <div class="panel inv-panel">
     <h2 id="inv-title">Envanter</h2>
-    <div class="craft">
+    <div class="furnace" id="furnace-ui" hidden>
+      <div class="furnace-col">
+        <div class="inv-slot" id="furnace-input"><span class="count"></span><span class="dur"></span></div>
+        <div class="flame"><i id="furnace-flame"></i></div>
+        <div class="inv-slot" id="furnace-fuel"><span class="count"></span><span class="dur"></span></div>
+      </div>
+      <div class="progress"><i id="furnace-progress"></i></div>
+      <div class="inv-slot" id="furnace-output"><span class="count"></span><span class="dur"></span></div>
+    </div>
+    <div class="craft" id="craft-ui">
       <div class="craft-grid" id="craft-grid"></div>
       <span class="craft-arrow">→</span>
       <div class="inv-slot" id="craft-result"><span class="count"></span><span class="dur"></span></div>
@@ -140,10 +155,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 17;
+  const T = 16, N_TILES = 19;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18,
   };
 
   function mulberry32(a) {
@@ -216,6 +231,15 @@
     px(TILE.furnaceTop, x, y, base);
     const mouth = x >= 4 && x <= 11 && y >= 8 && y <= 13;
     px(TILE.furnaceFront, x, y, mouth ? shade([30, 28, 28], 0.8 + rnd() * 0.4) : y === 3 ? shade([80, 80, 80], 1) : base);
+    // Yanan fırın: ağızda turuncu-sarı alev
+    const flame = mouth && (y >= 11 || rnd() < 0.45);
+    px(TILE.furnaceLit, x, y, flame ? (rnd() < 0.5 ? '#ffb02a' : '#e8601c') : mouth ? shade([60, 30, 20], 1) : y === 3 ? shade([80, 80, 80], 1) : base);
+  }
+  // Cam: açık gri çerçeve, içi açık mavi-beyaz (saydamlık madde 24'te)
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const edge = x === 0 || y === 0 || x === 15 || y === 15;
+    const glint = (x === y + 3 || x === y + 4) && x > 4 && x < 12;
+    px(TILE.glass, x, y, edge ? '#d8dee6' : glint ? '#ffffff' : '#c4dbe8');
   }
   // Kumtaşı
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
@@ -249,8 +273,10 @@
     // Fırının her yanında ağız var (bloklar yön tutmuyor).
     { name: 'Fırın', top: TILE.furnaceTop, side: TILE.furnaceFront, bottom: TILE.furnaceTop, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
     { name: 'Kumtaşı', top: TILE.sandstoneTop, side: TILE.sandstoneSide, bottom: TILE.sandstoneTop, breakTime: 4, tool: 'pickaxe', needsTool: true },
+    { name: 'Fırın', top: TILE.furnaceTop, side: TILE.furnaceLit, bottom: TILE.furnaceTop, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'furnace' },
+    { name: 'Cam', top: TILE.glass, side: TILE.glass, bottom: TILE.glass, breakTime: 0.5 },
   ];
-  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12 };
+  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14 };
 
   // ---------- Dünya üretimi ----------
   const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
@@ -700,6 +726,7 @@
     // Yaprak %10 olasılıkla düşer; alet isteyen bloklar doğru alet olmadan kırılınca düşmez.
     const def = BLOCKS[broken], tool = selectedTool();
     if (tool) useTool();
+    if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
     if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool)) return;
     if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
     if (broken === B.leaves && Math.random() < 0.05) dropItem('apple', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
@@ -762,6 +789,10 @@
     if (!hit) return;
     // Çalışma masasına sağ tık 3x3 üretim ızgarasını açar.
     if (get(hit.x, hit.y, hit.z) === B.crafting_table && !targetedMob(hit)) { openInventory(3); return; }
+    if ((get(hit.x, hit.y, hit.z) === B.furnace || get(hit.x, hit.y, hit.z) === B.furnace_lit) && !targetedMob(hit)) {
+      openFurnace(hit.x, hit.y, hit.z);
+      return;
+    }
     const { px: x, py: y, pz: z } = hit;
     if (!inBounds(x, y, z) || get(x, y, z) !== AIR) return;
     const p = player;
@@ -1482,6 +1513,10 @@
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
     torch: ['Meşale', { b: '#6b4a2b', y: '#ffd23a', o: '#ff8a1f' }, ['...yy...', '..yooy..', '...oo...', '...bb...', '...bb...', '...bb...', '...bb...', '........']],
+    cooked_beef: ['Pişmiş biftek', { r: '#7a3e22', w: '#c08a5a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
+    cooked_pork: ['Pişmiş domuz eti', { r: '#b8704a', w: '#e8b88a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
+    cooked_chicken: ['Pişmiş tavuk', { p: '#c8823e', w: '#f4f4f0' }, ['....pppp', '...ppppp', '..pppppp', '.ppppp..', '.pppp...', 'wpp.....', 'ww......', 'w.......']],
+    charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
     apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
     coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
   };
@@ -1521,8 +1556,12 @@
   Object.assign(ITEMS.raw_beef, { food: 3 });
   Object.assign(ITEMS.raw_pork, { food: 3 });
   Object.assign(ITEMS.raw_chicken, { food: 2 });
+  Object.assign(ITEMS.cooked_beef, { food: 8 });
+  Object.assign(ITEMS.cooked_pork, { food: 8 });
+  Object.assign(ITEMS.cooked_chicken, { food: 6 });
   Object.assign(ITEMS.rotten_flesh, { food: 2 });
   Object.assign(ITEMS.apple, { food: 4 });
+  ITEMS.furnace_lit.hidden = true; // yalnızca dünyada; kırılınca fırın düşer
   const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};
 
   // HUD'da kullanılacak simge (data URL)
@@ -1675,6 +1714,7 @@
     { pattern: ['P', 'P'], keys: { P: 'planks' }, out: ['stick', 4] },
     { pattern: ['PP', 'PP'], keys: { P: 'planks' }, out: ['crafting_table', 1] },
     { pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, out: ['torch', 4] },
+    { pattern: ['C', 'S'], keys: { C: 'charcoal', S: 'stick' }, out: ['torch', 4] },
     { pattern: ['CCC', 'C.C', 'CCC'], keys: { C: 'cobble' }, out: ['furnace', 1] },
     { pattern: ['SS', 'SS'], keys: { S: 'sand' }, out: ['sandstone', 1] },
   ];
@@ -1735,6 +1775,7 @@
     const result = craftResult();
     paintSlot(resultEl, result);
     if (result) resultEl.querySelector('.count').textContent = result.count > 1 ? result.count : '';
+    renderFurnace();
     updateHeldTool();
     paintSlot(heldEl, held);
     heldEl.hidden = !held;
@@ -1775,6 +1816,9 @@
   // size: 2 envanterde, 3 çalışma masasında
   function openInventory(size = 2) {
     craftSize = size;
+    openFurnaceKey = null;
+    document.getElementById('furnace-ui').hidden = true;
+    document.getElementById('craft-ui').hidden = false;
     document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';
     document.getElementById('craft-grid').classList.toggle('small', size === 2);
     craftSlotEls.forEach((el, i) => { el.hidden = i % 3 >= size || i >= size * 3; });
@@ -1794,12 +1838,90 @@
     // Izgarada kalanlar envantere döner.
     for (let i = 0; i < 9; i++) if (craftGrid[i]) { giveOrDrop(craftGrid[i]); craftGrid[i] = null; }
     inventoryOpen = false;
+    openFurnaceKey = null;
     invEl.hidden = true;
     renderInventory();
     if (!fallbackLook) {
       try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
     }
   }
+  // ---------- Fırın ----------
+  // Her fırın kendi yuvalarını tutar: [girdi, yakıt, çıktı]. Panel kapalıyken de pişirir. Kayda yazılır.
+  const SMELT_TIME = 5;
+  const SMELTING = { raw_beef: 'cooked_beef', raw_pork: 'cooked_pork', raw_chicken: 'cooked_chicken', sand: 'glass', cobble: 'stone', log: 'charcoal' };
+  // Yakıt: kaç eşya pişirir
+  const FUEL = { coal: 8, charcoal: 8, log: 1.5, planks: 1.5 };
+  const furnaces = {};
+  let openFurnaceKey = null;
+  const furnaceKey = (x, y, z) => x + ',' + y + ',' + z;
+  const getFurnace = (x, y, z) => furnaces[furnaceKey(x, y, z)] ??= { x, y, z, slots: [null, null, null], burn: 0, burnMax: 0, progress: 0 };
+  function openFurnace(x, y, z) {
+    openInventory(2);
+    openFurnaceKey = furnaceKey(x, y, z);
+    getFurnace(x, y, z);
+    document.getElementById('inv-title').textContent = 'Fırın';
+    document.getElementById('furnace-ui').hidden = false;
+    document.getElementById('craft-ui').hidden = true;
+    renderFurnace();
+  }
+  function removeFurnace(x, y, z) {
+    const f = furnaces[furnaceKey(x, y, z)];
+    if (!f) return;
+    for (const st of f.slots) if (st) for (let n = 0; n < st.count; n++) dropItem(st.key, x + 0.5, y + 0.5, z + 0.5);
+    delete furnaces[furnaceKey(x, y, z)];
+  }
+  // Girdi (0) ve yakıt (1) envanter gibi tıklanır; çıktıdan (2) yalnızca alınır.
+  function clickFurnace(i, right) {
+    const f = furnaces[openFurnaceKey];
+    if (!f) return;
+    if (i < 2) return clickIn(f.slots, i, right);
+    const out = f.slots[2];
+    if (!out || (held && (held.key !== out.key || held.count + out.count > maxStack(out.key)))) return;
+    held = held ? { ...held, count: held.count + out.count } : { ...out };
+    f.slots[2] = null;
+    renderInventory();
+  }
+  function updateFurnaces(dt) {
+    for (const f of Object.values(furnaces)) {
+      const [input, fuel, output] = f.slots;
+      const result = input && SMELTING[input.key];
+      const canSmelt = result && (!output || (output.key === result && output.count < maxStack(result)));
+      if (f.burn <= 0 && canSmelt && fuel && FUEL[fuel.key]) {
+        f.burn = f.burnMax = FUEL[fuel.key] * SMELT_TIME;
+        fuel.count--;
+        if (!fuel.count) f.slots[1] = null;
+      }
+      if (f.burn > 0) {
+        f.burn = Math.max(0, f.burn - dt);
+        f.progress = canSmelt ? f.progress + dt : 0;
+        if (f.progress >= SMELT_TIME) {
+          f.progress = 0;
+          input.count--;
+          if (!input.count) f.slots[0] = null;
+          f.slots[2] = output ? { ...output, count: output.count + 1 } : { key: result, count: 1 };
+        }
+      } else f.progress = 0;
+      // Yanarken blok ışıklı dokuya geçer.
+      const block = get(f.x, f.y, f.z);
+      const want = f.burn > 0 ? B.furnace_lit : B.furnace;
+      if (block !== B.furnace && block !== B.furnace_lit) { delete furnaces[furnaceKey(f.x, f.y, f.z)]; continue; }
+      if (block !== want) { set(f.x, f.y, f.z, want); rebuildAround(f.x, f.z); }
+    }
+    if (openFurnaceKey) renderFurnace();
+  }
+  const furnaceEls = ['furnace-input', 'furnace-fuel', 'furnace-output'].map(id => document.getElementById(id));
+  furnaceEls.forEach((el, i) => {
+    el.addEventListener('mousedown', e => { e.preventDefault(); clickFurnace(i, e.button === 2); });
+    el.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  function renderFurnace() {
+    const f = furnaces[openFurnaceKey];
+    if (!f) return;
+    furnaceEls.forEach((el, i) => paintSlot(el, f.slots[i]));
+    document.getElementById('furnace-progress').style.width = (f.progress / SMELT_TIME * 100) + '%';
+    document.getElementById('furnace-flame').style.height = (f.burnMax ? f.burn / f.burnMax * 100 : 0) + '%';
+  }
+
   // ---------- Elde alet ----------
   const selectedTool = () => inventory[selected] && ITEMS[inventory[selected].key].tool ? inventory[selected] : null;
   // Alet her kırma ve vuruşta 1 aşınır; bitince kırılır.
@@ -1837,6 +1959,7 @@
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
+  Object.assign(window.game, { furnaces, openFurnace, clickFurnace });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -1874,6 +1997,7 @@
         player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
         health: player.health,
         food: player.food,
+        furnaces: Object.values(furnaces).map(f => ({ ...f, slots: f.slots.map(st => st && { ...st }) })),
         selected,
         inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
         time: clock.time,
@@ -1892,6 +2016,7 @@
     Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
     player.health = save.health > 0 ? save.health : MAX_HEALTH;
     player.food = save.food ?? MAX_FOOD;
+    for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
     renderHearts();
     renderFood();
     // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
@@ -1975,6 +2100,7 @@
       updateProjectiles(dt);
       updateParticles(dt);
       updateDrops(dt);
+      updateFurnaces(dt);
     }
     for (const m of mobs) renderMob(m);
     renderDrops();

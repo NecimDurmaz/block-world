@@ -67,6 +67,7 @@
           <button class="mc-btn toggle" type="button" data-toggle="safe"><b>Güvenli mod</b><small>Canavarlar dolaşır, saldırmaz</small><i class="state"></i></button>
           <button class="mc-btn toggle" type="button" data-toggle="god"><b>Ölümsüzlük</b><small>Can ve açlık azalmaz</small><i class="state"></i></button>
           <button class="mc-btn toggle" type="button" data-toggle="fly"><b>Uçma</b><small>İki kez boşluk: uç / in</small><i class="state"></i></button>
+          <button class="mc-btn toggle" type="button" data-toggle="guide"><b>Rehber</b><small>Adım adım görevler (H)</small><i class="state"></i></button>
           <button class="mc-btn toggle" type="button" data-toggle="sound"><b>Ses</b><small>Efektler ve canlı sesleri</small><i class="state"></i></button>
         </div>
       </section>
@@ -108,6 +109,12 @@
     </div>
   </div>
 </div>
+<div id="guide" hidden>
+  <div class="guide-head"><span id="guide-count"></span><span class="guide-key">H: gizle</span></div>
+  <h3 id="guide-title"></h3>
+  <p id="guide-text"></p>
+  <p id="guide-hint"></p>
+</div>
 <div id="tooltip" hidden></div>
 <div id="chat">
   <div id="chat-log"></div>
@@ -140,6 +147,7 @@
       <kbd>Sağ tık (basılı)</kbd><span>Eldeki yemeği ye</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
       <kbd>K</kbd><span>Kontrol paneli: güvenli mod, saat, eşyalar…</span>
+      <kbd>H</kbd><span>Rehberi gizle / göster</span>
       <kbd>T</kbd><span>Sohbet</span>
       <kbd>/</kbd><span>Komut yaz (/help)</span>
       <kbd>Esc</kbd><span>Duraklat</span>
@@ -163,6 +171,7 @@
     </label>
     <label class="check" for="set-sound"><input id="set-sound" type="checkbox"> Ses</label>
     <label class="check" for="set-invert"><input id="set-invert" type="checkbox"> Y eksenini ters çevir</label>
+    <label class="check" for="set-guide"><input id="set-guide" type="checkbox"> Rehber (adım adım görevler)</label>
     <button id="settings-back" class="primary" type="button">Geri</button>
   </div>
 </div>
@@ -210,6 +219,7 @@
 <script src="js/game-actions.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/item-picker.js"></script>
+<script src="js/guide.js"></script>
 <script src="js/control-panel.js"></script>
 <script src="js/nether.js"></script>
 <script src="js/fluids.js"></script>

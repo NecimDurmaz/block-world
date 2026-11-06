@@ -238,6 +238,7 @@ function placeBlock() {
   if (!slot || !ITEMS[slot.key].block) return;
   if (mobs.some(m => x < m.x + m.w && x + 1 > m.x - m.w && y < m.y + m.h && y + 1 > m.y && z < m.z + m.w && z + 1 > m.z - m.w)) return;
   set(x, y, z, ITEMS[slot.key].block);
+  if (slot.key === 'crafting_table') guideFlags.table = true;
   blockSound(ITEMS[slot.key].block, 'place');
   rebuildAround(x, z);
   takeFromSlot(selected, 1);

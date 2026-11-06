@@ -99,6 +99,7 @@ function frame(now) {
       updateHostileSpawning(dt);
     } else updateNetherSpawning(dt);
     updateBlazeSpawners(dt);
+    updateGuide(dt);
     updateBow(dt);
     updateProjectiles(dt);
     updateParticles(dt);

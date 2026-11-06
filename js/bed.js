@@ -27,6 +27,7 @@ function useBed(x, y, z) {
     return;
   }
   sleepTimer = SLEEP_TIME;
+  guideFlags.slept = true;
   sleepEl.style.opacity = 1;
 }
 function updateSleep(dt) {

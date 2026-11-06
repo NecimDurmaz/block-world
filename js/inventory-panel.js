@@ -65,6 +65,7 @@ function openInventory(size = 2) {
   document.getElementById('armor-ui').hidden = size !== 2;
   craftSlotEls.forEach((el, i) => { el.hidden = i % 3 >= size || i >= size * 3; });
   inventoryOpen = true;
+  guideFlags.inventory = true;
   for (const k in keys) keys[k] = false;
   invEl.hidden = false;
   renderInventory();

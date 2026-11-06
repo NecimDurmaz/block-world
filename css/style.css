@@ -153,3 +153,11 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 .trade-row { display: flex; align-items: center; gap: 10px; }
 .trade-row .mc-btn { margin-left: auto; }
 .trade-row.poor .mc-btn { color: #a0a0a0; }
+/* Rehber kartı: Minecraft'taki ilerleme bildirimi gibi koyu kutu, sarı başlık */
+#guide { position: fixed; top: max(10px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: min(320px, calc(100vw - 20px)); box-sizing: border-box; padding: 10px 12px; background: rgba(16, 16, 24, 0.82); border: 2px solid #5a5a5a; box-shadow: inset 0 0 0 2px #1e1e2a; color: #fff; font: 15px var(--mc-font); pointer-events: none; display: grid; gap: 4px; transition: border-color 0.2s; }
+#guide.done { border-color: #55ff55; }
+.guide-head { display: flex; justify-content: space-between; color: #aaaaaa; font-size: 13px; }
+#guide h3 { margin: 0; font: 600 17px var(--mc-font); color: #ffff55; text-shadow: 2px 2px 0 #3f3f00; }
+#guide p { margin: 0; line-height: 1.3; text-shadow: 1px 1px 0 #3f3f3f; }
+#guide-hint { color: #8fd8ff; font-size: 13px; }
+#guide-hint:empty { display: none; }

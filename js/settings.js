@@ -5,7 +5,7 @@
 const SETTINGS_KEY = 'settings';
 const VIEW_DISTANCES = { short: 40, normal: 70, far: 120 };
 const DEFAULT_SENSITIVITY = 0.0025;
-const settings = { sensitivity: DEFAULT_SENSITIVITY, fov: 75, viewDistance: 'normal', sound: true, invertY: false };
+const settings = { sensitivity: DEFAULT_SENSITIVITY, fov: 75, viewDistance: 'normal', sound: true, invertY: false, guide: true };
 
 const menuMain = document.getElementById('menu-main');
 const menuSettings = document.getElementById('menu-settings');
@@ -15,16 +15,18 @@ const settingInputs = {
   viewDistance: document.getElementById('set-view'),
   sound: document.getElementById('set-sound'),
   invertY: document.getElementById('set-invert'),
+  guide: document.getElementById('set-guide'),
 };
 
 // Ayarları denetimlere ve oyuna yansıtır.
 function applySettings() {
-  const { sensitivity, fov, viewDistance, sound, invertY } = settingInputs;
+  const { sensitivity, fov, viewDistance, sound, invertY, guide } = settingInputs;
   sensitivity.value = settings.sensitivity;
   fov.value = settings.fov;
   viewDistance.value = settings.viewDistance;
   sound.checked = settings.sound;
   invertY.checked = settings.invertY;
+  guide.checked = settings.guide;
   document.getElementById('out-sensitivity').textContent = '%' + Math.round(settings.sensitivity / DEFAULT_SENSITIVITY * 100);
   document.getElementById('out-fov').textContent = settings.fov + '°';
   setSound(settings.sound);

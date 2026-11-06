@@ -59,6 +59,7 @@ function tryLightPortal(x, y, z) {
     for (const pos of interior) set(...pos, axis === 'x' ? B.portal_x : B.portal_z);
     rebuildAround(x, z);
     rebuildPortalMeshes();
+    guideFlags.portal = true;
     return true;
   }
   return false;

@@ -49,6 +49,7 @@ function updateHunger(dt, sprintingNow) {
       hunger.eating = 0;
       player.food = Math.min(MAX_FOOD, player.food + ITEMS[food.key].food);
       toast(ITEMS[food.key].name + ' yendi');
+      guideFlags.ate = true;
       takeFromSlot(selected, 1);
       renderFood();
     }

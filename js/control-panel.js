@@ -8,6 +8,7 @@ const TOGGLES = {
   safe: { on: () => safeMode, set: setSafeMode },
   god: { on: () => godMode, set: setGodMode },
   fly: { on: () => flyAllowed, set: setFlyAllowed },
+  guide: { on: () => settings.guide, set: on => setGuideShown(on) },
   sound: { on: () => settings.sound, set: on => { settings.sound = on; applySettings(); saveSettings(); return on ? 'Ses açık' : 'Ses kapalı'; } },
 };
 const tpInputs = ['x', 'y', 'z'].map(a => document.getElementById('tp-' + a));

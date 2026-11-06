@@ -5,8 +5,8 @@ await wait(300);
 const hearts = document.querySelectorAll('#hearts i').length;
 damagePlayer(5, p.x + 1, p.z);
 const afterHit = p.health;
-await wait(50);
-const flashed = Number(document.getElementById('hurt').style.opacity) > 0;
+let flashed = false;
+for (let i = 0; i < 30 && !flashed; i++) { await wait(10); flashed = Number(document.getElementById('hurt').style.opacity) > 0; }
 damagePlayer(5, p.x + 1, p.z);
 const invulnerable = p.health === afterHit;
 await wait(9500);

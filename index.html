@@ -47,6 +47,59 @@
     <div class="inv-grid inv-hotbar" id="inv-hotbar"></div>
   </div>
 </div>
+<div id="control" hidden>
+  <div class="mc-panel control-panel" role="dialog" aria-labelledby="control-title">
+    <div class="control-head">
+      <h2 id="control-title">Kontrol paneli</h2>
+      <button class="mc-btn control-close" id="control-close" type="button" title="Kapat (Esc)">Kapat</button>
+    </div>
+    <div class="control-body">
+      <section class="control-wide">
+        <h3>Oyun modu</h3>
+        <div class="control-toggles">
+          <button class="mc-btn toggle" type="button" data-toggle="safe"><b>Güvenli mod</b><small>Canavarlar dolaşır, saldırmaz</small><i class="state"></i></button>
+          <button class="mc-btn toggle" type="button" data-toggle="god"><b>Ölümsüzlük</b><small>Can ve açlık azalmaz</small><i class="state"></i></button>
+          <button class="mc-btn toggle" type="button" data-toggle="sound"><b>Ses</b><small>Efektler ve canlı sesleri</small><i class="state"></i></button>
+        </div>
+      </section>
+      <section>
+        <h3>Saat <span class="control-hint" id="control-clock"></span></h3>
+        <div class="control-buttons" id="control-times"></div>
+      </section>
+      <section>
+        <h3>Oyuncu</h3>
+        <div class="control-buttons">
+          <button class="mc-btn" type="button" data-action="heal">Canı doldur</button>
+          <button class="mc-btn" type="button" data-action="feed">Karnı doyur</button>
+          <button class="mc-btn" type="button" data-action="spawn">Doğma noktası burası</button>
+          <button class="mc-btn danger" type="button" data-action="clear">Envanteri boşalt</button>
+        </div>
+      </section>
+      <section>
+        <h3>Eşyalar</h3>
+        <div class="control-buttons">
+          <button class="mc-btn wide" type="button" data-action="items">Eşya seç ve al</button>
+        </div>
+      </section>
+      <section>
+        <h3>Işınlan</h3>
+        <div class="control-tp">
+          <label>X <input id="tp-x" type="number" step="1"></label>
+          <label>Y <input id="tp-y" type="number" step="1"></label>
+          <label>Z <input id="tp-z" type="number" step="1"></label>
+        </div>
+        <div class="control-buttons">
+          <button class="mc-btn" type="button" data-action="tp">Işınlan</button>
+          <button class="mc-btn" type="button" data-action="home">Doğma noktasına git</button>
+        </div>
+      </section>
+      <section class="control-wide">
+        <h3>Canlı çağır <span class="control-hint">önüne gelir</span></h3>
+        <div class="control-mobs" id="control-mobs"></div>
+      </section>
+    </div>
+  </div>
+</div>
 <div id="tooltip" hidden></div>
 <div id="chat">
   <div id="chat-log"></div>
@@ -76,6 +129,7 @@
       <kbd>Q</kbd><span>Seçili eşyadan birini at</span>
       <kbd>Sağ tık (basılı)</kbd><span>Eldeki yemeği ye</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
+      <kbd>K</kbd><span>Kontrol paneli: güvenli mod, saat, eşyalar…</span>
       <kbd>T</kbd><span>Sohbet</span>
       <kbd>/</kbd><span>Komut yaz (/help)</span>
       <kbd>Esc</kbd><span>Duraklat</span>
@@ -83,6 +137,7 @@
     <div class="actions">
       <button id="play" class="primary" type="button" disabled>Oyna</button>
       <button id="open-settings" class="secondary" type="button">Ayarlar</button>
+      <button id="open-control" class="secondary" type="button">Kontrol paneli</button>
       <button id="save-now" class="secondary" type="button" hidden>Kaydet</button>
       <button id="reset" class="secondary danger" type="button">Yeni dünya</button>
     </div>
@@ -136,8 +191,10 @@
 <script src="js/save.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/game-actions.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/item-picker.js"></script>
+<script src="js/control-panel.js"></script>
 <script src="js/nether.js"></script>
 <script src="js/main.js"></script>
 </body>

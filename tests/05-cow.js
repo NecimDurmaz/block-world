@@ -15,7 +15,8 @@ Object.assign(climber, { x: px + 4.5, y: py + 1, z: pz + 6.5, vx: 0, vy: 0, vz: 
 let maxY = climber.y;
 for (let i = 0; i < 60; i++) { maxY = Math.max(maxY, climber.y); await wait(100); }
 const moved = cows.slice(1).filter((m, i) => Math.hypot(m.x - start[i + 1][0], m.z - start[i + 1][1]) > 0.5).length;
-const insideBlock = cows.some(m => g.getBlock(Math.floor(m.x), Math.floor(m.y + 0.5), Math.floor(m.z)) !== 0);
+// Hava, su, uzun ot ve çiçekler içinden geçilebilir
+const insideBlock = cows.some(m => ![0, 17, 47, 48, 49].includes(g.getBlock(Math.floor(m.x), Math.floor(m.y + 0.5), Math.floor(m.z))));
 // Basamağın öbür tarafına geçtiyse üstüne çıkmış demektir
 const climbed = maxY >= py + 2 && climber.z < pz + 3;
 return { ok: cows.length >= 4 && onGrass && moved > 0 && !insideBlock && climbed,

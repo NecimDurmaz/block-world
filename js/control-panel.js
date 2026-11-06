@@ -1,0 +1,94 @@
+// ---------- Kontrol paneli ----------
+// K ile açılan panel: komut yazmadan güvenli mod, ölümsüzlük, ses, saat, can/açlık, eşya seçici, ışınlanma ve canlı çağırma.
+// Eylemler game-actions.js'tekilerle aynıdır; sonuç ekranın ortasında kısa bir bildirimle gösterilir.
+
+const controlEl = document.getElementById('control');
+let controlOpen = false;
+const TOGGLES = {
+  safe: { on: () => safeMode, set: setSafeMode },
+  god: { on: () => godMode, set: setGodMode },
+  sound: { on: () => settings.sound, set: on => { settings.sound = on; applySettings(); saveSettings(); return on ? 'Ses açık' : 'Ses kapalı'; } },
+};
+const tpInputs = ['x', 'y', 'z'].map(a => document.getElementById('tp-' + a));
+let confirmClear = false;
+const ACTIONS = {
+  heal: healPlayer,
+  feed: feedPlayer,
+  spawn: setSpawnHere,
+  // Yanlışlıkla boşaltılmasın: ikinci basışta boşaltır
+  clear: button => {
+    if (!confirmClear) { confirmClear = true; button.textContent = 'Emin misin? Tekrar bas'; return null; }
+    return clearInventory();
+  },
+  items: () => { closeControl(); openPicker(); return null; },
+  // Kutulardaki blok koordinatının ortasına
+  tp: () => tpInputs.some(el => el.value === '') ? 'Üç koordinatı da yaz' : teleport(...tpInputs.map((el, i) => Number(el.value) + (i === 1 ? 0 : 0.5))),
+  home: () => { spawn(); return 'Doğma noktasına döndün'; },
+};
+
+// Saat ve canlı düğmeleri tablolardan kurulur.
+const timesEl = document.getElementById('control-times');
+for (const [key, [name, time]] of Object.entries(TIMES_OF_DAY)) {
+  const b = document.createElement('button');
+  b.className = 'mc-btn'; b.type = 'button'; b.textContent = name; b.dataset.time = key;
+  b.addEventListener('click', () => { toast(setTimeOfDay(time)); renderControl(); });
+  timesEl.appendChild(b);
+}
+const mobsEl = document.getElementById('control-mobs');
+for (const [kind, type] of Object.entries(MOB_TYPES)) {
+  const b = document.createElement('button');
+  b.className = 'mc-btn' + (type.hostile ? ' hostile' : ''); b.type = 'button'; b.textContent = type.name; b.dataset.mob = kind;
+  b.title = type.hostile ? 'Düşman canlı' : 'Barışçıl canlı';
+  b.addEventListener('click', () => toast(summonMob(kind)));
+  mobsEl.appendChild(b);
+}
+controlEl.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+  const t = TOGGLES[b.dataset.toggle];
+  toast(t.set(!t.on()));
+  renderControl();
+}));
+controlEl.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', () => {
+  const text = ACTIONS[b.dataset.action](b);
+  if (text) toast(text);
+  renderControl();
+}));
+document.getElementById('control-close').addEventListener('click', () => closeControl());
+// Koordinat kutularına yazılan rakamlar hotbar'ı değiştirmesin; Esc paneli kapatır.
+for (const el of tpInputs) {
+  el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeControl(); if (e.key === 'Enter') controlEl.querySelector('[data-action="tp"]').click(); });
+  el.addEventListener('keyup', e => e.stopPropagation());
+}
+// Panel kapalıyken arka plana tıklamak paneli kapatır.
+controlEl.addEventListener('mousedown', e => { if (e.target === controlEl) closeControl(); });
+
+function renderControl() {
+  controlEl.querySelectorAll('[data-toggle]').forEach(b => {
+    const on = TOGGLES[b.dataset.toggle].on();
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+    b.querySelector('.state').textContent = on ? 'AÇIK' : 'KAPALI';
+  });
+  document.getElementById('control-clock').textContent = clockText().split(' · ')[1];
+  if (!confirmClear) controlEl.querySelector('[data-action="clear"]').textContent = 'Envanteri boşalt';
+}
+function openControl() {
+  if (inventoryOpen) closeInventory();
+  controlOpen = true;
+  for (const k in keys) keys[k] = false;
+  mining = false;
+  confirmClear = false;
+  [player.x, player.y, player.z].forEach((v, i) => { tpInputs[i].value = Math.floor(v); });
+  renderControl();
+  controlEl.hidden = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeControl() {
+  controlOpen = false;
+  controlEl.hidden = true;
+  if (!fallbackLook && playing && !inventoryOpen) {
+    try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
+  }
+}
+// Ana menüden: oyunu başlatıp paneli açar.
+document.getElementById('open-control').addEventListener('click', () => { start(); openControl(); });
+Object.assign(window.game, { openControl, closeControl, isControlOpen: () => controlOpen });

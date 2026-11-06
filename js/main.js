@@ -28,7 +28,7 @@ function frame(now) {
   const inWater = overlapsBlock(p, B.water);
   const inLava = overlapsBlock(p, B.lava);
   if (playing) updateSleep(dt);
-  if (playing && !inventoryOpen && !chatOpen && sleepTimer <= 0) {
+  if (playing && !inventoryOpen && !chatOpen && !controlOpen && sleepTimer <= 0) {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
     let mx = 0, mz = 0;
@@ -135,7 +135,7 @@ function frame(now) {
   document.getElementById('crosshair').hidden = view === 2;
   const hit = playing ? raycast() : null;
   const mobHit = playing ? rayMob() : null;
-  updateMining(playing && !inventoryOpen ? dt : 0, playing && !inventoryOpen ? hit : null);
+  updateMining(playing && !inventoryOpen && !controlOpen ? dt : 0, playing && !inventoryOpen && !controlOpen ? hit : null);
   // İmleç bir canlının üstündeyse blok çerçevesi gizlenir.
   highlight.visible = !!hit && !(mobHit && mobHit.t < hit.t);
   if (hit) highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);

@@ -9,7 +9,7 @@ const canvas = renderer.domElement;
 
 window.addEventListener('keydown', e => {
   // Sohbet: T boş, "/" komut için açar (harfin kutuya yazılmaması için varsayılan engellenir)
-  if (playing && !inventoryOpen && !chatOpen && (e.code === 'KeyT' || e.key === '/')) {
+  if (playing && !inventoryOpen && !chatOpen && !controlOpen && (e.code === 'KeyT' || e.key === '/')) {
     e.preventDefault();
     openChat(e.key === '/' ? '/' : '');
     return;
@@ -23,9 +23,11 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space') e.preventDefault();
   if (/^Digit[1-9]$/.test(e.code)) selectSlot(+e.code.slice(5) - 1);
   if (e.code === 'KeyV' && !e.repeat) { view = (view + 1) % VIEWS.length; toast('Kamera: ' + VIEWS[view]); }
-  if (e.code === 'KeyE' && !e.repeat && playing) inventoryOpen ? closeInventory() : openInventory();
-  if (e.code === 'KeyQ' && !e.repeat && playing && !inventoryOpen) throwSelected();
-  if (e.code === 'Escape' && inventoryOpen) closeInventory();
+  if (e.code === 'KeyK' && !e.repeat && playing && !chatOpen) controlOpen ? closeControl() : openControl();
+  if (e.code === 'KeyE' && !e.repeat && playing && !controlOpen) inventoryOpen ? closeInventory() : openInventory();
+  if (e.code === 'KeyQ' && !e.repeat && playing && !inventoryOpen && !controlOpen) throwSelected();
+  if (e.code === 'Escape' && controlOpen) closeControl();
+  else if (e.code === 'Escape' && inventoryOpen) closeInventory();
   else if (e.code === 'Escape' && fallbackLook) pause();
 });
 window.addEventListener('keyup', e => {
@@ -67,8 +69,10 @@ function pause() {
 document.getElementById('play').addEventListener('click', start);
 document.addEventListener('pointerlockerror', useFallback);
 document.addEventListener('pointerlockchange', () => {
-  // Envanter açılırken fare kilidi bilerek bırakılır; oyun durmaz.
-  if (document.pointerLockElement !== canvas && !fallbackLook && !inventoryOpen && !chatOpen) pause();
+  // Envanter, sohbet ya da kontrol paneli açılırken fare kilidi bilerek bırakılır; oyun durmaz.
+  // Panel açılırken gecikerek gelen kilit hemen bırakılır.
+  if (document.pointerLockElement === canvas && (inventoryOpen || controlOpen)) document.exitPointerLock();
+  else if (document.pointerLockElement !== canvas && !fallbackLook && !inventoryOpen && !chatOpen && !controlOpen) pause();
 });
 
 let drag = null;
@@ -84,7 +88,7 @@ document.addEventListener('mousemove', e => {
 // Sol tuş basılı tutuldukça kazılır (mining). Yedek modda sürükleme bakıştır, kazmayı keser.
 let mining = false, using = false; // using: sağ tuş basılı (yemek yeme)
 canvas.addEventListener('mousedown', e => {
-  if (!playing || inventoryOpen || chatOpen) return;
+  if (!playing || inventoryOpen || chatOpen || controlOpen) return;
   if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
   if (e.button === 0) { mining = true; attackMob(); }
   else if (e.button === 2) { using = true; if (!heldFood()) placeBlock(); }
@@ -96,6 +100,6 @@ window.addEventListener('mouseup', e => {
 });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('wheel', e => {
-  if (!playing || inventoryOpen || chatOpen) return;
+  if (!playing || inventoryOpen || chatOpen || controlOpen) return;
   selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + HOTBAR_SIZE) % HOTBAR_SIZE);
 }, { passive: true });

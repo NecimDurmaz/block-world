@@ -41,6 +41,8 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
   - Yuva: `#8b8b8b`, çukur görünüm (sol üst kenar `#373737`, sağ alt kenar beyaz); üzerine gelince açılır. Hotbar yuvaları yarı saydam koyu, seçili yuva kalın beyaz çerçeveli.
   - Yazı: piksel yazı tipi `var(--mc-font)` (Pixelify Sans); adetler ve başlıklar beyaz/gri, `2px 2px 0 #3f3f3f` gölgeli.
   - **İpucu:** eşya taşıyan her yuvanın üzerine gelince eşyanın adı Minecraft ipucu kutusunda (koyu mor zemin, mor çerçeve) görünür. Yuvaya `dataset.name` yazılır, `#tooltip` bunu gösterir; yeni yuva türleri de bunu kullanmalı.
+  - Düğme: `.mc-btn` (taş gri, kabartma kenar, beyaz gölgeli piksel yazı, üzerine gelince mavimsi). Açılıp kapanan ayar: `.mc-btn.toggle` (açıkken yeşil, sağda "AÇIK"/"KAPALI").
+- **Her özellik arayüzden kullanılabilir** (kullanıcının açık isteği): komut yazmak zorunlu olmamalı. Açılıp kapanan ya da hile niteliğindeki her yeni özellik kontrol paneline (`control-panel.js`, K) eklenir; eylem `game-actions.js`'te yazılır, komut da aynı eylemi çağırır.
 - **Eşya ve blok simgeleri Minecraft'taki gibidir:** bloklar izometrik küp (`blockIcon`), diğer eşyalar 16×16 piksel, Minecraft'taki şekline benzeyen ve koyu kenarlı çizimler (`outlineIcon`; aletler `drawTool`). Yeni eşya eklerken bu üsluba uy.
 - Başlangıç, duraklatma ve ayarlar menüleri Elektraweb marka renklerini kullanır; dosyanın başındaki CSS değişkenlerini kullan (`--ew-primary`, `--ew-secondary`, `--ew-text` vb.). Yeni sabit renk yazma, gerekiyorsa `:root` bloğuna yeni değişken ekle.
 - Oyun dünyasının renkleri (dokular, gökyüzü, canlılar) Minecraft'a benzer doğal renklerdir.

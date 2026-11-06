@@ -87,7 +87,9 @@ tests/              otomatik testler
    | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
    | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
-   | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), `godMode` |
+   | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), sohbet dışı eylemler `game-actions.js`'te |
+   | `game-actions.js` | Panel ve komutların ortak eylemleri: `godMode`, `safeMode`, `TIMES_OF_DAY`, `setGodMode()`, `setSafeMode()`, `healPlayer()`, `feedPlayer()`, `setTimeOfDay()`, `teleport()`, `clearInventory()`, `summonMob()`, `setSpawnHere()` |
+   | `control-panel.js` | Kontrol paneli: `controlOpen`, `openControl()`, `closeControl()`, `renderControl()` |
    | `item-picker.js` | Eşya seçici: `openPicker()`, `filterPicker()`, `clickPicker()` |
    | `nether.js` | `dimension`, `generateNether()`, `switchDimension()`, `portalLinks`, `createPortalNear()`, `travelThroughPortal()`, `updateLava()`. Yüklenirken `useBed` ve `RECIPES`'e eriştiği için `main.js`'ten hemen önce yüklenir |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
@@ -556,9 +558,25 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - Arama Türkçe ada ya da İngilizce anahtara göre anında süzer (`normalize`, içerir). Arama kutusundaki tuşlar oyuna gitmez (E yazılabilir); Esc paneli kapatır.
 - Sol tık bir yığın (64; aletlerde 1, tam dayanıklılıkla), sağ tık bir tane envantere ekler. Envanter doluysa "Envanter dolu".
 
+## Kontrol paneli
+
+- K tuşu (oyun sırasında, sohbet kapalıyken) ve ana menüdeki "Kontrol paneli" düğmesi (oyunu başlatıp açar) `#control` panelini açar; Esc, K, "Kapat" ya da panelin dışına tıklamak kapatır. Açıkken (`controlOpen`) oyun durmaz; oyuncu yürümez, kazamaz, hotbar ve E/Q/T çalışmaz, fare kilidi bırakılır (gecikerek gelen kilit hemen bırakılır).
+- Görünüm Minecraft gibidir: gri kabartma panel, koyu gömük bölümler, taş düğmeler (`.mc-btn`, üzerine gelince mavimsi). Geniş ekranda iki sütun, 640 px altında tek sütun.
+
+  | Bölüm | Denetimler | Eylem (`game-actions.js`) |
+  | --- | --- | --- |
+  | Oyun modu | Güvenli mod, Ölümsüzlük, Ses anahtarları (açıkken yeşil, "AÇIK") | `setSafeMode`, `setGodMode`, `settings.sound` + `applySettings`/`saveSettings` |
+  | Saat | Sabah, Öğle, Akşam, Gece yarısı (`TIMES_OF_DAY`); başlıkta o anki saat | `setTimeOfDay` |
+  | Oyuncu | Canı doldur, Karnı doyur, Doğma noktası burası, Envanteri boşalt (ikinci basışta) | `healPlayer`, `feedPlayer`, `setSpawnHere`, `clearInventory` |
+  | Eşyalar | Eşya seç ve al: paneli kapatıp eşya seçiciyi açar | `openPicker` |
+  | Işınlan | X, Y, Z kutuları (açılınca oyuncunun konumu; Enter ışınlar), Işınlan, Doğma noktasına git | `teleport`, `spawn` |
+  | Canlı çağır | Her `MOB_TYPES` için bir düğme; düşmanlar kırmızımsı yazı | `summonMob` |
+
+- Sohbet komutları aynı eylemleri çağırır; eylemler sonucu metin olarak döndürür (panelde bildirim, sohbette sarı satır). Yeni açılıp kapanabilen her özellik bu panele anahtar olarak eklenir.
+
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -648,3 +666,4 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 48 | Eşya seçici (`/give` paneli) | Yapıldı |
 | 49 | Eldeki eşya her zaman görünür | Yapıldı |
 | 50 | Güvenli mod (`/safe`) | Yapıldı |
+| 51 | Kontrol paneli | Yapıldı |

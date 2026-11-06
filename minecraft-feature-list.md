@@ -535,10 +535,21 @@ Bu maddeler 37'den hemen sonra yapılır.
 ### 50. Güvenli mod (`/safe`)
 - **Neden:** Küçük bir çocuk oynarken korkmasın diye.
 - **Bu oyunda:**
-  - `/safe on` ve `/safe off` komutları (`/safe` tek başına durumu söyler). Açıkken düşman canlılar dünyada durur, dolaşır ama hiçbir şekilde saldırmaz: zombi ve örümcek vurmaz, iskelet ok atmaz, creeper patlamaz, ghast ateş topu atmaz, domuz adamlar kızmaz.
+  - Kontrol panelindeki (madde 51) anahtarla ya da `/safe on` ve `/safe off` komutlarıyla (`/safe` tek başına durumu söyler). Açıkken düşman canlılar dünyada durur, dolaşır ama hiçbir şekilde saldırmaz: zombi ve örümcek vurmaz, iskelet ok atmaz, creeper patlamaz, ghast ateş topu atmaz, domuz adamlar kızmaz.
   - Durum kayda yazılır; açıkken sohbette ve menüde "Güvenli mod açık" yazar.
 - **Kabul ölçütü:** `/safe on` açıkken zombi yanında durunca can gitmiyor, creeper patlamıyor; `/safe off` ile eski hale dönüyor; sayfa yenilenince durum korunuyor.
 - **Bağımlılık:** 8–11, 35, 45
+
+### 51. Kontrol paneli
+- **Neden:** Her şey komut yazmadan, düğmelerle yapılabilsin; özellikler arayüzden açılıp kapansın.
+- **Bu oyunda:**
+  - K tuşu ve ana menüdeki "Kontrol paneli" düğmesi Minecraft görünümlü bir panel açar; Esc, K ya da "Kapat" kapatır. Panel açıkken oyun durmaz ama oyuncu yürümez, dünyaya tıklanamaz.
+  - Oyun modu anahtarları (AÇIK/KAPALI): güvenli mod, ölümsüzlük, ses.
+  - Saat: sabah, öğle, akşam, gece yarısı. Oyuncu: canı doldur, karnı doyur, doğma noktası burası, envanteri boşalt (ikinci basışta). Eşyalar: eşya seçiciyi açar (madde 48). Işınlan: X, Y, Z kutuları ve doğma noktasına dön. Canlı çağır: her canlı için bir düğme (düşmanlar kırmızımsı yazıyla).
+  - Komutlar yedek olarak çalışmaya devam eder; ikisi aynı eylemleri kullanır.
+  - **Bundan sonraki her açılıp kapanabilen özellik** (ör. rehber) bu panele de anahtar olarak eklenir.
+- **Kabul ölçütü:** K ile panel açılıyor; güvenli mod tek tıkla açılıp kapanıyor; saat, can, ışınlanma ve canlı çağırma düğmeleri çalışıyor; hiç komut yazmadan bütün özellikler kullanılabiliyor.
+- **Bağımlılık:** 45, 48, 50
 
 ---
 

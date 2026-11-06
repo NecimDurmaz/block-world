@@ -6,7 +6,8 @@ g.clock.time = 0.25;
 // Açık alan: havada geniş platform
 for (let x = 20; x < 60; x++) for (let z = 20; z < 60; z++) g.setBlock(x, 39, z, 3);
 Object.assign(p, { x: 40.5, y: 40, z: 40.5, yaw: 0, pitch: 0, vx: 0, vz: 0 });
-await wait(1500);
+// Kamera yumuşakça geri çekilir; tam uzaklığa ulaşmasını bekle
+for (let i = 0; i < 60 && g.cameraDistance() < 3.4; i++) await wait(100);
 const openDistance = g.cameraDistance();
 // Karakterin göğsü ekranda merkezin solunda olmalı
 const chest = new THREE.Vector3(p.x, p.y + 1.2, p.z).project(g.camera);

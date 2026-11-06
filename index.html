@@ -159,10 +159,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 26;
+  const T = 16, N_TILES = 28;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27,
   };
 
   function mulberry32(a) {
@@ -268,11 +268,19 @@
     const ripple = (x + y * 3) % 7 === 0 || (x * 2 + y) % 11 === 0;
     px(TILE.water, x, y, ripple ? shade([90, 150, 230], 1) : shade([46, 98, 200], 0.92 + rnd() * 0.12));
   }
-  // Cam: açık gri çerçeve, içi açık mavi-beyaz (saydamlık madde 24'te)
+  // Cam: açık gri çerçeve, içi saydam (birkaç parlama pikseli hariç)
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const edge = x === 0 || y === 0 || x === 15 || y === 15;
-    const glint = (x === y + 3 || x === y + 4) && x > 4 && x < 12;
-    px(TILE.glass, x, y, edge ? '#d8dee6' : glint ? '#ffffff' : '#c4dbe8');
+    const glint = (x === y + 3 || x === y + 4) && x > 4 && x < 9;
+    if (edge || glint) px(TILE.glass, x, y, edge ? '#d8dee6' : '#ffffff');
+  }
+  // Kapı: koyu çerçeveli tahta; üst yarıda iki küçük pencere
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const frame = x < 2 || x > 13 || y === 0 || y === 15;
+    const wood = frame ? shade([92, 64, 38], 0.95 + rnd() * 0.1) : shade([150, 110, 64], 0.9 + rnd() * 0.15);
+    px(TILE.doorLower, x, y, y === 7 && !frame ? shade([92, 64, 38], 1) : wood);
+    const pane = !frame && y >= 3 && y <= 9 && x !== 7 && x !== 8;
+    px(TILE.doorUpper, x, y, pane ? '#a9cbe0' : wood);
   }
   // Kumtaşı
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
@@ -308,7 +316,8 @@
     { name: 'Fırın', top: TILE.furnaceTop, side: TILE.furnaceFront, bottom: TILE.furnaceTop, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
     { name: 'Kumtaşı', top: TILE.sandstoneTop, side: TILE.sandstoneSide, bottom: TILE.sandstoneTop, breakTime: 4, tool: 'pickaxe', needsTool: true },
     { name: 'Fırın', top: TILE.furnaceTop, side: TILE.furnaceLit, bottom: TILE.furnaceTop, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'furnace' },
-    { name: 'Cam', top: TILE.glass, side: TILE.glass, bottom: TILE.glass, breakTime: 0.5 },
+    // cutout: saydam pikseller kesilir (opak mesh'te çizilir), arkasındaki yüzler görünür.
+    { name: 'Cam', top: TILE.glass, side: TILE.glass, bottom: TILE.glass, breakTime: 0.5, transparent: true, cutout: true },
     // minTier: düşmesi için gereken en düşük alet seviyesi (1 tahta, 2 taş)
     { name: 'Kömür cevheri', top: TILE.coalOre, side: TILE.coalOre, bottom: TILE.coalOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'coal' },
     { name: 'Demir cevheri', top: TILE.ironOre, side: TILE.ironOre, bottom: TILE.ironOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, minTier: 2 },
@@ -324,12 +333,26 @@
       name: 'Yatak', top: part === 'head' ? TILE.bedHeadTop : TILE.bedFootTop, side: TILE.bedSide, bottom: TILE.planks,
       breakTime: 0.3, tool: 'axe', model: 'bed', part, dir, height: BED_HEIGHT, transparent: true, hidden: true, drop: 'bed',
     }))),
+    // Kapı: 3/16 kalınlığında levha (box). Kapalıyken baktığı yönün kenarında, açıkken sol kenarda.
+    ...BED_DIRS.flatMap(([, dir]) => ['lower', 'upper'].flatMap(part => [false, true].map(open => {
+      const [sx, sz] = open ? [dir[1], -dir[0]] : dir, t = 3 / 16;
+      const box = sx === 1 ? [1 - t, 0, 0, 1, 1, 1] : sx === -1 ? [0, 0, 0, t, 1, 1] : sz === 1 ? [0, 0, 1 - t, 1, 1, 1] : [0, 0, 0, 1, 1, t];
+      const tile = part === 'lower' ? TILE.doorLower : TILE.doorUpper;
+      return { name: 'Kapı', top: tile, side: tile, bottom: tile, breakTime: 3, tool: 'axe', model: 'box', box, part, dir, open, transparent: true, hidden: true, drop: 'door' };
+    }))),
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
     torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
   // Yatak kimlikleri 23–30: her yön için ayak ve baş
   BED_DIRS.forEach(([name], i) => { B['bed_foot_' + name] = 23 + i * 2; B['bed_head_' + name] = 24 + i * 2; });
   const isBed = b => b >= 23 && b <= 30;
+  // Kapı kimlikleri 31–46: yön × (alt, üst) × (kapalı, açık)
+  const DOOR_FIRST = 31;
+  const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
+  const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
+  BED_DIRS.forEach(([name], i) => ['lower', 'upper'].forEach(part => [false, true].forEach(open => {
+    B[`door_${name}_${part}_${open ? 'open' : 'closed'}`] = doorId(i, part, open);
+  })));
   const isTorch = b => b >= B.torch_floor && b <= B.torch_north;
   // Katı blok: çarpışır, görüşü ve okları keser.
   const isSolid = b => b !== AIR && !BLOCKS[b].fluid && !BLOCKS[b].noCollide;
@@ -468,7 +491,8 @@
     };
     return mat;
   }
-  const material = withTorchLight(new THREE.MeshBasicMaterial({ map: texture, vertexColors: true }));
+  // alphaTest: camın saydam pikselleri kesilir
+  const material = withTorchLight(new THREE.MeshBasicMaterial({ map: texture, vertexColors: true, alphaTest: 0.5 }));
 
   const FACES = [
     { dir: [-1, 0, 0], light: 0.8, corners: [[[0, 1, 0], [0, 1]], [[0, 0, 0], [0, 0]], [[0, 1, 1], [1, 1]], [[0, 0, 1], [1, 0]]] },
@@ -496,6 +520,29 @@
     let light = 0;
     for (const [tx, ty, tz] of torches) light = Math.max(light, 1 - Math.hypot(tx - x, ty - y, tz - z) / TORCH_RANGE);
     return light;
+  }
+  // Hücre içindeki bir kutu (kapı levhası); hücre kenarındaki yüz komşu opak blokla çakışıyorsa çizilmez.
+  function addBoxModel(buf, x, y, z, def, torches) {
+    const [x0, y0, z0, x1, y1, z1] = def.box;
+    for (const f of FACES) {
+      const [fx, fy, fz] = f.dir;
+      const onEdge = (fx === 1 && x1 === 1) || (fx === -1 && x0 === 0) || (fy === 1 && y1 === 1) || (fy === -1 && y0 === 0) || (fz === 1 && z1 === 1) || (fz === -1 && z0 === 0);
+      const n = get(x + fx, y + fy, z + fz);
+      if (onEdge && n !== AIR && !BLOCKS[n].transparent && isSolid(n)) continue;
+      const tile = def.side;
+      const lit = torches.length ? torchLightAt(torches, x + 0.5 + fx * 0.5, y + 0.5 + fy * 0.5, z + 0.5 + fz * 0.5) : 0;
+      const base = buf.pos.length / 3;
+      for (const [p] of f.corners) {
+        const lx = p[0] ? x1 : x0, ly = p[1] ? y1 : y0, lz = p[2] ? z1 : z0;
+        buf.pos.push(x + lx, y + ly, z + lz);
+        // Doku yüzün ekseninde hücre koordinatından okunur
+        const [u, v] = fx ? [lz, ly] : fz ? [lx, ly] : [lx, lz];
+        buf.uv.push((tile + Math.min(1 - EPS, Math.max(EPS, u))) / N_TILES, Math.min(1 - EPS, Math.max(EPS, v)));
+        buf.col.push(f.light, f.light, f.light);
+        buf.light.push(lit);
+      }
+      buf.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    }
   }
   // Yatak hücresi: yarım blok yüksekliğinde kutu; iki yarı arasındaki yüz ve alt yüz çizilmez.
   // Üst dokunun "yukarısı" (v = 1) her iki yarıda da baş tarafına döner.
@@ -556,7 +603,8 @@
       const def = BLOCKS[b];
       if (def.model === 'torch') { addTorchModel(buffers[0], x, y, z, def); continue; }
       if (def.model === 'bed') { addBedModel(buffers[0], x, y, z, def, torches); continue; }
-      const buf = buffers[def.transparent ? 1 : 0];
+      if (def.model === 'box') { addBoxModel(buffers[0], x, y, z, def, torches); continue; }
+      const buf = buffers[def.transparent && !def.cutout ? 1 : 0];
       const { pos, uv, col, light, idx } = buf;
       for (const f of FACES) {
         if (!faceVisible(b, get(x + f.dir[0], y + f.dir[1], z + f.dir[2]))) continue;
@@ -755,39 +803,37 @@
     return false;
   }
   // Oyuncu ve canlılar için ortak AABB fiziği: e = { x, y, z, w, h, vx, vy, vz, onGround }
-  // Alçak bloklar (yatak) yalnızca kendi yükseklikleri (height) kadar çarpışır.
-  function collides(e, x, y, z) {
+  // Bloğun hücre içindeki çarpışma kutusu [x0, y0, z0, x1, y1, z1]: kapı levhası (box), alçak blok (height) ya da tam hücre.
+  const blockBox = b => BLOCKS[b].box || [0, 0, 0, 1, BLOCKS[b].height || 1, 1];
+  // e kutusu (x, y, z) konumundayken kesiştiği blok kutuları, dünya koordinatında. Dünya kenarı duvardır.
+  function overlappingBoxes(e, x, y, z) {
+    const boxes = [];
     for (let bx = Math.floor(x - e.w); bx <= Math.floor(x + e.w); bx++)
       for (let by = Math.floor(y); by <= Math.floor(y + e.h - 0.001); by++)
         for (let bz = Math.floor(z - e.w); bz <= Math.floor(z + e.w); bz++) {
-          if (bx < 0 || bz < 0 || bx >= SX || bz >= SZ) return true;
+          if (bx < 0 || bz < 0 || bx >= SX || bz >= SZ) { boxes.push([bx, by, bz, bx + 1, by + 1, bz + 1]); continue; }
           const b = get(bx, by, bz);
-          if (isSolid(b) && y < by + (BLOCKS[b]?.height || 1)) return true;
+          if (!isSolid(b)) continue;
+          const [x0, y0, z0, x1, y1, z1] = blockBox(b);
+          const box = [bx + x0, by + y0, bz + z0, bx + x1, by + y1, bz + z1];
+          if (x - e.w < box[3] && x + e.w > box[0] && y < box[4] && y + e.h > box[1] && z - e.w < box[5] && z + e.w > box[2]) boxes.push(box);
         }
-    return false;
+    return boxes;
   }
-  // Varlığın ayak hizasındaki katmanda, altındaki katı blokların en yüksek üst yüzü
-  function groundTop(e) {
-    const by = Math.floor(e.y);
-    let top = by + 1, found = false;
-    for (let bx = Math.floor(e.x - e.w); bx <= Math.floor(e.x + e.w); bx++)
-      for (let bz = Math.floor(e.z - e.w); bz <= Math.floor(e.z + e.w); bz++) {
-        const b = get(bx, by, bz);
-        if (isSolid(b)) { const t = by + (BLOCKS[b]?.height || 1); top = found ? Math.max(top, t) : t; found = true; }
-      }
-    return top;
-  }
-  // Çarpışma olduysa true döner.
+  const collides = (e, x, y, z) => overlappingBoxes(e, x, y, z).length > 0;
+  // Çarpışma olduysa varlığı çarptığı kutunun yüzüne dayar ve true döner.
   function moveAxis(e, axis, d) {
     if (!d) return false;
     e[axis] += d;
-    if (!collides(e, e.x, e.y, e.z)) return false;
+    const boxes = overlappingBoxes(e, e.x, e.y, e.z);
+    if (!boxes.length) return false;
+    const i = { x: 0, y: 1, z: 2 }[axis];
     if (axis === 'y') {
-      if (d < 0) { e.y = groundTop(e); e.onGround = true; }
-      else e.y = Math.floor(e.y + e.h) - e.h - 0.001;
+      if (d < 0) { e.y = Math.max(...boxes.map(b => b[4])); e.onGround = true; }
+      else e.y = Math.min(...boxes.map(b => b[1])) - e.h - 0.001;
       e.vy = 0;
     } else {
-      e[axis] = d > 0 ? Math.floor(e[axis] + e.w) - e.w - 0.001 : Math.floor(e[axis] - e.w) + 1 + e.w + 0.001;
+      e[axis] = d > 0 ? Math.min(...boxes.map(b => b[i])) - e.w - 0.001 : Math.max(...boxes.map(b => b[i + 3])) + e.w + 0.001;
     }
     return true;
   }
@@ -934,6 +980,11 @@
     const broken = get(hit.x, hit.y, hit.z);
     set(hit.x, hit.y, hit.z, AIR);
     // Bu bloğa dayanan meşaleler düşer
+    // Kapının diğer yarısı da kalkar
+    if (isDoor(broken)) {
+      const oy = BLOCKS[broken].part === 'lower' ? hit.y + 1 : hit.y - 1;
+      if (isDoor(get(hit.x, oy, hit.z))) set(hit.x, oy, hit.z, AIR);
+    }
     // Yatağın diğer yarısı da kalkar (eşya bir kez düşer)
     if (isBed(broken)) {
       const def = BLOCKS[broken], sign = def.part === 'foot' ? 1 : -1;
@@ -1017,6 +1068,7 @@
     // Çalışma masasına sağ tık 3x3 üretim ızgarasını açar.
     if (get(hit.x, hit.y, hit.z) === B.crafting_table && !targetedMob(hit)) { openInventory(3); return; }
     if (isBed(get(hit.x, hit.y, hit.z)) && !targetedMob(hit)) { useBed(hit.x, hit.y, hit.z); return; }
+    if (isDoor(get(hit.x, hit.y, hit.z)) && !targetedMob(hit)) { toggleDoor(hit.x, hit.y, hit.z); return; }
     if ((get(hit.x, hit.y, hit.z) === B.furnace || get(hit.x, hit.y, hit.z) === B.furnace_lit) && !targetedMob(hit)) {
       openFurnace(hit.x, hit.y, hit.z);
       return;
@@ -1027,6 +1079,17 @@
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
     const slot = inventory[selected];
+    if (slot?.key === 'door') {
+      // Kapı bir bloğun üstüne konur: alt ve üst hücre boş olmalı; oyuncunun baktığı yöne kapanır.
+      if (y - hit.y !== 1 || !inBounds(x, y + 1, z) || isTargetable(get(x, y + 1, z))) return;
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const i = BED_DIRS.findIndex(([, [ax, az]]) => Math.abs(fx) > Math.abs(fz) ? ax === Math.sign(fx) : az === Math.sign(fz));
+      set(x, y, z, doorId(i, 'lower', false));
+      set(x, y + 1, z, doorId(i, 'upper', false));
+      rebuildAround(x, z);
+      takeFromSlot(selected, 1);
+      return;
+    }
     if (slot?.key === 'bed') {
       // Ayak bakılan hücreye, baş oyuncunun baktığı eksende bir sonraki hücreye; ikisinin altı da dolu olmalı.
       const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
@@ -1159,6 +1222,16 @@
     if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || player.food < REGEN_FOOD || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
     regenTimer += dt;
     if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
+  }
+
+  // ---------- Kapı ----------
+  // Sağ tık kapıyı açar/kapar: iki yarı birlikte döner. Canlılar kapı açamaz.
+  function toggleDoor(x, y, z) {
+    const def = BLOCKS[get(x, y, z)];
+    const lowerY = def.part === 'lower' ? y : y - 1;
+    const i = BED_DIRS.findIndex(([, d]) => d[0] === def.dir[0] && d[1] === def.dir[1]);
+    for (const [cy, part] of [[lowerY, 'lower'], [lowerY + 1, 'upper']]) if (isDoor(get(x, cy, z))) set(x, cy, z, doorId(i, part, !def.open));
+    rebuildAround(x, z);
   }
 
   // ---------- Yatak ----------
@@ -1806,6 +1879,7 @@
     rotten_flesh: ['Çürük et', { g: '#6f8a3a', b: '#8a5a3a' }, ['..gggg..', '.ggbggg.', 'gggggbgg', 'ggbggggg', 'gggggbgg', '.ggbggg.', '..gggg..', '........']],
     bone: ['Kemik', { w: '#ecebe2' }, ['......ww', '.....www', '....ww..', '...ww...', '..ww....', 'www.....', 'ww......', '........']],
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
+    door: ['Kapı', { b: '#96693c', d: '#5c4024', g: '#a9cbe0' }, ['..dddd..', '..dggd..', '..dggd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dddd..']],
     bed: ['Yatak', { w: '#ececec', r: '#a8282a', b: '#7a5a32' }, ['........', '........', 'wwrrrrrr', 'wwrrrrrr', 'bbbbbbbb', 'b......b', '........', '........']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
     torch: ['Meşale', { b: '#6b4a2b', y: '#ffd23a', o: '#ff8a1f' }, ['...yy...', '..yooy..', '...oo...', '...bb...', '...bb...', '...bb...', '...bb...', '........']],
@@ -2015,6 +2089,7 @@
     { pattern: ['CCC', 'C.C', 'CCC'], keys: { C: 'cobble' }, out: ['furnace', 1] },
     { pattern: ['SS', 'SS'], keys: { S: 'sand' }, out: ['sandstone', 1] },
     { pattern: ['WWW', 'PPP'], keys: { W: 'wool', P: 'planks' }, out: ['bed', 1] },
+    { pattern: ['PP', 'PP', 'PP'], keys: { P: 'planks' }, out: ['door', 3] },
   ];
   for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) for (const [kindKey, kind] of Object.entries(TOOL_KINDS)) {
     RECIPES.push({ pattern: kind.pattern, keys: { M: tier.material, S: 'stick' }, out: [`${tierKey}_${kindKey}`, 1] });

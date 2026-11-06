@@ -56,6 +56,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
    | HUD | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | Kapı | `toggleDoor()` |
    | Yatak | `setSpawnNearBed()`, `useBed()`, `updateSleep()` |
    | Açlık | `FOOD_SHAPE`, `renderFood()`, `hunger`, `heldFood()`, `updateHunger()` (azalma, açlıktan hasar, yemek yeme) |
    | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
@@ -102,10 +103,11 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 11 | `furnace` | Fırın | `furnaceTop` / `furnaceFront` / `furnaceTop` (blok yön tutmadığı için ağız dört yanda) |
 | 12 | `sandstone` | Kumtaşı | `sandstoneTop` / `sandstoneSide` / `sandstoneTop` |
 | 13 | `furnace_lit` | Fırın (yanan) | `furnaceTop` / `furnaceLit` / `furnaceTop`; yalnızca dünyada, kırılınca fırın düşer |
-| 14 | `glass` | Cam | `glass` (şimdilik opak; saydamlık madde 24) |
+| 14 | `glass` | Cam | `glass`; çerçeve opak, içi saydam (`transparent`, `cutout`) |
 | 15 | `coal_ore` | Kömür cevheri | `coalOre` (taş + siyah benekler) |
 | 16 | `iron_ore` | Demir cevheri | `ironOre` (taş + bej benekler) |
 | 17 | `water` | Su | `water`; `fluid`, `transparent`, `hidden` (eşya olarak alınamaz, kırılamaz) |
+| 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
 | 23–30 | `bed_foot_<yön>`, `bed_head_<yön>` (yön: `east`, `west`, `south`, `north`) | Yatak | `bedHeadTop` / `bedFootTop` / `bedSide`; `model: 'bed'`, `part`, `dir` (baş tarafı), `height: 9/16`, kırılınca `bed` eşyası (bir kez) |
 | 18–22 | `torch_floor`, `torch_east`, `torch_west`, `torch_south`, `torch_north` | Meşale | `torch`; `model: 'torch'`, `lean` (eğilme yönü), `noCollide`, `transparent`, kırılınca `torch` eşyası |
 
@@ -127,8 +129,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 26` doku, atlas `416 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 28` doku, atlas `448 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -140,6 +142,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Yüz gölgesi:** Işık hesabı yok, köşe rengiyle sabit gölge: üst 1,0, doğu/batı 0,8, kuzey/güney 0,65, alt 0,5.
 - **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri. `withTorchLight()` shader'a bir ek yapar: her köşede `torchLight` niteliği (0–1) vardır ve son renk `doku × köşe rengi × max(uBrightness, torchLight × (1, 0,85, 0,6))` olur. `uBrightness` (`brightnessUniform`) gün döngüsünün parlaklığıdır; böylece meşale ışığı gece karartmasından etkilenmez.
 - **Meşale ışığı:** Chunk kurulurken çevresindeki (±8 blok) meşaleler toplanır (`torchesNear`); her yüzün merkezinin en yakın meşaleye uzaklığına göre `torchLight = max(0, 1 − d / TORCH_RANGE)`, `TORCH_RANGE = 7.5`. Duvarlar ışığı kesmez. Meşale konunca ya da kaldırılınca ışığın ulaştığı bütün chunk'lar yeniden kurulur (`rebuildArea`).
+- **Kutu modeli:** `addBoxModel` hücre içindeki bir kutuyu (kapı levhası) çizer; doku yüzün ekseninde hücre koordinatından okunur. Hücre kenarındaki bir yüz, komşusu opak katı bir bloksa çizilmez.
+- **Cam:** Atlas dokusunda camın içi saydamdır; dünya malzemesindeki `alphaTest: 0.5` bu pikselleri keser. Cam `cutout` olduğu için opak mesh'te çizilir ama `transparent` sayıldığından arkasındaki yüzler çizilir; cam–cam yüzleri çizilmez.
 - **Yatak modeli:** `addBedModel` yarım blok yüksekliğinde bir kutu çizer; iki yarı arasındaki yüz ve alt yüz çizilmez. Üst dokuların "yukarısı" her iki yarıda da baş tarafına döner (yastık baş hücresinin uzak kenarında).
 - **Meşale modeli:** Tam blok değil; 2×10 piksellik çubuk (`addTorchModel`), dokunun ortadaki iki sütunu (alt kısım tahta, üst 3 satır alev). Yerdeki meşale dik durur; duvar meşalesi duvara yakın başlar ve dışa eğilir. Meşalenin kendi yüzleri her zaman tam aydınlıktır.
 - **Yeniden kurma:** Blok değişince `rebuildAround(x, z)` o chunk'ı ve gerekiyorsa komşusunu yeniden kurar.
@@ -180,7 +184,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | Yürüme | 4,3 | blok/sn |
 | Koşma | 6,2 | blok/sn |
 
-- Alçak bloklar (`height`, ör. yatak 9/16) yalnızca kendi yükseklikleri kadar çarpışır; düşerken üstlerine konulur (`groundTop`).
+- **Blok kutuları:** Her katı bloğun hücre içinde bir çarpışma kutusu vardır (`blockBox`): `box` (kapı levhası), `height` (yatak 9/16) ya da tam hücre. `overlappingBoxes` varlığın kesiştiği kutuları bulur; `moveAxis` çarpışınca varlığı kutunun yüzüne dayar (yere iner, tavana değer, duvara yaslanır).
 - Çarpışma eksen eksen yapılır (`moveAxis(e, axis, d)`): önce x, sonra z, sonra y. `stepEntity(e, dt)` adım 0,4 bloktan büyükse alt adımlara böler ve yatayda çarpıp çarpmadığını döndürür. Aynı kod canlılar için de kullanılır; her varlık `{ x, y, z, w, h, vx, vy, vz, onGround }` taşır (`w` yarı genişlik). Kare süresi 0 ile 0,05 sn arasına sıkıştırılır.
 - **Su:** Oyuncunun kutusu suya değiyorsa yürüme hızı %50, yerçekimi 1/4, batma hızı en çok `SINK_SPEED = 3`; Boşluk basılıyken `SWIM_UP_SPEED = 3` ile yukarı yüzer. Suya düşen düşme hasarı almaz. Kamera suyun içindeyse ekran mavi tonlanır (`#underwater`) ve sis 0–8 bloğa iner. Hayvanlar suya girmez; düşmanlar suya doğmaz.
 - **Geri itilme:** `player.kx`, `player.kz` hıza eklenir ve her karede `e^(-6·dt)` ile söner.
@@ -190,6 +194,10 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - `player.health`, en fazla `MAX_HEALTH = 20`. HUD'da 10 kalp; her kalp 2 puan (dolu, yarım, boş). Kalpler 9×9 piksellik canvas görselleridir.
 - `damagePlayer(amount, sourceX, sourceZ)`: canı düşürür, 0,5 sn hasarsızlık verir, ekran kenarını 0,2 sn kırmızı yakar. Kaynak verilirse oyuncuyu kaynaktan uzağa 4 blok/sn iter ve 6 blok/sn yukarı zıplatır; kaynak verilmezse (düşme gibi) itmez. Konsoldan test için `window.damagePlayer` olarak da açıktır.
 - **Yenilenme:** Can 20'den azsa, açlık en az `REGEN_FOOD = 18` ise ve son 5 sn hasar alınmadıysa, oyun duraklatılmamışken her 4 sn'de 1 puan geri gelir.
+
+### Kapı
+
+- Elde kapı varken bir bloğun üstüne sağ tık: alt ve üst hücreye kapalı kapı konur (iki hücre de boş olmalı); kapı oyuncunun baktığı yöne kapanır (levha hücrenin o kenarında). Kapıya sağ tık iki yarıyı birlikte açar/kapar; açıkken levha sol kenara döner ve geçilir. Bir yarı kırılınca diğeri de kalkar. Canlılar kapı açamaz (yapay zekâ kapıyı duvar sayar).
 
 ### Yatak ve doğma noktası
 
@@ -306,6 +314,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `coal` | Kömür (kömür cevherinden) |
   | `apple` | Elma |
   | `bed` | Yatak (konulabilir) |
+  | `door` | Kapı (konulabilir) |
   | `cooked_beef` | Pişmiş biftek |
   | `cooked_pork` | Pişmiş domuz eti |
   | `cooked_chicken` | Pişmiş tavuk |
@@ -373,6 +382,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `CCC` / `C.C` / `CCC` | kırık taş | fırın |
   | `SS` / `SS` | kum | kumtaşı |
   | `WWW` / `PPP` | yün üstte, tahta altta | yatak |
+  | `PP` / `PP` / `PP` | tahta | 3 kapı |
   | (Aletler tablosu) | tahta ya da kırık taş + çubuk | 8 alet |
 
 ## Test kancası
@@ -435,7 +445,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 21 | Su | Yapıldı |
 | 22 | Meşale ve basit ışık | Yapıldı |
 | 23 | Yatak | Yapıldı |
-| 24 | Kapı ve cam | Yapılmadı |
+| 24 | Kapı ve cam | Yapıldı |
 | 25 | Çiçek, uzun ot ve süs bitkileri | Yapılmadı |
 | 26 | Buğday tarımı ve ekmek | Yapılmadı |
 | 27 | Mağaralar | Yapılmadı |

@@ -21,8 +21,8 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
   - **Yeni dosya** açarsan `index.html`'deki doğru yere `<script src="js/….js">` satırını ekle ve SPEC.md'deki dosya tablosuna yaz. Bir dosya ~300 satırı geçerse konuya göre böl.
 - **Tek dış kütüphane: Three.js r128,** cdnjs'ten yüklenir: `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`. Yeni kütüphane ekleme, sürümü değiştirme.
 - **Dış dosya yok.** Resim, model ve ses dosyası kullanılmaz. Dokular 16×16 pikselde canvas ile kodla çizilir (mevcut atlas düzenine eklenir). Sesler WebAudio API ile kodla üretilir.
-- **Tarayıcı kısıtları.** Oyun hem claude.ai Artifact olarak hem de çift tıklanan yerel dosya (`file://`) olarak çalışmalı.
-  - `alert()`, `confirm()` ve `prompt()` Artifact içinde çalışmaz. Onay gereken her adımı sayfanın kendi arayüzüyle yap (örnek: düğmeye ikinci kez basınca onaylanır).
+- **Tarayıcı kısıtları.** Oyun hem GitHub Pages'te (HTTPS) hem de çift tıklanan yerel dosya (`file://`) olarak çalışmalı.
+  - `alert()`, `confirm()` ve `prompt()` kullanma; oyun içi arayüzün (Minecraft görünümü) dışında kalırlar. Onay gereken her adımı sayfanın kendi arayüzüyle yap (örnek: düğmeye ikinci kez basınca onaylanır).
   - Fare kilidi, IndexedDB ve `localStorage` reddedilebilir. Hepsini `try/catch` ile sar, reddedilince oyun yine oynanabilir kalsın.
   - Ses yalnızca kullanıcı bir yere tıkladıktan sonra başlayabilir (`AudioContext` ilk "Oyna" tıklamasında açılır).
 
@@ -134,7 +134,9 @@ Bilinen tuzaklar:
 
 ## Yayınlama
 
-- **Artifact:** Oyun claude.ai'da bir Artifact olarak yayınlıdır. Güncellerken aynı Artifact adresine yayınla ki link değişmesin.
-- **GitHub Pages:** Depo `origin` (GitHub) üzerinden GitHub Pages ile yayınlanır. Pages kök dizindeki `index.html` dosyasını açtığı için oyun dosyasının adı `index.html` olarak kalmalıdır.
+- **GitHub Pages (tek yayın yeri):** Depo `origin` (GitHub) üzerinden GitHub Pages ile yayınlanır; özel alan adı `CNAME` dosyasındadır (`block-world.necim.dev`). Kullanıcı push'layınca yayın güncellenir; agent push'lamaz.
+  - Pages kök dizindeki `index.html` dosyasını açtığı için oyun dosyasının adı `index.html` olarak kalmalıdır; `CNAME` dosyasını silme ya da değiştirme.
+  - Bütün yollar göreli olmalı (`css/style.css`, `js/….js`); kök `/` ile başlayan yol yazma.
+  - Derleme adımı yok: depodaki dosyalar olduğu gibi yayınlanır. `tests/` ve `tools/` de yayına girer ama oyun onları yüklemez.
+- Artifact olarak yayınlanmaz (kullanıcının kararı).
 - **Yerel açma:** Klasör bütün olarak kopyalanırsa `index.html` çift tıklanarak açılır (`css/` ve `js/` yanında olmalı). Three.js internetten yüklendiği için oyun internet bağlantısı ister.
-- **Artifact:** Çok dosyalı yayınlanır: sayfa `index.html`, diğerleri `files` ile aynı göreli yollarla (`css/style.css`, `js/….js`).

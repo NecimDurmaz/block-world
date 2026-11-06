@@ -32,7 +32,10 @@ function targetedMob(hit) {
 // Sol tuşa basınca: canlıya bakılıyorsa vurur.
 function attackMob() {
   punch = 0.25;
-  const mob = targetedMob(raycast());
+  // Ateş topuna vurmak onu geri çevirir (bloktan ve canlıdan yakınsa)
+  const hit = raycast(), mobHit = rayMob();
+  if (reflectFireball(Math.min(hit ? hit.t : Infinity, mobHit ? mobHit.t : Infinity))) return;
+  const mob = targetedMob(hit);
   if (!mob) return;
   const tool = selectedTool();
   hurtMob(mob, tool ? ITEMS[tool.key].damage : FIST_DAMAGE, aim.d.x, aim.d.z);

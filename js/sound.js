@@ -92,6 +92,8 @@ const MOB_SOUNDS = {
   chicken: { freq: 1400, endFreq: 1900, duration: 0.07, type: 'square', volume: 0.08 },
   sheep: { freq: 380, endFreq: 360, duration: 0.55, type: 'triangle', volume: 0.16, vibrato: 9 },
   zombie: { freq: 95, endFreq: 70, duration: 0.9, type: 'sawtooth', volume: 0.16, lowpass: 400 },
+  zombie_pigman: { freq: 150, endFreq: 110, duration: 0.6, type: 'sawtooth', volume: 0.15, lowpass: 700 },
+  ghast: { freq: 520, endFreq: 300, duration: 1.2, type: 'triangle', volume: 0.12, vibrato: 6 },
 };
 // Yakındaki (16 blok) canlılar 5–12 sn arayla ses çıkarır; ses uzaklıkla doğrusal azalır.
 function updateMobSounds(dt) {

@@ -60,7 +60,7 @@ function frame(now) {
     if (dimension === 'overworld') {
       updateAnimalSpawning(dt);
       updateHostileSpawning(dt);
-    }
+    } else updateNetherSpawning(dt);
     updateProjectiles(dt);
     updateParticles(dt);
     updateDrops(dt);

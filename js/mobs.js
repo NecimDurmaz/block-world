@@ -6,6 +6,7 @@ const MAX_ANIMALS = 16;
 // slowFall: düşerken yerçekimi 1/4 (tavuk kanat çırpar). hostile: gece doğar, oyuncuya saldırır.
 // ranged: uzaktan ok atar. climbs: önündeki duvara tırmanır. leaps: yakından oyuncuya sıçrar.
 // explodes: yaklaşıp patlar. burns: gündüz açık havada yanar. passiveByDay: gündüz saldırmaz, dolaşır.
+// neutral: vurulana kadar saldırmaz. flies: yerçekimsiz uçar (nether-mobs.js). Nether türleri nether-mobs.js'te eklenir.
 const MOB_TYPES = {
   cow: { name: 'İnek', health: 10, w: 0.45, h: 1.2, speed: 1.2, build: buildCow },
   pig: { name: 'Domuz', health: 10, w: 0.4, h: 0.9, speed: 1.1, build: buildPig },
@@ -79,6 +80,7 @@ function hurtMob(m, amount, dirX, dirZ) {
   m.kz = dirZ / len * 5;
   if (m.onGround) m.vy = 4;
   if (!m.type.hostile) m.flee = 4;
+  if (m.type.neutral) angerPigmen(m);
   if (m.health <= 0) m.dying = 0.5;
 }
 function surfaceY(x, z) {
@@ -197,11 +199,13 @@ function updateMob(m, dt) {
   m.swing = Math.max(0, m.swing - dt);
   m.leapTimer = Math.max(0, m.leapTimer - dt);
   m.timer -= dt;
+  m.angry = Math.max(0, (m.angry || 0) - dt);
+  if (m.type.flies) { updateGhast(m, dt); return; }
   const dx = player.x - m.x, dz = player.z - m.z, dist = Math.hypot(dx, dz);
   if (m.type.hostile && dist > DESPAWN_DISTANCE) { removeMob(m); return; }
   // Gördüğü oyuncuyu, görüş kesilse de CHASE_MEMORY sn kovalar.
   const day = daylight(clock.time) >= 0.5;
-  const aggressive = m.type.hostile && !dead && !(m.type.passiveByDay && day);
+  const aggressive = m.type.hostile && !dead && !(m.type.passiveByDay && day) && !(m.type.neutral && m.angry <= 0);
   const sees = aggressive && dist <= CHASE_DISTANCE && canSeePlayer(m);
   m.memory = sees ? CHASE_MEMORY : aggressive ? Math.max(0, m.memory - dt) : 0;
   const chasing = aggressive && dist <= CHASE_DISTANCE && m.memory > 0;
@@ -278,8 +282,9 @@ function updateMob(m, dt) {
     const wall = solid(ax, fy, az) ? (solid(ax, fy + 1, az) ? 2 : 1) : 0;
     let drop = 0;
     if (!wall) while (drop <= 3 && !solid(ax, fy - 1 - drop, az)) drop++;
-    // Hayvanlar suya girmez
+    // Hayvanlar suya, hiçbir canlı lava girmez
     if (!m.type.hostile && (get(ax, fy, az) === B.water || get(ax, fy - 1, az) === B.water)) drop = 99;
+    if (get(ax, fy, az) === B.lava || get(ax, fy - 1, az) === B.lava) drop = 99;
     if (wall && m.type.climbs) climbing = true;
     else if (wall === 2 || drop > 3) { m.yaw += Math.PI * (0.5 + Math.random()); speed = 0; }
     else if (wall === 1 && m.onGround) m.vy = JUMP;
@@ -352,9 +357,13 @@ function updateParticles(dt) {
   }
 }
 
-// Patlama: yarıçap içindeki blokları siler (y = 0 hariç), oyuncuya uzaklığa göre en çok 12 hasar.
+// Patlama: yarıçap içindeki blokları siler (y = 0 hariç), oyuncuya uzaklığa göre en çok maxDamage hasar.
 function explode(m) {
-  const cx = Math.floor(m.x), cy = Math.floor(m.y + 0.5), cz = Math.floor(m.z), r = EXPLOSION_RADIUS;
+  blast(m.x, m.y + 0.5, m.z, EXPLOSION_RADIUS, EXPLOSION_DAMAGE);
+  removeMob(m);
+}
+function blast(x, y, z, r, maxDamage) {
+  const cx = Math.floor(x), cy = Math.floor(y), cz = Math.floor(z);
   for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
     if (dx * dx + dy * dy + dz * dz <= r * r && cy + dy > 0) set(cx + dx, cy + dy, cz + dz, AIR);
   }
@@ -363,8 +372,7 @@ function explode(m) {
     if (x >= 0 && z >= 0 && x < SX && z < SZ) chunks.add(Math.floor(x / CH) + ',' + Math.floor(z / CH));
   }
   for (const key of chunks) buildChunk(...key.split(',').map(Number));
-  const distance = Math.hypot(player.x - m.x, player.y + 0.9 - (m.y + 0.75), player.z - m.z);
-  const damage = Math.round(EXPLOSION_DAMAGE * (1 - distance / (r * 2)));
-  if (damage > 0) damagePlayer(damage, m.x, m.z);
-  removeMob(m);
+  const distance = Math.hypot(player.x - x, player.y + 0.9 - (y + 0.25), player.z - z);
+  const damage = Math.round(maxDamage * (1 - distance / (r * 2)));
+  if (damage > 0) damagePlayer(damage, x, z);
 }

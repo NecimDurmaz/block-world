@@ -30,7 +30,8 @@ function shootArrow(m) {
 function updateProjectiles(dt) {
   for (const a of [...projectiles]) {
     a.life -= dt;
-    if (!a.stuck) {
+    if (a.fireball) updateFireball(a, dt);
+    else if (!a.stuck) {
       const steps = 4;
       for (let i = 0; i < steps; i++) {
         a.vy -= ARROW_GRAVITY * dt / steps;

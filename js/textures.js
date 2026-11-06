@@ -1,6 +1,9 @@
 // ---------- Dokular ----------
 // Doku atlası: 16x16 piksellik dokular kodla çizilir.
 
+// Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
+window.game = {};
+
 const T = 16, N_TILES = 36;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,

@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (29 betik, sırayla yüklenir) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (30 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -55,6 +55,7 @@ tests/              otomatik testler
    | `world-gen.js` | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
    | `renderer.js` | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
    | `day-cycle.js` | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
+   | `sky.js` | Bulutlar (`clouds`, `cloudTexture`) ve yıldızlar (`stars`), `updateSky()` |
    | `player-model.js` | `paint()`, `buildHumanoid()` (oyuncu, zombi, iskelet ortak), oyuncu modeli ve gözden görünümdeki kol |
    | `physics.js` | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | `input.js` | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
@@ -169,6 +170,11 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Gökyüzü:** Rengi gün döngüsüne göre değişir (aşağıda); sis aynı renktedir (30–70 blok).
 - **İki geçişli çizim:** `renderer.autoClear = false`. Önce dünya sahnesi, sonra gözden görünümde derinlik temizlenip kol sahnesi (`fpScene`, `fpCam`) çizilir; böylece kol duvarın içine girmez.
 - **Işıklar:** Dünya ışıksızdır. Oyuncu modeli ve kol için `HemisphereLight` (`HEMI_INTENSITY = 0.8`) + `DirectionalLight` (`SUN_INTENSITY = 0.5`), `addLights()` ile iki sahneye de eklenir ve `lightRigs` dizisinde tutulur.
+
+### Bulutlar ve yıldızlar
+
+- **Bulutlar:** `CLOUD_HEIGHT = 60`'ta, oyuncuyla birlikte hareket eden 384×384 blokluk düz bir katman. Doku 64×64 pikseldir, her piksel 4×4 bloğa denk gelir; döşenebilir gürültüyle şekillenir ve dünyaya sabit kalacak şekilde kaydırılır, böylece katman dünyanın dışına da uzanır. Oyun oynanırken `CLOUD_SPEED = 0.6` blok/sn doğuya (+x) kayar. Sisten etkilenmez, %85 opaktır; rengi gece `0,3 + 0,7 × daylight` oranında grileşir.
+- **Yıldızlar:** 400 nokta (`THREE.Points`), kameraya bağlı 150 yarıçaplı kürenin üst yarısında; gün döngüsüyle döner, opaklığı `1 − daylight` (gündüz görünmez).
 
 ### Gün döngüsü
 
@@ -449,7 +455,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -514,7 +520,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 28 | Ses efektleri | Yapıldı |
 | 29 | Kırılma parçacıkları | Yapıldı |
 | 30 | Duraklat menüsü ve ayarlar | Yapıldı |
-| 31 | Bulutlar ve yıldızlar | Yapılmadı |
+| 31 | Bulutlar ve yıldızlar | Yapıldı |
 | 32 | Hasar ve ölüm geri bildirimleri | Yapılmadı |
 | 33 | Obsidyen ve Nether portalı | Yapılmadı |
 | 34 | Nether boyutu | Yapılmadı |

@@ -136,6 +136,7 @@ function frame(now) {
   if (hit) highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
 
   updateDayCycle(dt);
+  updateSky(dt);
   // Kamera suyun içindeyse ekran mavi tonlanır, sis 8 bloğa iner.
   const cameraInWater = get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.water;
   underwaterEl.hidden = !cameraInWater;

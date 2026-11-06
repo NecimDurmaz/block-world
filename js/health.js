@@ -49,7 +49,7 @@ function damagePlayer(amount, sourceX, sourceZ) {
 }
 // Konsoldan test için
 window.damagePlayer = damagePlayer;
-window.game = { player, damagePlayer, clock };
+Object.assign(window.game, { player, damagePlayer, clock });
 
 const deathEl = document.getElementById('death');
 function die() {

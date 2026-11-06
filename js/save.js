@@ -42,6 +42,7 @@ function saveGame() {
       furnaces: Object.values(furnaces).map(f => ({ ...f, slots: f.slots.map(st => st && { ...st }) })),
       chests: Object.values(chests).map(c => ({ ...c, slots: c.slots.map(st => st && { ...st }) })),
       spawnPoint,
+      safeMode,
       selected,
       inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
       time: clock.time,
@@ -69,6 +70,7 @@ function applySave(save) {
   // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
   for (const c of save.chests || []) chests[c.dim + ':' + c.x + ',' + c.y + ',' + c.z] = { ...c, slots: c.slots.map(st => st && ITEMS[st.key] ? st : null) };
   spawnPoint = save.spawnPoint || null;
+  setSafeMode(!!save.safeMode);
   scanCrops();
   rebuildPortalMeshes();
   renderHearts();

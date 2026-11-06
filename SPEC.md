@@ -535,6 +535,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | `/give <eşya> [adet]` | Eşya verir (aletler tam dayanıklılıkla) |
 | `/give` | Eşya seçiciyi açar (aşağıda) |
 | `/god` | Ölümsüzlük aç/kapat: `damagePlayer` etkisiz, açlık azalmaz |
+| `/safe on\|off` | Güvenli mod (aşağıda); `/safe` tek başına durumu yazar |
 | `/heal`, `/feed` | Canı / açlığı doldurur |
 | `/time set day\|noon\|night\|midnight\|0–23` | Saati değiştirir (Türkçe: gündüz, öğle, gece, gece yarısı) |
 | `/tp <x> <y> <z>` | Işınlar; `~` göreli (`~ ~5 ~`) |
@@ -544,6 +545,11 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 - Komut sohbet kapanmadan önce çalışır; komut bir panel açtıysa sohbet kapanırken fare kilitlenmez.
 
+### Güvenli mod
+
+- Küçük çocuklar için: açıkken (`safeMode`) düşman canlılar dünyada durur ve dolaşır ama kovalamaz ve saldırmaz (`aggressive` her zaman yanlış): zombi ve örümcek vurmaz, iskelet ok atmaz, creeper patlamaz, domuz adamlar kızmaz, ghast ateş topu atmaz.
+- Kayda yazılır (`safeMode`). Açıkken ana menüde "Güvenli mod açık" notu (`#safe-note`) görünür.
+
 ### Eşya seçici
 
 - `/give` adsız yazılınca envanter paneli "Eşyalar" başlığıyla açılır; üretim bölümü yerine `#picker-ui` görünür: arama kutusu (`#picker-search`, açılınca odaklı) ve dünyada gizli olmayan bütün eşyaların yuvaları (`#picker-grid`, 6 satır yüksekliğinde kayar).
@@ -552,7 +558,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `pickerItems()`, `isGod()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -571,6 +577,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikt
   | `food` | Açlık (yoksa 20) |
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
   | `furnaces` | Fırınların dizisi: `{ dim, x, y, z, slots, burn, burnMax, progress }` (`dim` yoksa ana dünya) |
+  | `safeMode` | Güvenli mod açık mı (yoksa kapalı) |
   | `chests` | Sandıkların dizisi: `{ dim, x, y, z, slots[27] }`; alan yoksa sandık yok |
   | `selected` | Seçili hotbar yuvası (0–8) |
   | `inventory` | 36 yuva: `{ key, count }` (aletlerde `durability` da) ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
@@ -640,4 +647,4 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |
 | 48 | Eşya seçici (`/give` paneli) | Yapıldı |
 | 49 | Eldeki eşya her zaman görünür | Yapıldı |
-| 50 | Güvenli mod (`/safe`) | Yapılmadı |
+| 50 | Güvenli mod (`/safe`) | Yapıldı |

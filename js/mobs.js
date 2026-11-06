@@ -205,7 +205,8 @@ function updateMob(m, dt) {
   if (m.type.hostile && dist > DESPAWN_DISTANCE) { removeMob(m); return; }
   // Gördüğü oyuncuyu, görüş kesilse de CHASE_MEMORY sn kovalar.
   const day = daylight(clock.time) >= 0.5;
-  const aggressive = m.type.hostile && !dead && !(m.type.passiveByDay && day) && !(m.type.neutral && m.angry <= 0);
+  // Güvenli modda hiçbir canlı kovalamaz ve saldırmaz.
+  const aggressive = m.type.hostile && !dead && !safeMode && !(m.type.passiveByDay && day) && !(m.type.neutral && m.angry <= 0);
   const sees = aggressive && dist <= CHASE_DISTANCE && canSeePlayer(m);
   m.memory = sees ? CHASE_MEMORY : aggressive ? Math.max(0, m.memory - dt) : 0;
   const chasing = aggressive && dist <= CHASE_DISTANCE && m.memory > 0;

@@ -71,7 +71,7 @@ function updateGhast(m, dt) {
   m.yaw = sees ? Math.atan2(-dx, -dz) : Math.atan2(-tx, -tz);
   // Ateş atarken ağzı açık (kırmızı yanıp söner gibi kısa parlama)
   m.attackCooldown = Math.max(0, m.attackCooldown - dt);
-  if (sees && m.attackCooldown <= 0) {
+  if (sees && !safeMode && m.attackCooldown <= 0) {
     shootFireball(m);
     m.attackCooldown = GHAST_SHOT_INTERVAL;
   }

@@ -6,7 +6,8 @@ const CHAT_FADE = 10000, CHAT_MAX_LINES = 50;
 const chatEl = document.getElementById('chat');
 const chatLog = document.getElementById('chat-log');
 const chatInput = document.getElementById('chat-input');
-let chatOpen = false, godMode = false;
+// safeMode: güvenli mod (/safe), canavarlar saldırmaz; kayda yazılır.
+let chatOpen = false, godMode = false, safeMode = false;
 
 // kind: '' oyuncu mesajı, 'info' sistem (sarı), 'error' hata (kırmızı)
 function chatLine(text, kind = '') {
@@ -83,6 +84,13 @@ const COMMANDS = {
     godMode = !godMode;
     chatLine(godMode ? 'Ölümsüzlük açık' : 'Ölümsüzlük kapalı', 'info');
   } },
+  safe: { usage: '/safe on|off', about: 'Güvenli mod: canavarlar dolaşır ama saldırmaz', run: args => {
+    const value = normalize(args.join(' '));
+    if (value === 'on' || value === 'aç') setSafeMode(true);
+    else if (value === 'off' || value === 'kapat') setSafeMode(false);
+    else if (value) return chatLine('Kullanım: /safe on | off', 'error');
+    chatLine(safeMode ? 'Güvenli mod açık: canavarlar saldırmaz' : 'Güvenli mod kapalı', 'info');
+  } },
   heal: { usage: '/heal', about: 'Canı doldurur', run: () => {
     player.health = MAX_HEALTH;
     renderHearts();
@@ -123,6 +131,10 @@ const COMMANDS = {
     chatLine('Doğma noktası buraya taşındı', 'info');
   } },
 };
+function setSafeMode(on) {
+  safeMode = on;
+  document.getElementById('safe-note').hidden = !on;
+}
 function submitChat(text) {
   if (!text.startsWith('/')) { chatLine(`<Oyuncu> ${text}`); return; }
   const [name, ...args] = text.slice(1).split(/\s+/);
@@ -131,4 +143,4 @@ function submitChat(text) {
   command.run(args);
 }
 
-Object.assign(window.game, { openChat, closeChat, submitChat, isGod: () => godMode, chatLines: () => [...chatLog.children].map(l => l.textContent) });
+Object.assign(window.game, { openChat, closeChat, submitChat, isGod: () => godMode, isSafe: () => safeMode, chatLines: () => [...chatLog.children].map(l => l.textContent) });

@@ -20,14 +20,14 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 
 `block-world.html` sırasıyla şunları içerir:
 
-1. `<head>`: başlık, Roboto (Google Fonts), tüm CSS. CSS değişkenleri `:root` bloğundadır.
+1. `<head>`: başlık, Roboto (Google Fonts), tüm CSS. CSS değişkenleri `:root` bloğundadır. `[hidden] { display: none !important; }` kuralı, `display` verilmiş panellerin `hidden` ile gizlenebilmesi için gereklidir; silme.
 2. `<body>` içinde HUD öğeleri:
 
    | id | Görevi |
    | --- | --- |
    | `game` | WebGL tuvalinin yerleştiği kap |
    | `crosshair` | Ekran ortasındaki artı işareti (önden kamerada gizlenir) |
-   | `info` | Sol üstte konum: `X 48 · Y 13 · Z 48` |
+   | `info` | Sol üstte gün, saat ve konum: `Gün 1 · 07:12 · X 48 · Y 13 · Z 48` |
    | `blockname` | Hotbar üstünde 1,5 sn görünen bildirim (blok adı, kamera adı) |
    | `hotbar` | 9 yuvalı blok çubuğu |
    | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
@@ -43,7 +43,8 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Dokular | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
    | Bloklar | `BLOCKS` tanımları, `B` kısaltmaları, `HOTBAR` sırası |
    | Dünya üretimi | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
-   | Three.js sahnesi | Renderer, sahne, kamera, ışıklar, kol sahnesi, chunk mesh'leri, seçim çerçevesi |
+   | Three.js sahnesi | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
+   | Gün döngüsü | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
    | Oyuncu modeli | Bloklu insan modeli ve gözden görünümdeki kol |
    | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, AABB çarpışma |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
@@ -100,9 +101,26 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 - **Yüz gölgesi:** Işık hesabı yok, köşe rengiyle sabit gölge: üst 1,0, doğu/batı 0,8, kuzey/güney 0,65, alt 0,5.
 - **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri.
 - **Yeniden kurma:** Blok değişince `rebuildAround(x, z)` o chunk'ı ve gerekiyorsa komşusunu yeniden kurar.
-- **Gökyüzü:** Sabit `#9cc8ef`, aynı renkte sis (30–70 blok).
+- **Gökyüzü:** Rengi gün döngüsüne göre değişir (aşağıda); sis aynı renktedir (30–70 blok).
 - **İki geçişli çizim:** `renderer.autoClear = false`. Önce dünya sahnesi, sonra gözden görünümde derinlik temizlenip kol sahnesi (`fpScene`, `fpCam`) çizilir; böylece kol duvarın içine girmez.
-- **Işıklar:** Dünya ışıksızdır. Oyuncu modeli ve kol için `HemisphereLight` (0,8) + `DirectionalLight` (0,5), `addLights()` ile iki sahneye de eklenir.
+- **Işıklar:** Dünya ışıksızdır. Oyuncu modeli ve kol için `HemisphereLight` (`HEMI_INTENSITY = 0.8`) + `DirectionalLight` (`SUN_INTENSITY = 0.5`), `addLights()` ile iki sahneye de eklenir ve `lightRigs` dizisinde tutulur.
+
+### Gün döngüsü
+
+- Bir gün `DAY_LENGTH = 600` sn. `clock.time` 0–1 arasıdır ve yalnızca oyun oynanırken ilerler; 1'i geçince `clock.day` bir artar. Oyun `clock.time = 0.05` (07:12) ile başlar.
+
+  | `clock.time` | Evre | Süre |
+  | --- | --- | --- |
+  | 0–0,5 | Gündüz | 5 dk |
+  | 0,5–0,55 | Akşam geçişi (`DUSK`) | 30 sn |
+  | 0,55–0,95 | Gece | 4 dk |
+  | 0,95–1 | Şafak geçişi (`DAWN`) | 30 sn |
+
+- **Saat:** `(6 + time × 24) mod 24`; 0 → 06:00, 0,25 → 12:00, 0,5 → 18:00, 0,75 → 00:00.
+- **`daylight(t)`:** gündüz 1, gece 0, geçişlerde yumuşak (smoothstep).
+- **Gökyüzü ve sis rengi:** gece `#0b1026` ile gündüz `#9cc8ef` arasında `daylight` oranında karışır; geçişlerin ortasında `#e8a36a` turuncusuna doğru %60'a kadar kayar.
+- **Parlaklık:** `0.25 + 0.75 × daylight`. Blok malzemesinin rengi (`material.color`) ve iki sahnedeki ışık şiddetleri bu çarpanla ölçeklenir.
+- **Güneş ve ay:** Sisten etkilenmeyen kare düzlemler (güneş 16, ay 11 birim), kameradan 150 blok uzakta ve her zaman kameraya dönük. Güneş `t = 0`'da doğuda (+x) doğar, 0,25'te tepede, 0,5'te batıda batar; ay tam karşısındadır.
 
 ---
 
@@ -161,7 +179,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game = { player, damagePlayer }` açıktır. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game = { player, damagePlayer, clock }` açıktır. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -179,7 +197,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | — | Oyuncu modeli, üç kamera, gözden kol, W-W koşma | Yapıldı |
 | 1 | Can barı | Yapıldı |
 | 2 | Düşme hasarı, ölüm ve yeniden doğma | Yapıldı |
-| 3 | Sabah / akşam döngüsü | Yapılmadı |
+| 3 | Sabah / akşam döngüsü | Yapıldı |
 | 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapılmadı |
 | 5 | Canlı altyapısı ve inek | Yapılmadı |
 | 6 | Domuz, tavuk ve koyun | Yapılmadı |

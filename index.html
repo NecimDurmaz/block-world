@@ -159,10 +159,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 31;
+  const T = 16, N_TILES = 36;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35,
   };
 
   function mulberry32(a) {
@@ -285,6 +285,17 @@
     for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) px(tile, 7 + dx, 6 + dy, shade(petal, 0.9 + rnd() * 0.15));
     px(tile, 7, 6, shade(center, 1));
   }
+  // Tarla: koyu, nemli toprak üstünde sürülmüş çizgiler
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) px(TILE.farmland, x, y, shade(y % 4 === 0 ? [60, 38, 24] : [92, 62, 40], 0.9 + rnd() * 0.15));
+  // Buğday: 4 aşama, gittikçe uzayan ve sararan saplar
+  [[5, [96, 168, 56]], [9, [110, 170, 50]], [12, [180, 170, 60]], [14, [214, 180, 70]]].forEach(([h, color], stage) => {
+    const tile = TILE.wheat0 + stage;
+    for (let x = 1; x < 15; x += 2) {
+      const hh = h - Math.floor(rnd() * 3);
+      for (let y = 16 - hh; y < 16; y++) px(tile, x, y, shade(color, 0.85 + rnd() * 0.3));
+      if (stage === 3) px(tile, x, 16 - hh, shade([150, 110, 40], 1)); // başak
+    }
+  });
   // Kapı: koyu çerçeveli tahta; üst yarıda iki küçük pencere
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const frame = x < 2 || x > 13 || y === 0 || y === 15;
@@ -356,6 +367,13 @@
       name, top: tile, side: tile, bottom: tile, breakTime: 0.05, model: 'cross', noCollide: true, transparent: true, cutout: true,
       replaceable: true, hidden: true, noDrop: true,
     })),
+    // Tarla: çapayla sürülmüş toprak; kırılınca toprak düşer
+    { name: 'Tarla', top: TILE.farmland, side: TILE.dirt, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel', drop: 'dirt' },
+    // Buğday 4 aşama (crop: aşama)
+    ...[0, 1, 2, 3].map(stage => ({
+      name: 'Buğday', top: TILE.wheat0 + stage, side: TILE.wheat0 + stage, bottom: TILE.wheat0 + stage, breakTime: 0.05,
+      model: 'cross', noCollide: true, transparent: true, cutout: true, hidden: true, crop: stage,
+    })),
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
     torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -366,7 +384,8 @@
   const DOOR_FIRST = 31;
   const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
   const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
-  Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49 });
+  Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54 });
+  const isCrop = b => b >= B.wheat_0 && b <= B.wheat_3;
   const isPlant = b => BLOCKS[b]?.model === 'cross';
   // Üstünden geçilebilen, zemin sayılmayan hücre (hava ya da bitki/meşale)
   const passable = b => b === AIR || !!BLOCKS[b].noCollide;
@@ -1056,6 +1075,14 @@
     if (tool) useTool();
     if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
     // Bitkiler eşya düşürmez; uzun ot %12 olasılıkla buğday tohumu verir.
+    // Buğday: olgunsa 1 buğday + 1–3 tohum, değilse 1 tohum
+    if (isCrop(broken)) {
+      crops.delete(furnaceKey(hit.x, hit.y, hit.z));
+      const mature = broken === B.wheat_3, seeds = mature ? 1 + Math.floor(Math.random() * 3) : 1;
+      if (mature) dropItem('wheat', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+      for (let n = 0; n < seeds; n++) dropItem('wheat_seeds', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+      return;
+    }
     if (def.noDrop) {
       if (broken === B.tall_grass && Math.random() < 0.12) dropItem('wheat_seeds', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
       return;
@@ -1134,6 +1161,25 @@
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
     const slot = inventory[selected];
+    // Çapa: üstü boş çimen ya da toprağı tarlaya çevirir
+    if (slot?.key === 'wooden_hoe') {
+      const target = get(hit.x, hit.y, hit.z);
+      if ((target === B.grass || target === B.dirt) && y - hit.y === 1) {
+        set(hit.x, hit.y, hit.z, B.farmland);
+        rebuildAround(hit.x, hit.z);
+        useTool();
+      }
+      return;
+    }
+    // Tohum yalnızca tarlanın üstüne ekilir
+    if (slot?.key === 'wheat_seeds') {
+      if (get(hit.x, hit.y, hit.z) !== B.farmland || y - hit.y !== 1) return;
+      set(x, y, z, B.wheat_0);
+      plantCrop(x, y, z);
+      rebuildAround(x, z);
+      takeFromSlot(selected, 1);
+      return;
+    }
     if (slot?.key === 'door') {
       // Kapı bir bloğun üstüne konur: alt ve üst hücre boş olmalı; oyuncunun baktığı yöne kapanır.
       if (y - hit.y !== 1 || !inBounds(x, y + 1, z) || isTargetable(get(x, y + 1, z))) return;
@@ -1277,6 +1323,32 @@
     if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || player.food < REGEN_FOOD || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
     regenTimer += dt;
     if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
+  }
+
+  // ---------- Ekinler ----------
+  // Her ekin, ortalama 60 sn'de bir sonraki aşamaya geçer (oyun oynanırken). Aşama dünya dizisinde durur, kayda girer.
+  const CROP_STAGE_TIME = 60;
+  const crops = new Map(); // "x,y,z" -> sonraki aşamaya kalan sn
+  const nextStageTime = () => CROP_STAGE_TIME * (0.6 + Math.random() * 0.8);
+  function plantCrop(x, y, z) { crops.set(x + ',' + y + ',' + z, nextStageTime()); }
+  // Yüklenen dünyadaki olgunlaşmamış ekinleri bulur
+  function scanCrops() {
+    crops.clear();
+    for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
+      const b = world[index(x, y, z)];
+      if (isCrop(b) && b !== B.wheat_3) plantCrop(x, y, z);
+    }
+  }
+  function updateCrops(dt) {
+    for (const [key, left] of crops) {
+      if (left - dt > 0) { crops.set(key, left - dt); continue; }
+      const [x, y, z] = key.split(',').map(Number);
+      const b = get(x, y, z);
+      if (!isCrop(b) || b === B.wheat_3) { crops.delete(key); continue; }
+      set(x, y, z, b + 1);
+      rebuildAround(x, z);
+      if (b + 1 === B.wheat_3) crops.delete(key); else crops.set(key, nextStageTime());
+    }
   }
 
   // ---------- Kapı ----------
@@ -1935,6 +2007,9 @@
     bone: ['Kemik', { w: '#ecebe2' }, ['......ww', '.....www', '....ww..', '...ww...', '..ww....', 'www.....', 'ww......', '........']],
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
     door: ['Kapı', { b: '#96693c', d: '#5c4024', g: '#a9cbe0' }, ['..dddd..', '..dggd..', '..dggd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dddd..']],
+    wheat: ['Buğday', { y: '#d6b44a', d: '#a8842a' }, ['......yy', '.....yd.', '....yy..', '...yd...', '..yy....', '.d......', 'd.......', '........']],
+    bread: ['Ekmek', { b: '#c8883e', d: '#8a5a24', l: '#e8b870' }, ['........', '..bbbb..', '.blblbb.', 'bbbbbbbd', 'bbbbbbbd', '.dddddd.', '........', '........']],
+    wooden_hoe: ['Tahta çapa', { h: '#b08a52', d: '#7a5a32', s: '#6b4a2b' }, ['..hhhh..', '..d..s..', '....s...', '...s....', '..s.....', '.s......', 's.......', '........']],
     wheat_seeds: ['Buğday tohumu', { g: '#5f9a3a', d: '#3f6a22' }, ['........', '..g..d..', '....g...', '.d....g.', '...g....', '.g...d..', '....g...', '........']],
     bed: ['Yatak', { w: '#ececec', r: '#a8282a', b: '#7a5a32' }, ['........', '........', 'wwrrrrrr', 'wwrrrrrr', 'bbbbbbbb', 'b......b', '........', '........']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
@@ -1988,6 +2063,8 @@
   Object.assign(ITEMS.cooked_chicken, { food: 6 });
   Object.assign(ITEMS.rotten_flesh, { food: 2 });
   Object.assign(ITEMS.apple, { food: 4 });
+  Object.assign(ITEMS.bread, { food: 5 });
+  Object.assign(ITEMS.wooden_hoe, { tool: 'hoe', tier: 1, speed: 1, durability: 60, damage: 1 });
   ITEMS.furnace_lit.hidden = true; // yalnızca dünyada; kırılınca fırın düşer
   const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};
 
@@ -2147,6 +2224,10 @@
     { pattern: ['WWW', 'PPP'], keys: { W: 'wool', P: 'planks' }, out: ['bed', 1] },
     { pattern: ['PP', 'PP', 'PP'], keys: { P: 'planks' }, out: ['door', 3] },
   ];
+  RECIPES.push(
+    { pattern: ['PP', '.S', '.S'], keys: { P: 'planks', S: 'stick' }, out: ['wooden_hoe', 1] },
+    { pattern: ['WWW'], keys: { W: 'wheat' }, out: ['bread', 1] },
+  );
   for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) for (const [kindKey, kind] of Object.entries(TOOL_KINDS)) {
     RECIPES.push({ pattern: kind.pattern, keys: { M: tier.material, S: 'stick' }, out: [`${tierKey}_${kindKey}`, 1] });
   }
@@ -2389,6 +2470,7 @@
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
   Object.assign(window.game, { getSpawnPoint: () => spawnPoint, isSleeping: () => sleepTimer > 0 });
+  Object.assign(window.game, { crops });
   Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance, raycast, torchNearby, torchLight: (x, y, z) => torchLightAt(torchesNear(x - 8, z - 8, x + 8, z + 8), x, y, z) });
 
   // ---------- Kayıt ----------
@@ -2449,6 +2531,7 @@
     player.food = save.food ?? MAX_FOOD;
     for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
     spawnPoint = save.spawnPoint || null;
+    scanCrops();
     renderHearts();
     renderFood();
     // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
@@ -2554,6 +2637,7 @@
       updateParticles(dt);
       updateDrops(dt);
       updateFurnaces(dt);
+      updateCrops(dt);
     }
     for (const m of mobs) renderMob(m);
     renderDrops();

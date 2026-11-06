@@ -48,6 +48,8 @@
   .craft-arrow { font-size: 24px; color: var(--ew-text-muted); }
   .inv-slot { width: 40px; height: 40px; box-sizing: border-box; background: #eceef4 center / 30px no-repeat; image-rendering: pixelated; border: 1px solid #c6cddd; border-radius: var(--ew-radius-btn); position: relative; cursor: pointer; }
   .inv-slot:hover { border-color: var(--ew-primary); }
+  .dur { position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; background: #212121; display: none; }
+  .dur i { display: block; height: 100%; }
   #held { position: fixed; width: 30px; height: 30px; pointer-events: none; background: center / 30px no-repeat; image-rendering: pixelated; transform: translate(-50%, -50%); }
   .slot.active { border-color: var(--hud-fg); box-shadow: 0 0 0 2px var(--ew-primary); }
   #status { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
@@ -92,13 +94,13 @@
     <div class="craft">
       <div class="craft-grid" id="craft-grid"></div>
       <span class="craft-arrow">→</span>
-      <div class="inv-slot" id="craft-result"><span class="count"></span></div>
+      <div class="inv-slot" id="craft-result"><span class="count"></span><span class="dur"></span></div>
     </div>
     <div class="inv-grid" id="inv-bag"></div>
     <div class="inv-grid inv-hotbar" id="inv-hotbar"></div>
   </div>
 </div>
-<div id="held" hidden><span class="count"></span></div>
+<div id="held" hidden><span class="count"></span><span class="dur"></span></div>
 <div id="death" hidden>
   <div class="panel">
     <h1>Öldün!</h1>
@@ -228,11 +230,12 @@
   // ---------- Bloklar ----------
   const AIR = 0;
   // breakTime: elle kırma süresi (sn). tool: bloğu hızlı kıran alet. needsTool: o alet olmadan kırılınca eşya düşmez.
+  // drop: kırılınca kendisi yerine düşen eşya.
   const BLOCKS = [
     null,
     { name: 'Çimen', top: TILE.grassTop, side: TILE.grassSide, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
     { name: 'Toprak', top: TILE.dirt, side: TILE.dirt, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
-    { name: 'Taş', top: TILE.stone, side: TILE.stone, bottom: TILE.stone, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
+    { name: 'Taş', top: TILE.stone, side: TILE.stone, bottom: TILE.stone, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'cobble' },
     { name: 'Kütük', top: TILE.logTop, side: TILE.logSide, bottom: TILE.logTop, breakTime: 3, tool: 'axe' },
     { name: 'Yaprak', top: TILE.leaves, side: TILE.leaves, bottom: TILE.leaves, breakTime: 0.3 },
     { name: 'Kum', top: TILE.sand, side: TILE.sand, bottom: TILE.sand, breakTime: 0.75, tool: 'shovel' },
@@ -681,16 +684,20 @@
   function attackMob() {
     punch = 0.25;
     const mob = targetedMob(raycast());
-    if (mob) hurtMob(mob, FIST_DAMAGE, aim.d.x, aim.d.z);
+    if (!mob) return;
+    const tool = selectedTool();
+    hurtMob(mob, tool ? ITEMS[tool.key].damage : FIST_DAMAGE, aim.d.x, aim.d.z);
+    if (tool) useTool();
   }
   function breakBlockAt(hit) {
     const broken = get(hit.x, hit.y, hit.z);
     set(hit.x, hit.y, hit.z, AIR);
     rebuildAround(hit.x, hit.z);
-    // Yaprak %10 olasılıkla düşer; alet isteyen bloklar elle kırılınca düşmez.
-    const def = BLOCKS[broken];
-    if (def.needsTool) return;
-    if (broken !== B.leaves || Math.random() < 0.1) dropItem(BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+    // Yaprak %10 olasılıkla düşer; alet isteyen bloklar doğru alet olmadan kırılınca düşmez.
+    const def = BLOCKS[broken], tool = selectedTool();
+    if (tool) useTool();
+    if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool)) return;
+    if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
   }
 
   // Kazma ilerlemesi: aynı bloğa basılı tutuldukça dolar; hedef değişir ya da tuş bırakılırsa sıfırlanır.
@@ -721,7 +728,11 @@
   crackBox.visible = false;
   scene.add(crackBox);
   const miningState = { key: '', progress: 0 };
-  function breakTimeOf(block) { return BLOCKS[block].breakTime; }
+  // Doğru alet süreyi hız çarpanına böler.
+  function breakTimeOf(block) {
+    const def = BLOCKS[block], tool = selectedTool();
+    return tool && ITEMS[tool.key].tool === def.tool ? def.breakTime / ITEMS[tool.key].speed : def.breakTime;
+  }
   function updateMining(dt, hit) {
     const target = mining && hit && hit.y > 0 && !targetedMob(hit) ? hit : null;
     if (!target) { miningState.key = ''; miningState.progress = 0; crackBox.visible = false; return; }
@@ -767,7 +778,7 @@
   for (let i = 0; i < HOTBAR_SIZE; i++) {
     const s = document.createElement('div');
     s.className = 'slot';
-    s.innerHTML = `<span class="num">${i + 1}</span><span class="count"></span>`;
+    s.innerHTML = `<span class="num">${i + 1}</span><span class="count"></span><span class="dur"></span>`;
     s.addEventListener('click', () => selectSlot(i));
     hotbar.appendChild(s);
   }
@@ -782,6 +793,7 @@
     selected = i;
     [...hotbar.children].forEach((s, j) => s.classList.toggle('active', j === i));
     if (inventory[i]) toast(ITEMS[inventory[i].key].name);
+    updateHeldTool();
   }
 
   // ---------- Can ----------
@@ -1417,6 +1429,34 @@
     rows.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
     ITEMS[key] = { name, canvas: c };
   }
+  // Aletler: 2 seviye x 4 tür. tool: tür, speed: doğru blokta hız çarpanı, durability: kullanım hakkı, damage: vuruş hasarı.
+  const TOOL_TIERS = {
+    wooden: { name: 'Tahta', head: '#b08a52', dark: '#7a5a32', speed: 2, durability: 60, material: 'planks' },
+    stone: { name: 'Taş', head: '#9a9a9a', dark: '#626262', speed: 4, durability: 132, material: 'cobble' },
+  };
+  // damage: [tahta, taş]. Desen: M malzeme, S çubuk.
+  const TOOL_KINDS = {
+    pickaxe: { name: 'kazma', damage: [2, 3], pattern: ['MMM', '.S.', '.S.'],
+      art: ['.hhhhh..', 'd...sd..', '...s.h..', '..s..d..', '.s......', 's.......', '........', '........'] },
+    axe: { name: 'balta', damage: [3, 3], pattern: ['MM', 'MS', '.S'],
+      art: ['...hh...', '..hhhh..', '..hdsh..', '...sd...', '..s.....', '.s......', 's.......', '........'] },
+    shovel: { name: 'kürek', damage: [2, 2], pattern: ['M', 'S', 'S'],
+      art: ['.....hh.', '....hhhh', '.....hdh', '....s.h.', '...s....', '..s.....', '.s......', 's.......'] },
+    sword: { name: 'kılıç', damage: [4, 5], pattern: ['M', 'M', 'S'],
+      art: ['.......h', '......hd', '.....hd.', '....hd..', '.s.hd...', '..sd....', '.s.s....', 's.......'] },
+  };
+  for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) Object.entries(TOOL_KINDS).forEach(([kindKey, kind]) => {
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const ic = c.getContext('2d');
+    const palette = { h: tier.head, d: tier.dark, s: '#6b4a2b' };
+    kind.art.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
+    ITEMS[`${tierKey}_${kindKey}`] = {
+      name: `${tier.name} ${kind.name}`, canvas: c, tool: kindKey, speed: tier.speed,
+      durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1],
+    };
+  });
+  const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};
+
   // HUD'da kullanılacak simge (data URL)
   const iconCache = {};
   function itemIcon(key) {
@@ -1473,7 +1513,7 @@
     drops.splice(drops.indexOf(d), 1);
   }
   // Envantere sığarsa toplanır; sığmazsa yerde kalır.
-  const collectItem = key => addItem(key, 1) === 0;
+  const collectItem = d => addItem(d.key, 1, d.extra) === 0;
   function updateDrops(dt) {
     for (const d of [...drops]) {
       d.age += dt;
@@ -1482,7 +1522,7 @@
       d.pickupDelay = Math.max(0, (d.pickupDelay || 0) - dt);
       if (!dead && dist < PICKUP_RANGE && !d.pickupDelay) {
         // Oyuncuya doğru çekilir; yeterince yaklaşınca toplanır.
-        if (dist < 0.6 && collectItem(d.key)) { toast('+1 ' + ITEMS[d.key].name); removeDrop(d); continue; }
+        if (dist < 0.6 && collectItem(d)) { toast('+1 ' + ITEMS[d.key].name); removeDrop(d); continue; }
         d.x += dx / dist * 6 * dt; d.y += dy / dist * 6 * dt; d.z += dz / dist * 6 * dt;
       } else {
         const friction = d.onGround ? Math.exp(-dt * 8) : 1;
@@ -1508,7 +1548,8 @@
   let held = null; // envanter ekranında farenin tuttuğu yığın
 
   // Önce aynı türdeki yuvalara, sonra ilk boş yuvaya koyar. Sığmayan adedi döndürür.
-  function addItem(key, count) {
+  // extra: yığına eklenecek alanlar (ör. aletin dayanıklılığı)
+  function addItem(key, count, extra = {}) {
     for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
       const s = inventory[i];
       if (s && s.key === key && s.count < maxStack(key)) {
@@ -1519,7 +1560,7 @@
     for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
       if (!inventory[i]) {
         const n = Math.min(count, maxStack(key));
-        inventory[i] = { key, count: n }; count -= n;
+        inventory[i] = { key, count: n, ...extra }; count -= n;
       }
     }
     renderInventory();
@@ -1536,6 +1577,7 @@
     const s = inventory[selected];
     if (!s) return;
     const d = dropItem(s.key, player.x + aim.d.x * 0.6, player.y + EYE - 0.3, player.z + aim.d.z * 0.6);
+    d.extra = extraOf(s);
     d.vx = aim.d.x * 5; d.vy = aim.d.y * 5 + 2; d.vz = aim.d.z * 5;
     d.pickupDelay = 1.5;
     takeFromSlot(selected, 1);
@@ -1547,7 +1589,7 @@
   for (let i = 0; i < INVENTORY_SIZE; i++) {
     const el = document.createElement('div');
     el.className = 'inv-slot';
-    el.innerHTML = '<span class="count"></span>';
+    el.innerHTML = '<span class="count"></span><span class="dur"></span>';
     el.addEventListener('mousedown', e => { e.preventDefault(); clickSlot(i, e.button === 2); });
     el.addEventListener('contextmenu', e => e.preventDefault());
     document.getElementById(i < HOTBAR_SIZE ? 'inv-hotbar' : 'inv-bag').appendChild(el);
@@ -1568,6 +1610,9 @@
     { pattern: ['CCC', 'C.C', 'CCC'], keys: { C: 'cobble' }, out: ['furnace', 1] },
     { pattern: ['SS', 'SS'], keys: { S: 'sand' }, out: ['sandstone', 1] },
   ];
+  for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) for (const [kindKey, kind] of Object.entries(TOOL_KINDS)) {
+    RECIPES.push({ pattern: kind.pattern, keys: { M: tier.material, S: 'stick' }, out: [`${tierKey}_${kindKey}`, 1] });
+  }
   // Izgaradaki dolu hücrelerin sınır kutusunu desenle karşılaştırır.
   function craftResult() {
     const cells = [];
@@ -1584,7 +1629,10 @@
         const have = craftGrid[(top + r) * 3 + left + c];
         match = want ? have?.key === want : !have;
       }
-      if (match) return { key: recipe.out[0], count: recipe.out[1] };
+      if (match) {
+        const [key, count] = recipe.out;
+        return ITEMS[key].durability ? { key, count, durability: ITEMS[key].durability } : { key, count };
+      }
     }
     return null;
   }
@@ -1592,7 +1640,7 @@
   for (let i = 0; i < 9; i++) {
     const el = document.createElement('div');
     el.className = 'inv-slot';
-    el.innerHTML = '<span class="count"></span>';
+    el.innerHTML = '<span class="count"></span><span class="dur"></span>';
     el.addEventListener('mousedown', e => { e.preventDefault(); clickCraft(i, e.button === 2); });
     el.addEventListener('contextmenu', e => e.preventDefault());
     document.getElementById('craft-grid').appendChild(el);
@@ -1606,6 +1654,11 @@
     el.style.backgroundImage = s ? `url(${itemIcon(s.key)})` : 'none';
     el.querySelector('.count').textContent = s && s.count > 1 ? s.count : '';
     el.title = s ? ITEMS[s.key].name : '';
+    // Aşınmış aletin dayanıklılık çubuğu: yeşilden kırmızıya
+    const bar = el.querySelector('.dur'), max = s && ITEMS[s.key].durability;
+    const worn = max && s.durability < max;
+    bar.style.display = worn ? 'block' : 'none';
+    if (worn) bar.innerHTML = `<i style="width:${s.durability / max * 100}%;background:hsl(${s.durability / max * 120},80%,45%)"></i>`;
   };
   function renderInventory() {
     for (let i = 0; i < HOTBAR_SIZE; i++) paintSlot(hotbar.children[i], inventory[i]);
@@ -1614,6 +1667,7 @@
     const result = craftResult();
     paintSlot(resultEl, result);
     if (result) resultEl.querySelector('.count').textContent = result.count > 1 ? result.count : '';
+    updateHeldTool();
     paintSlot(heldEl, held);
     heldEl.hidden = !held;
   }
@@ -1624,13 +1678,13 @@
     if (!held) {
       if (!s) return;
       const n = right ? Math.ceil(s.count / 2) : s.count;
-      held = { key: s.key, count: n };
+      held = { ...s, count: n };
       s.count -= n;
       if (!s.count) slots[i] = null;
     } else if (!s || s.key === held.key) {
       const n = Math.min(right ? 1 : held.count, maxStack(held.key) - (s ? s.count : 0));
       if (n <= 0) return;
-      slots[i] = { key: held.key, count: (s ? s.count : 0) + n };
+      slots[i] = { ...held, count: (s ? s.count : 0) + n };
       held.count -= n;
       if (!held.count) held = null;
     } else if (!right) {
@@ -1663,14 +1717,14 @@
     if (document.pointerLockElement) document.exitPointerLock();
   }
   // Envantere sığmayanı oyuncunun önüne atar.
-  function giveOrDrop(key, count) {
-    const left = addItem(key, count);
-    for (let n = 0; n < left; n++) dropItem(key, player.x, player.y + 1, player.z).pickupDelay = 1.5;
+  function giveOrDrop(stack) {
+    const left = addItem(stack.key, stack.count, extraOf(stack));
+    for (let n = 0; n < left; n++) Object.assign(dropItem(stack.key, player.x, player.y + 1, player.z), { pickupDelay: 1.5, extra: extraOf(stack) });
   }
   function closeInventory() {
-    if (held) { giveOrDrop(held.key, held.count); held = null; }
+    if (held) { giveOrDrop(held); held = null; }
     // Izgarada kalanlar envantere döner.
-    for (let i = 0; i < 9; i++) if (craftGrid[i]) { giveOrDrop(craftGrid[i].key, craftGrid[i].count); craftGrid[i] = null; }
+    for (let i = 0; i < 9; i++) if (craftGrid[i]) { giveOrDrop(craftGrid[i]); craftGrid[i] = null; }
     inventoryOpen = false;
     invEl.hidden = true;
     renderInventory();
@@ -1678,6 +1732,38 @@
       try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
     }
   }
+  // ---------- Elde alet ----------
+  const selectedTool = () => inventory[selected] && ITEMS[inventory[selected].key].tool ? inventory[selected] : null;
+  // Alet her kırma ve vuruşta 1 aşınır; bitince kırılır.
+  function useTool() {
+    const s = inventory[selected];
+    s.durability--;
+    if (s.durability <= 0) { inventory[selected] = null; toast(ITEMS[s.key].name + ' kırıldı'); }
+    renderInventory();
+  }
+  // Seçili alet gözden görünümde kolun ucunda, 3. şahıs modelde sağ elde düz bir simge olarak görünür.
+  const toolTextures = {};
+  const heldToolMaterial = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+  const fpTool = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), heldToolMaterial);
+  fpTool.position.set(0, -0.42, -0.12);
+  fpTool.rotation.set(-Math.PI / 2, Math.PI / 2, 0);
+  fpArm.add(fpTool);
+  const tpTool = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), heldToolMaterial);
+  tpTool.position.set(0, -0.6, -0.18);
+  tpTool.rotation.set(-Math.PI / 2, Math.PI / 2, 0);
+  armR.add(tpTool);
+  function updateHeldTool() {
+    const tool = selectedTool();
+    fpTool.visible = tpTool.visible = !!tool;
+    if (!tool) return;
+    if (!toolTextures[tool.key]) {
+      const t = new THREE.CanvasTexture(ITEMS[tool.key].canvas);
+      t.magFilter = t.minFilter = THREE.NearestFilter;
+      toolTextures[tool.key] = t;
+    }
+    if (heldToolMaterial.map !== toolTextures[tool.key]) { heldToolMaterial.map = toolTextures[tool.key]; heldToolMaterial.needsUpdate = true; }
+  }
+
   renderInventory();
   selectSlot(0);
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
@@ -1719,7 +1805,7 @@
         player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
         health: player.health,
         selected,
-        inventory: inventory.map(s => s && { key: s.key, count: s.count }),
+        inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
         time: clock.time,
         day: clock.day,
       }, SAVE_KEY);
@@ -1737,7 +1823,7 @@
     player.health = save.health > 0 ? save.health : MAX_HEALTH;
     renderHearts();
     // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
-    (save.inventory || []).forEach((s, i) => { inventory[i] = s && ITEMS[s.key] ? { key: s.key, count: s.count } : null; });
+    (save.inventory || []).forEach((s, i) => { inventory[i] = s && ITEMS[s.key] ? { key: s.key, count: s.count, ...extraOf(s) } : null; });
     renderInventory();
     selectSlot(save.selected);
     clock.time = save.time;

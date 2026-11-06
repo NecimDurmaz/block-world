@@ -58,6 +58,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Oklar | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
    | Eşyalar | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
    | Üretim | `craftGrid`, `craftSize`, `RECIPES`, `craftResult()`, üretim ızgarası yuvaları |
+   | Elde alet | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki alet (`fpTool`, `tpTool`, `updateHeldTool()`) |
    | Envanter | `inventory`, `addItem()`, `takeFromSlot()`, `throwSelected()`, envanter paneli (`clickSlot()`, `openInventory()`, `closeInventory()`), `renderInventory()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
@@ -96,14 +97,14 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 
 Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
 
-**Kırma:** Her blokta `breakTime` (elle kırma süresi), `tool` (hızlı kıran alet türü) ve gerekiyorsa `needsTool` vardır.
+**Kırma:** Her blokta `breakTime` (elle kırma süresi), `tool` (hızlı kıran alet türü), gerekiyorsa `needsTool` (yalnızca o alet türüyle kırılınca düşer) ve `drop` (kendisi yerine düşen eşya) vardır. Seçili alet bloğun `tool` türündeyse süre aletin `speed` çarpanına bölünür (bkz. Aletler).
 
 | Grup | Bloklar | Elle süre | `tool` | Elle kırınca düşer mi |
 | --- | --- | --- | --- | --- |
 | Yaprak | Yaprak | 0,3 sn | — | %10 |
 | Toprak | Çimen, Toprak, Kum | 0,75 sn | `shovel` | Evet |
 | Ahşap | Kütük, Tahta, Çalışma masası | 3 sn | `axe` | Evet |
-| Taş | Taş, Kırık taş, Tuğla, Fırın | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
+| Taş | Taş (kırık taş düşürür, `drop`), Kırık taş, Tuğla, Fırın | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
 | Kumtaşı | Kumtaşı | 4 sn | `pickaxe` (`needsTool`) | Hayır |
 
 ### Dokular
@@ -272,6 +273,26 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 - **Envanter paneli (E):** Fare kilidi bırakılır ama oyun durmaz (dünya, canlılar ve zaman işler); oyuncu yürümez, dünyaya tıklanamaz. Sol tık: boş elde yığını alır; elde yığın varken boş yuvaya bırakır, aynı türse sığdığı kadar birleştirir, farklı türse yer değiştirir. Sağ tık: boş elde yığının yarısını (yukarı yuvarlayarak) alır; elde yığın varken boş ya da aynı türdeki yuvaya 1 tane bırakır. Kapanınca eldeki yığın envantere döner, sığmayan yere atılır; fare yeniden kilitlenir.
 - **Q:** seçili yığından 1 tanesini bakış yönünde 5 blok/sn fırlatır.
 
+## Aletler
+
+- 2 seviye × 4 tür = 8 alet; anahtar `<seviye>_<tür>`: `wooden_pickaxe`, `stone_sword` … Adlar Türkçe: "Tahta kazma", "Taş kılıç" vb. `ITEMS[key]` alanları: `tool` (tür), `speed`, `durability` (en yüksek), `damage`, `canvas` (8×8 desenden simge).
+
+  | Seviye | Malzeme | `speed` | `durability` |
+  | --- | --- | --- | --- |
+  | `wooden` (Tahta) | tahta | ×2 | 60 |
+  | `stone` (Taş) | kırık taş | ×4 | 132 |
+
+  | Tür | Hızlandırdığı bloklar | Hasar (tahta / taş) | Tarif (M malzeme, S çubuk) |
+  | --- | --- | --- | --- |
+  | `pickaxe` (kazma) | taş grubu, kumtaşı; taş grubu yalnızca kazmayla düşer | 2 / 3 | `MMM` / `.S.` / `.S.` |
+  | `axe` (balta) | kütük, tahta, çalışma masası | 3 / 3 | `MM` / `MS` / `.S` |
+  | `shovel` (kürek) | toprak, çimen, kum | 2 / 2 | `M` / `S` / `S` |
+  | `sword` (kılıç) | — | 4 / 5 | `M` / `M` / `S` |
+
+- Elle vuruş `FIST_DAMAGE = 1`; seçili yuvada alet varsa onun `damage` değeri kullanılır.
+- **Dayanıklılık:** Alet yığını `{ key, count: 1, durability }` taşır. Her blok kırışta ve her canlıya vuruşta 1 azalır; 0 olunca alet kaybolur ve "… kırıldı" bildirimi çıkar. Aşınmış aletin yuvasında altta yeşilden kırmızıya giden bir çubuk görünür. Yığınlar taşınırken, atılırken (`drop.extra`) ve kaydedilirken `durability` korunur (`extraOf`).
+- **Elde görünüm:** Seçili yuvada alet varsa simgesi düz, çift yüzlü bir düzlem olarak gözden görünümde kolun ucunda (`fpTool`), 3. şahıs modelde sağ elde (`tpTool`) görünür.
+
 ## Üretim
 
 - Envanter panelinde 2×2, çalışma masasına sağ tıklanınca 3×3 üretim ızgarası (`openInventory(size)`). `craftGrid` her zaman 9 hücrelik dizidir (indeks `satır × 3 + sütun`); 2×2'de yalnızca sol üst dört hücre görünür ve kullanılır.
@@ -287,6 +308,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
   | `C` / `S` | kömür üstte, çubuk altta | 4 meşale |
   | `CCC` / `C.C` / `CCC` | kırık taş | fırın |
   | `SS` / `SS` | kum | kumtaşı |
+  | (Aletler tablosu) | tahta ya da kırık taş + çubuk | 8 alet |
 
 ## Test kancası
 
@@ -304,7 +326,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
   | `selected` | Seçili hotbar yuvası (0–8) |
-  | `inventory` | 36 yuva: `{ key, count }` ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
+  | `inventory` | 36 yuva: `{ key, count }` (aletlerde `durability` da) ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
   | `time`, `day` | `clock.time`, `clock.day` |
 
   Yeni özellikler kendi alanlarını bu nesneye ekler ve bu tabloya yazar. Alanların anlamı değişirse `SAVE_VERSION` artırılır; sürümü uymayan kayıt yok sayılır.
@@ -338,7 +360,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 14 | Sınırlı hotbar ve envanter ekranı | Yapıldı |
 | 15 | Blok kırma süresi ve çatlama | Yapıldı |
 | 16 | Üretim ve çalışma masası | Yapıldı |
-| 17 | Aletler | Yapılmadı |
+| 17 | Aletler | Yapıldı |
 | 18 | Açlık barı ve yemek | Yapılmadı |
 | 19 | Fırın ve pişirme | Yapılmadı |
 | 20 | Maden cevherleri | Yapılmadı |

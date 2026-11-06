@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dünyası**. Oyunun tamamı tek bir dosyadadır: `index.html`. Bu dosya, bu depoda çalışan her yapay zekâ ajanı için kuralları ve çalışma düzenini anlatır.
+Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dünyası**. Oyun `index.html`, `css/style.css` ve `js/` altındaki küçük betiklerden oluşur. Bu dosya, bu depoda çalışan her yapay zekâ ajanı için kuralları ve çalışma düzenini anlatır.
 
 Önce şunları oku:
 
@@ -13,7 +13,12 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
 
 ### Teknik
 
-- **Tek dosya.** Oyunun tamamı `index.html` içinde kalır. Build adımı, npm, bundler, ayrı JS/CSS dosyası yok.
+- **Dosya yapısı.** `index.html` yalnızca sayfa iskeleti ve betik sırasıdır; stiller `css/style.css`, oyun kodu `js/` altındadır. Her betik tek bir konuyu taşır (dokular, bloklar, canlılar, envanter…); tam liste SPEC.md "Dosya yapısı" bölümünde.
+- **Build yok.** npm, bundler, derleme adımı yok. Dosyalar tarayıcıya olduğu gibi gider.
+- **Klasik betikler, ES modülü değil.** Betikler `<script src>` ile sırayla yüklenir ve üst düzey tanımları (`const`, `let`, `function`) ortak genel kapsamı paylaşır. `import`/`export` ya da `type="module"` kullanma: oyun `file://` üzerinden çift tıklanarak da açılabilmeli.
+  - **Yükleme sırası önemlidir.** Bir betik, yüklenirken (üst düzeyde hemen çalışan kodda) yalnızca kendisinden önce yüklenen betiklerin tanımlarını kullanabilir. Fonksiyonların içinden daha sonraki betiklerin tanımlarına erişmek serbesttir (fonksiyon çağrıldığında hepsi yüklenmiş olur).
+  - **Ad çakışması.** Üst düzey adlar bütün betiklerde tektir; aynı adı iki dosyada tanımlama. Tarayıcının kendi genel adlarını (`top`, `self`, `name`, `status`, `parent`, `length`, `location`, `history`, `event` vb.) üst düzey değişken adı olarak kullanma.
+  - **Yeni dosya** açarsan `index.html`'deki doğru yere `<script src="js/….js">` satırını ekle ve SPEC.md'deki dosya tablosuna yaz. Bir dosya ~300 satırı geçerse konuya göre böl.
 - **Tek dış kütüphane: Three.js r128,** cdnjs'ten yüklenir: `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`. Yeni kütüphane ekleme, sürümü değiştirme.
 - **Dış dosya yok.** Resim, model ve ses dosyası kullanılmaz. Dokular 16×16 pikselde canvas ile kodla çizilir (mevcut atlas düzenine eklenir). Sesler WebAudio API ile kodla üretilir.
 - **Tarayıcı kısıtları.** Oyun hem claude.ai Artifact olarak hem de çift tıklanan yerel dosya (`file://`) olarak çalışmalı.
@@ -37,7 +42,7 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
 
 ### Kod düzeni
 
-- Betik bölümlere ayrılmıştır. Her bölüm `// ---------- Başlık ----------` satırıyla başlar. Yeni kodu ilgili bölüme koy, gerekiyorsa aynı biçimde yeni bölüm aç. Bölümlerin listesi SPEC.md'de.
+- Her betik `// ---------- Başlık ----------` satırı ve bir satırlık açıklamayla başlar. Yeni kodu konusuna uyan dosyaya koy; uygun dosya yoksa yeni dosya aç.
 - Mevcut kodun üslubuna uy: kısa fonksiyonlar, `const` öncelikli, ok fonksiyonları, iki boşluk girinti, noktalı virgül.
 - Gereksiz soyutlama ekleme. Bir özellik için gereken en az kodu yaz; ilgisiz kodu düzeltme ya da yeniden düzenleme.
 - Yeni bir tuş eklersen başlangıç panelindeki tuş listesine (`.keys`) Türkçe açıklamasıyla ekle.
@@ -50,10 +55,10 @@ Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde v
 
 1. **Oku.** Maddeyi, bağımlılıklarını ve SPEC.md'nin ilgili bölümünü oku. Bağımlılıklar yapılmamışsa önce onları yap ya da kullanıcıya sor.
 2. **Yap.** Yalnızca o maddenin istediğini ekle. Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W ve Shift), çarpışma, blok kırma/koyma, 1–9 ve tekerlekle blok seçme, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
-3. **Sözdizimini denetle.** Satır içi betiği ayıklayıp Node ile kontrol et:
+3. **Sözdizimini denetle.** Her betiği Node ile kontrol et:
 
    ```bash
-   awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html > /tmp/block-world.js && node --check /tmp/block-world.js
+   for f in js/*.js; do node --check "$f" || echo "HATA: $f"; done
    ```
 
 4. **Test yaz ve çalıştır.** Maddenin kabul ölçütünü `tests/NN-kisa-ad.js` dosyasında otomatik teste çevir ve görünmez Chrome'da çalıştır (bkz. "Test"). Test geçmeli, konsolda hata olmamalı. Görsel bir değişiklikse ekran görüntüsü alıp bak.
@@ -96,9 +101,9 @@ node tools/browser-test.mjs tests/02-fall-damage.js /tmp/ekran.png   # ekran gö
 - Nişan alan testler (kazma, vurma, sağ tık) başta V ile gözden görünüme geçer: arkadan kamerada omuz kayması olduğu için nişangâh oyuncunun tam önünden geçmez.
 - Görünmez Chrome'da kare hızı düşük ve düzensizdir (yazılımla WebGL). Sabit sürelere değil, duruma göre bekle: örneğin oyuncu yere değene kadar `p.onGround` kontrol et.
 - Araç, testten önce `window.game.ready` olmasını (kaydın okunmasını) bekler.
-- Sayfa yenilemeyi gerektiren testler aşamalara bölünür ve birlikte verilir: `node tools/browser-test.mjs tests/04-save-a-write.js tests/04-save-b-load.js ...`. Her aşamadan önce sayfa yeniden açılır, IndexedDB korunur. Yeni dosya adlarında aşamalar `-a-`, `-b-` ile sıralanır; tek tek çalıştırılmamaları gerekir.
+- Sayfa yenilemeyi gerektiren testler aşamalara bölünür ve birlikte verilir: `node tools/browser-test.mjs tests/04-save-a.js tests/04-save-b.js ...`. Her aşamadan önce sayfa yeniden açılır, IndexedDB korunur. Aşama dosyalarının adı `-a.js`, `-b.js` … ile biter.
 - Çıkış kodu: `0` geçti, `1` test başarısız ya da sayfada hata, `2` araç hatası.
-- Bütün testler: tek aşamalı testleri tek tek, aşamalı testleri (`NN-ad-a-*.js` …) birlikte çalıştır.
+- **Bütün testler:** `node tools/run-tests.mjs` (ad filtresi verilebilir: `node tools/run-tests.mjs 14`). Aşamalı testler adlarının sonundaki `-a.js`, `-b.js` … ile gruplanıp birlikte çalışır. Her madde bittiğinde bütün testleri çalıştır.
 
 ### Elle deneme
 
@@ -123,4 +128,5 @@ Bilinen tuzaklar:
 
 - **Artifact:** Oyun claude.ai'da bir Artifact olarak yayınlıdır. Güncellerken aynı Artifact adresine yayınla ki link değişmesin.
 - **GitHub Pages:** Depo `origin` (GitHub) üzerinden GitHub Pages ile yayınlanır. Pages kök dizindeki `index.html` dosyasını açtığı için oyun dosyasının adı `index.html` olarak kalmalıdır.
-- **Paylaşılan dosya:** `index.html` tek başına çift tıklanarak açılabilen tam bir HTML belgesidir (`<!doctype html>`, `<head>`, `<body>`). Bu yapıyı koru. Three.js internetten yüklendiği için oyun internet bağlantısı ister.
+- **Yerel açma:** Klasör bütün olarak kopyalanırsa `index.html` çift tıklanarak açılır (`css/` ve `js/` yanında olmalı). Three.js internetten yüklendiği için oyun internet bağlantısı ister.
+- **Artifact:** Çok dosyalı yayınlanır: sayfa `index.html`, diğerleri `files` ile aynı göreli yollarla (`css/style.css`, `js/….js`).

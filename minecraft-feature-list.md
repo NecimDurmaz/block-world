@@ -6,15 +6,15 @@ Bu liste, `index.html` oyununa bir yapay zekâ asistanına **tek tek** yaptırı
 
 ## Ortak talimat (her isteğin başına bunu ekle)
 
-> Ekteki `index.html` bir tarayıcı oyunu. Aşağıdaki **tek** maddeyi ekle, başka bir şeye dokunma.
+> Bu depo bir tarayıcı oyunu (`index.html`, `css/style.css`, `js/*.js`). Önce AGENTS.md ve SPEC.md'yi oku. Aşağıdaki **tek** maddeyi ekle, başka bir şeye dokunma.
 >
-> - Her şey tek HTML dosyasında kalacak. Build adımı, npm, ayrı JS/CSS dosyası yok.
+> - Kod `js/` altında konusuna göre ayrılmış klasik betiklerde durur (ES modülü değil); yeni kod uygun dosyaya, gerekiyorsa yeni bir dosyaya. Build adımı ve npm yok.
 > - Dış kütüphane olarak yalnızca zaten yüklü olan Three.js r128 (cdnjs) kullanılacak. Yeni kütüphane ekleme.
 > - Dış resim, model veya ses dosyası yok. Dokular mevcut atlas gibi canvas ile kodla çizilecek (16×16 piksel). Sesler WebAudio API ile kodla üretilecek.
 > - Dil kuralı: dosya adları ve koddaki tüm adlar (değişken, fonksiyon, sabit, sınıf, CSS sınıfı ve id, IndexedDB veritabanı, depo ve anahtar adları) İngilizce olacak. Yalnızca oyuncunun gördüğü arayüz yazıları Türkçe olacak.
 > - Arayüzdeki tüm yazılar Türkçe olacak. Mevcut renk değişkenlerini (`--ew-primary` vb.) ve HUD stilini kullan.
 > - Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W / Shift), çarpışma, blok kırma/koyma, 1–9 hotbar, tekerlek, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
-> - Kodu mevcut düzene uy: bölüm başlıkları `// ---------- Başlık ----------` şeklinde, yeni sabitler dosyanın üstündeki ilgili bölüme.
+> - Kodu mevcut düzene uy: her betik `// ---------- Başlık ----------` satırıyla başlar, sabitler ilgili dosyanın başında.
 > - Yeni bir tuş eklersen başlangıç panelindeki tuş listesine de ekle.
 > - Bitince neyi değiştirdiğini ve nasıl test edeceğimi 3–5 satırda yaz.
 

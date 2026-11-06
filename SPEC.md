@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosya | `index.html` (tek dosya) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (26 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -18,10 +18,16 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 
 ## Dosya yapısı
 
-`index.html` sırasıyla şunları içerir:
+```
+index.html          sayfa iskeleti: HUD ve panel öğeleri, betiklerin yükleme sırası
+css/style.css       bütün stiller
+js/*.js             oyun betikleri (aşağıdaki sırayla)
+tools/              test araçları (oyunun parçası değil)
+tests/              otomatik testler
+```
 
-1. `<head>`: başlık, Roboto (Google Fonts), tüm CSS. CSS değişkenleri `:root` bloğundadır. `[hidden] { display: none !important; }` kuralı, `display` verilmiş panellerin `hidden` ile gizlenebilmesi için gereklidir; silme.
-2. `<body>` içinde HUD öğeleri:
+- **`css/style.css`:** CSS değişkenleri `:root` bloğundadır. `[hidden] { display: none !important; }` kuralı, `display` verilmiş panellerin `hidden` ile gizlenebilmesi için gereklidir; silme.
+- **`index.html`:** `<head>`'de başlık, Roboto (Google Fonts) ve `css/style.css`. `<body>` içinde HUD öğeleri:
 
    | id | Görevi |
    | --- | --- |
@@ -40,35 +46,36 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), kayıt durumu (`#save-note`) |
    | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
 
-3. Three.js r128 betiği.
-4. Oyunun betiği: tek bir kendini çağıran fonksiyon `(() => { ... })()`. Bölümleri:
+- **Betikler:** `<body>` sonunda önce Three.js r128, sonra `js/` altındaki oyun betikleri bu sırayla yüklenir. Bunlar ES modülü değil, klasik betiklerdir: her dosyanın üst düzey `const`/`let`/`function` tanımları bütün betiklerin paylaştığı genel kapsamdadır. Bu sayede oyun `file://` üzerinden (çift tıklayarak) da açılır.
 
-   | Bölüm başlığı | İçerik |
+   | Dosya | İçerik |
    | --- | --- |
-   | Dokular | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
-   | Bloklar | `BLOCKS` tanımları, `B` kısaltmaları |
-   | Dünya üretimi | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
-   | Three.js sahnesi | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
-   | Gün döngüsü | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
-   | Oyuncu modeli | `paint()`, `buildHumanoid()` (oyuncu, zombi, iskelet ortak), oyuncu modeli ve gözden görünümdeki kol |
-   | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
-   | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
-   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
-   | HUD | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
-   | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
-   | Ekinler | `crops`, `plantCrop()`, `scanCrops()`, `updateCrops()` |
-   | Kapı | `toggleDoor()` |
-   | Yatak | `setSpawnNearBed()`, `useBed()`, `updateSleep()` |
-   | Açlık | `FOOD_SHAPE`, `renderFood()`, `hunger`, `heldFood()`, `updateHunger()` (azalma, açlıktan hasar, yemek yeme) |
-   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
-   | Oklar | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
-   | Eşyalar | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
-   | Üretim | `craftGrid`, `craftSize`, `RECIPES`, `craftResult()`, üretim ızgarası yuvaları |
-   | Fırın | `furnaces`, `SMELTING`, `FUEL`, `openFurnace()`, `clickFurnace()`, `updateFurnaces()`, `removeFurnace()`, `renderFurnace()` |
-   | Elde alet | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki alet (`fpTool`, `tpTool`, `updateHeldTool()`) |
-   | Envanter | `inventory`, `addItem()`, `takeFromSlot()`, `throwSelected()`, envanter paneli (`clickSlot()`, `openInventory()`, `closeInventory()`), `renderInventory()` |
-   | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
-   | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
+   | `textures.js` | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
+   | `blocks.js` | `BLOCKS` tanımları, `B` kısaltmaları |
+   | `world-gen.js` | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
+   | `renderer.js` | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
+   | `day-cycle.js` | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
+   | `player-model.js` | `paint()`, `buildHumanoid()` (oyuncu, zombi, iskelet ortak), oyuncu modeli ve gözden görünümdeki kol |
+   | `physics.js` | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
+   | `input.js` | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
+   | `block-interaction.js` | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
+   | `hud.js` | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
+   | `health.js` | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | `crops.js` | `crops`, `plantCrop()`, `scanCrops()`, `updateCrops()` |
+   | `doors.js` | `toggleDoor()` |
+   | `bed.js` | `setSpawnNearBed()`, `useBed()`, `updateSleep()` |
+   | `hunger.js` | `FOOD_SHAPE`, `renderFood()`, `hunger`, `heldFood()`, `updateHunger()` (azalma, açlıktan hasar, yemek yeme) |
+   | `mob-models.js` | `box()`/`pivot()` model yardımcıları; hayvan, zombi, iskelet, örümcek ve creeper modelleri |
+   | `mobs.js` | `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
+   | `arrows.js` | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
+   | `items.js` | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
+   | `inventory.js` | `inventory`, `maxStack()`, `addItem()`, `takeFromSlot()`, `throwSelected()`, envanter yuva öğeleri |
+   | `crafting.js` | `craftGrid`, `craftSize`, `RECIPES`, `craftResult()`, üretim ızgarası yuvaları, `clickCraft()`, `clickResult()` |
+   | `inventory-panel.js` | `paintSlot()`, `renderInventory()`, `clickIn()`/`clickSlot()`, `openInventory()`, `giveOrDrop()`, `closeInventory()` |
+   | `furnace.js` | `furnaces`, `SMELTING`, `FUEL`, `openFurnace()`, `clickFurnace()`, `updateFurnaces()`, `removeFurnace()`, `renderFurnace()` |
+   | `held-tool.js` | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki alet (`fpTool`, `tpTool`, `updateHeldTool()`) |
+   | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
+   | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
 

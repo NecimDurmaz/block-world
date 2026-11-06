@@ -97,7 +97,7 @@ function shootFireball(m) {
 }
 // Ateş topu düz gider: oyuncuya değerse 5 hasar, geri çevrilmişse canlıya değerse 10 hasar, bloğa değerse küçük patlama.
 function updateFireball(a, dt) {
-  const steps = 4;
+  const steps = Math.max(4, Math.ceil(Math.hypot(a.vx, a.vy, a.vz) * dt / 0.25));
   for (let i = 0; i < steps && a.life > 0; i++) {
     a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;
     if (isSolid(get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) {

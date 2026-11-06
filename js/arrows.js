@@ -34,7 +34,8 @@ function updateProjectiles(dt) {
     if (a.fireball) updateFireball(a, dt);
     else if (a.stuck) { if (a.fromPlayer) pickUpArrow(a); }
     else {
-      const steps = 4;
+      // Alt adım en çok 0,25 blok: hızlı ok ince canlıların içinden geçmesin
+      const steps = Math.max(4, Math.ceil(Math.hypot(a.vx, a.vy, a.vz) * dt / 0.25));
       for (let i = 0; i < steps; i++) {
         a.vy -= (a.gravity || ARROW_GRAVITY) * dt / steps;
         a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;

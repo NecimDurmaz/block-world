@@ -62,7 +62,8 @@ const bread = g.inventory[5]?.key === 'bread';
 p.food = 10;
 window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit6' }));
 canvas.dispatchEvent(new MouseEvent('mousedown', { button: 2, bubbles: true }));
-await wait(2000);
+// Yeme süresi oyun zamanıyla ölçülür; yavaş karelerde biraz uzar
+for (let i = 0; i < 60 && p.food === 10; i++) await wait(100);
 window.dispatchEvent(new MouseEvent('mouseup', { button: 2 }));
 const ate = p.food === 15;
 return { ok: hoe && tilled && planted && mature && harvested && bread && ate, hoe, tilled, planted, mature, harvested, wheat: count('wheat'), seeds: count('wheat_seeds'), bread, ate, food: p.food };

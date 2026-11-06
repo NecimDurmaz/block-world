@@ -15,7 +15,7 @@ canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
 await wait(1000);
 window.dispatchEvent(new MouseEvent('mouseup', { button: 0 }));
 const whileDigging = g.debris.length > 0;
-await wait(1000);
+for (let i = 0; i < 40 && g.debris.length; i++) await wait(100);
 const faded = g.debris.length === 0;
 // Kırılınca 12 parça, bloğun dokusundan (taş: gri)
 g.spawnDebris(3, 40, 40, 40, 12);

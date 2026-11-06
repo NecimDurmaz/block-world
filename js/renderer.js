@@ -247,6 +247,8 @@ function buildChunk(cx, cz) {
     scene.add(...meshes);
     chunkMeshes.set(key, meshes);
   }
+  // Boş tampon (su ya da ışıklı blok yoksa) çizilmez
+  chunkMeshes.get(key).forEach((m, i) => { m.visible = buffers[i].idx.length > 0; });
 }
 function removeChunkMesh(key) {
   for (const m of chunkMeshes.get(key) || []) { scene.remove(m); m.geometry.dispose(); }

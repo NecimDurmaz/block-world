@@ -1,0 +1,25 @@
+// Madde 49: eldeki her eşya görünür; bloklar küçük küp, diğerleri düz simge
+const g = window.game, p = g.player;
+document.getElementById('play').click();
+window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyV' }));
+window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyV' }));
+for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
+g.inventory.fill(null);
+g.inventory[0] = { key: 'dirt', count: 5 };
+g.inventory[1] = { key: 'coal', count: 3 };
+g.inventory[2] = { key: 'poppy', count: 1 };
+g.inventory[3] = { key: 'stone_pickaxe', count: 1, durability: 132 };
+const press = code => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+press('Digit1'); await wait(100);
+const dirt = g.heldView();
+press('Digit2'); await wait(100);
+const coal = g.heldView();
+press('Digit3'); await wait(100);
+const poppy = g.heldView();
+press('Digit4'); await wait(100);
+const pick = g.heldView();
+press('Digit5'); await wait(100);
+const empty = g.heldView();
+const ok = dirt.cube && !dirt.icon && coal.icon && !coal.cube && poppy.icon && pick.icon && !empty.cube && !empty.icon;
+press('Digit1'); await wait(300);
+return { ok, dirt, coal, poppy, pick, empty };

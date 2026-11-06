@@ -27,7 +27,8 @@ renderFood();
 const hunger = { timer: 0, starve: 0, eating: 0 };
 const heldFood = () => inventory[selected] && ITEMS[inventory[selected].key].food ? inventory[selected] : null;
 function updateHunger(dt, sprintingNow) {
-  hunger.timer += dt * (sprintingNow ? 2 : 1);
+  // Ölümsüzlükte (/god) açlık azalmaz
+  if (!godMode) hunger.timer += dt * (sprintingNow ? 2 : 1);
   if (hunger.timer >= HUNGER_INTERVAL) {
     hunger.timer = 0;
     if (player.food > 0) { player.food--; renderFood(); }

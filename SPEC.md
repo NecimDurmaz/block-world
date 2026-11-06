@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (31 betik, sırayla yüklenir) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (32 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -45,6 +45,7 @@ tests/              otomatik testler
    | `low-health` | Can 4 ve altındayken ekran kenarını koyu kırmızıya karartan katman |
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
+   | `chat` | Sohbet: `#chat-log` satırları ve `#chat-input` (yalnızca sohbet açıkken görünür) |
    | `tooltip` | Yuvanın üzerine gelince eşya adını gösteren Minecraft ipucu kutusu |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
    | `overlay` | Başlangıç / duraklatma menüsü. `#menu-main`: tuş listesi (`.keys`), "Oyna" / oyun başladıktan sonra "Devam et" (`#play`, kayıt okunana kadar pasif), "Ayarlar" (`#open-settings`), "Kaydet" (`#save-now`, oyun başladıktan sonra), "Yeni dünya" (`#reset`, kırmızı), kayıt durumu (`#save-note`). `#menu-settings`: ayar denetimleri ve "Geri" |
@@ -84,6 +85,7 @@ tests/              otomatik testler
    | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
    | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
+   | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), `godMode` |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -289,7 +291,9 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | E | Envanteri aç / kapat (Esc de kapatır) |
 | Q | Seçili yığından 1 tanesini bakılan yöne at |
 | V | Kamera: arkadan → gözden → önden |
-| Esc | Duraklat (fare kilidi bırakılınca panel açılır) |
+| T | Sohbeti aç |
+| / | Sohbeti "/" yazılı açar (komut) |
+| Esc | Duraklat (fare kilidi bırakılınca panel açılır); sohbet ya da envanter açıksa onu kapatır |
 
 ### Kamera
 
@@ -478,9 +482,27 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Aç/kapat:** Ayarlardaki "Ses" kutusu (`setSound`).
 - `soundLog`: son 50 sesin adı ve şiddeti (ses kapalıyken de tutulur; testler için).
 
+## Sohbet ve komutlar
+
+- T sohbeti, `/` sohbeti `/` yazılı açar; Enter gönderir, Esc kapatır. Sohbet açıkken fare kilidi bırakılır ama oyun durmaz; oyuncu yürümez, dünyaya tıklanamaz, oyun tuşları çalışmaz.
+- Satırlar sol altta, yarı saydam siyah zeminde piksel yazıyla görünür ve `CHAT_FADE = 10` sn sonra solar; sohbet açıkken hepsi görünür. En çok 50 satır. Renkler Minecraft gibi: oyuncu mesajı beyaz (`<Oyuncu> …`), sistem sarı, hata kırmızı.
+- Eşya ve canlı adları İngilizce anahtar (`stone_pickaxe`) ya da Türkçe ad (`Taş kazma`, `taş_kazma`) olarak yazılabilir; büyük/küçük harf ve alt çizgi fark etmez. Dünyada gizli bloklar verilemez.
+
+| Komut | İş |
+| --- | --- |
+| `/help` | Komutları listeler |
+| `/give <eşya> [adet]` | Eşya verir (aletler tam dayanıklılıkla) |
+| `/god` | Ölümsüzlük aç/kapat: `damagePlayer` etkisiz, açlık azalmaz |
+| `/heal`, `/feed` | Canı / açlığı doldurur |
+| `/time set day\|noon\|night\|midnight\|0–23` | Saati değiştirir (Türkçe: gündüz, öğle, gece, gece yarısı) |
+| `/tp <x> <y> <z>` | Işınlar; `~` göreli (`~ ~5 ~`) |
+| `/clear` | Envanteri boşaltır |
+| `/summon <canlı>` | Bakılan yönde 3 blok öne canlı çağırır |
+| `/spawnpoint` | Doğma noktasını buraya taşır |
+
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `openChat`, `closeChat`, `submitChat`, `isGod()`, `chatLines()`, `itemIcon`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -559,6 +581,6 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 42 | Sonsuz dünya | Yapılmadı |
 | 43 | Köyler ve köylü ticareti | Yapılmadı |
 | 44 | Nether kalesi ve blaze | Yapılmadı |
-| 45 | Sohbet ve komutlar | Yapılmadı |
+| 45 | Sohbet ve komutlar | Yapıldı |
 | 46 | Adım adım rehber | Yapılmadı |
 | 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |

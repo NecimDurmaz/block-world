@@ -43,6 +43,10 @@
   </div>
 </div>
 <div id="tooltip" hidden></div>
+<div id="chat">
+  <div id="chat-log"></div>
+  <input id="chat-input" type="text" autocomplete="off" spellcheck="false" maxlength="120" hidden>
+</div>
 <div id="held" hidden><span class="count"></span><span class="dur"></span></div>
 <div id="death" hidden>
   <div class="panel">
@@ -66,6 +70,8 @@
       <kbd>Q</kbd><span>Seçili eşyadan birini at</span>
       <kbd>Sağ tık (basılı)</kbd><span>Eldeki yemeği ye</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
+      <kbd>T</kbd><span>Sohbet</span>
+      <kbd>/</kbd><span>Komut yaz (/help)</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
     <div class="actions">
@@ -122,6 +128,7 @@
 <script src="js/save.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

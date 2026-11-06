@@ -27,7 +27,7 @@ function frame(now) {
 
   const inWater = overlapsBlock(p, B.water);
   if (playing) updateSleep(dt);
-  if (playing && !inventoryOpen && sleepTimer <= 0) {
+  if (playing && !inventoryOpen && !chatOpen && sleepTimer <= 0) {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
     let mx = 0, mz = 0;

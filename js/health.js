@@ -35,7 +35,7 @@ let cameraRoll = 0, rollSign = 1, heartShakeTimer = 0;
 const lowHealthEl = document.getElementById('low-health');
 // Kaynak verilmezse (ör. düşme) geri itme olmaz.
 function damagePlayer(amount, sourceX, sourceZ) {
-  if (invulnerable > 0 || player.health <= 0) return;
+  if (godMode || invulnerable > 0 || player.health <= 0) return;
   player.health = Math.max(0, player.health - amount);
   invulnerable = 0.5;
   hurtFlash = 0.2;

@@ -52,6 +52,15 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #craft-result { width: 48px; height: 48px; background-size: 36px; }
 /* Minecraft ipucu kutusu: koyu mor zemin, mor çerçeve */
 #tooltip { position: fixed; pointer-events: none; z-index: 5; padding: 3px 6px 5px; background: rgba(16, 0, 16, 0.94); border: 2px solid #28007f; box-shadow: 0 0 0 1px #100010; font: 18px var(--mc-font); color: #fff; text-shadow: 2px 2px 0 #3f3f3f; white-space: nowrap; }
+/* Sohbet: Minecraft gibi sol altta yarı saydam satırlar */
+#chat { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); bottom: calc(110px + env(safe-area-inset-bottom, 0px)); width: min(460px, calc(100vw - 16px)); font: 16px var(--mc-font); pointer-events: none; }
+#chat-log { display: flex; flex-direction: column; max-height: 50vh; overflow: hidden; justify-content: flex-end; }
+.chat-line { background: rgba(0, 0, 0, 0.45); color: #fff; padding: 1px 5px; text-shadow: 2px 2px 0 #3f3f3f; transition: opacity 0.8s; overflow-wrap: anywhere; }
+.chat-line.info { color: #ffff55; }
+.chat-line.error { color: #ff5555; }
+.chat-line.faded { opacity: 0; }
+#chat.open .chat-line { opacity: 1; }
+#chat-input { pointer-events: auto; display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 4px 6px; border: 0; outline: none; background: rgba(0, 0, 0, 0.6); color: #fff; font: 16px var(--mc-font); text-shadow: 2px 2px 0 #3f3f3f; }
 #held { position: fixed; width: 28px; height: 28px; pointer-events: none; background: center / 28px no-repeat; image-rendering: pixelated; transform: translate(-50%, -50%); z-index: 3; }
 .slot.active { border: 3px solid #fff; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #a0a0a0; z-index: 1; }
 #status { position: fixed; left: 50%; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }

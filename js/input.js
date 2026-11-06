@@ -8,6 +8,12 @@ const overlay = document.getElementById('overlay');
 const canvas = renderer.domElement;
 
 window.addEventListener('keydown', e => {
+  // Sohbet: T boş, "/" komut için açar (harfin kutuya yazılmaması için varsayılan engellenir)
+  if (playing && !inventoryOpen && !chatOpen && (e.code === 'KeyT' || e.key === '/')) {
+    e.preventDefault();
+    openChat(e.key === '/' ? '/' : '');
+    return;
+  }
   if (e.code === 'KeyW' && !e.repeat) {
     const now = performance.now();
     if (now - lastWTap < 300) sprinting = true;
@@ -62,7 +68,7 @@ document.getElementById('play').addEventListener('click', start);
 document.addEventListener('pointerlockerror', useFallback);
 document.addEventListener('pointerlockchange', () => {
   // Envanter açılırken fare kilidi bilerek bırakılır; oyun durmaz.
-  if (document.pointerLockElement !== canvas && !fallbackLook && !inventoryOpen) pause();
+  if (document.pointerLockElement !== canvas && !fallbackLook && !inventoryOpen && !chatOpen) pause();
 });
 
 let drag = null;
@@ -78,7 +84,7 @@ document.addEventListener('mousemove', e => {
 // Sol tuş basılı tutuldukça kazılır (mining). Yedek modda sürükleme bakıştır, kazmayı keser.
 let mining = false, using = false; // using: sağ tuş basılı (yemek yeme)
 canvas.addEventListener('mousedown', e => {
-  if (!playing || inventoryOpen) return;
+  if (!playing || inventoryOpen || chatOpen) return;
   if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
   if (e.button === 0) { mining = true; attackMob(); }
   else if (e.button === 2) { using = true; if (!heldFood()) placeBlock(); }
@@ -90,6 +96,6 @@ window.addEventListener('mouseup', e => {
 });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('wheel', e => {
-  if (!playing || inventoryOpen) return;
+  if (!playing || inventoryOpen || chatOpen) return;
   selectSlot((selected + (e.deltaY > 0 ? 1 : -1) + HOTBAR_SIZE) % HOTBAR_SIZE);
 }, { passive: true });

@@ -60,16 +60,18 @@ Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde v
 5. **Belgeleri güncelle.**
    - SPEC.md'de değişen veya eklenen şeyleri yaz: yeni bloklar, sabitler, tuşlar, kayıt alanları, bölümler.
    - SPEC.md'deki "Özellik durumu" tablosunda maddeyi `Yapıldı` olarak işaretle.
-6. **Commit at.** Biçim:
+6. **Commit at.** Commit mesajları **İngilizce** yazılır. Biçim:
 
    ```
-   feat(#5): canlı altyapısı ve inek
+   feat(#5): mob framework and cow
 
-   - mobs dizisi, ortak AABB fiziği
-   - inek modeli ve dolaşma yapay zekâsı
+   - shared AABB physics for player and mobs
+   - cow model and wandering AI
    ```
 
-   - Başlık: `feat(#<madde no>): <maddenin kısa adı>`. Hata düzeltmesi `fix:`, yalnızca belge `docs:`.
+   - Başlık: `feat(#<madde no>): <kısa İngilizce özet>`, küçük harfle başlar, sonda nokta yok. Hata düzeltmesi `fix:`, yalnızca belge `docs:`, test `test:`, diğer işler `chore:`.
+   - Gövdede yapılanları 2–5 madde halinde, İngilizce yaz.
+   - Eski commit'ler Türkçedir; geçmiş yeniden yazılmaz.
    - Gövdede yapılanları 2–5 madde halinde yaz.
    - Commit mesajına `Co-Authored-By` satırı ekleme.
    - Uzak depoya (`origin`, GitHub) yalnızca kullanıcı isterse push yap.

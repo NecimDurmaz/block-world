@@ -284,8 +284,8 @@ function updateMob(m, dt) {
     let drop = 0;
     if (!wall) while (drop <= 3 && !solid(ax, fy - 1 - drop, az)) drop++;
     // Hayvanlar suya, hiçbir canlı lava girmez
-    if (!m.type.hostile && (get(ax, fy, az) === B.water || get(ax, fy - 1, az) === B.water)) drop = 99;
-    if (get(ax, fy, az) === B.lava || get(ax, fy - 1, az) === B.lava) drop = 99;
+    if (!m.type.hostile && (isWater(get(ax, fy, az)) || isWater(get(ax, fy - 1, az)))) drop = 99;
+    if (isLava(get(ax, fy, az)) || isLava(get(ax, fy - 1, az))) drop = 99;
     if (wall && m.type.climbs) climbing = true;
     else if (wall === 2 || drop > 3) { m.yaw += Math.PI * (0.5 + Math.random()); speed = 0; }
     else if (wall === 1 && m.onGround) m.vy = JUMP;

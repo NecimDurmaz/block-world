@@ -175,6 +175,11 @@ function addTorchModel(buf, x, y, z, def) {
 const chunkMeshes = new Map();
 // Yüz, komşu hava ise ya da komşu kendisinden farklı saydam bir bloksa çizilir.
 const faceVisible = (b, n) => n === AIR || (n !== b && BLOCKS[n].transparent);
+// Sıvının üst yüz yüksekliği: kaynak ve üstünde aynı sıvı olan hücre tam, akan sıvı seviyesi kadar alçak.
+function liquidTop(x, y, z) {
+  const def = BLOCKS[get(x, y, z)];
+  return liquidOf(get(x, y + 1, z)) === def.liquid ? 1 : 1 - def.level / 8;
+}
 function buildChunk(cx, cz) {
   const buffers = [0, 1, 2].map(() => ({ pos: [], uv: [], col: [], light: [], idx: [] })); // 0 opak, 1 saydam, 2 kendi ışıklı
   const range = Math.ceil(TORCH_RANGE);
@@ -190,15 +195,20 @@ function buildChunk(cx, cz) {
     if (def.model === 'portal') continue; // portal.js ayrı çizer
     const buf = buffers[def.selfLit ? 2 : def.transparent && !def.cutout ? 1 : 0];
     const { pos, uv, col, light, idx } = buf;
+    const top = def.liquid ? liquidTop(x, y, z) : 1;
     for (const f of FACES) {
-      if (!faceVisible(b, get(x + f.dir[0], y + f.dir[1], z + f.dir[2]))) continue;
+      const n = get(x + f.dir[0], y + f.dir[1], z + f.dir[2]);
+      // Aynı sıvının komşusuna yüz çizilmez; yalnızca komşu daha alçaksa yan yüzün açık kalan kısmı görünür.
+      if (def.liquid && liquidOf(n) === def.liquid) {
+        if (f.dir[1] !== 0 || liquidTop(x + f.dir[0], y, z + f.dir[2]) >= top) continue;
+      } else if (!faceVisible(b, n)) continue;
       const tile = f.dir[1] === 1 ? def.top : f.dir[1] === -1 ? def.bottom : def.side;
       const u0 = tile / N_TILES + EPS, u1 = (tile + 1) / N_TILES - EPS;
       const base = pos.length / 3;
       // Yüzün meşale ışığı: yüz merkezinin en yakın meşaleye uzaklığı
       const lit = torches.length ? torchLightAt(torches, x + 0.5 + f.dir[0] * 0.5, y + 0.5 + f.dir[1] * 0.5, z + 0.5 + f.dir[2] * 0.5) : 0;
       for (const [p, t] of f.corners) {
-        pos.push(x + p[0], y + p[1], z + p[2]);
+        pos.push(x + p[0], y + p[1] * top, z + p[2]);
         uv.push(u0 + (u1 - u0) * t[0], t[1] ? 1 - EPS : EPS);
         col.push(f.light, f.light, f.light);
         light.push(lit);

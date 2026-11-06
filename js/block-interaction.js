@@ -159,6 +159,7 @@ function updateMining(dt, hit) {
 }
 function placeBlock() {
   punch = 0.25;
+  if (heldBucket()) { useBucket(); return; }
   const hit = raycast();
   if (!hit) return;
   // Çalışma masasına sağ tık 3x3 üretim ızgarasını açar.

@@ -20,12 +20,13 @@ function spawn() {
 spawn();
 
 const solid = (x, y, z) => (x < 0 || z < 0 || x >= SX || z >= SZ) ? true : isSolid(get(x, y, z));
-// Varlığın kutusu verilen blok türüyle kesişiyor mu (ör. su)
+// Varlığın kutusu verilen blok türüyle (ya da test işleviyle, ör. isWater) kesişiyor mu
 function overlapsBlock(e, block) {
+  const test = typeof block === 'function' ? block : b => b === block;
   for (let bx = Math.floor(e.x - e.w); bx <= Math.floor(e.x + e.w); bx++)
     for (let by = Math.floor(e.y); by <= Math.floor(e.y + e.h - 0.001); by++)
       for (let bz = Math.floor(e.z - e.w); bz <= Math.floor(e.z + e.w); bz++)
-        if (get(bx, by, bz) === block) return true;
+        if (test(get(bx, by, bz))) return true;
   return false;
 }
 // Oyuncu ve canlılar için ortak AABB fiziği: e = { x, y, z, w, h, vx, vy, vz, onGround }

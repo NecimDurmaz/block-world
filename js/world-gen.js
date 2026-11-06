@@ -11,7 +11,9 @@ function get(x, y, z) {
   if (y < 0) return B.stone;
   return inBounds(x, y, z) ? world[index(x, y, z)] : AIR;
 }
-const set = (x, y, z, v) => { if (inBounds(x, y, z)) world[index(x, y, z)] = v; };
+// onBlockSet: dünya üretildikten sonra fluids.js bağlar (değişen hücrenin çevresindeki sıvılar yeniden hesaplanır).
+let onBlockSet = null;
+const set = (x, y, z, v) => { if (!inBounds(x, y, z)) return; world[index(x, y, z)] = v; if (onBlockSet) onBlockSet(x, y, z); };
 
 function hash(x, z) {
   let h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + SEED) | 0;

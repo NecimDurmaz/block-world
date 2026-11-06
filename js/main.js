@@ -32,8 +32,8 @@ function frame(now) {
   last = now;
   const p = player;
 
-  const inWater = overlapsBlock(p, B.water);
-  const inLava = overlapsBlock(p, B.lava);
+  const inWater = overlapsBlock(p, isWater);
+  const inLava = overlapsBlock(p, isLava);
   if (playing) updateSleep(dt);
   if (playing && !inventoryOpen && !chatOpen && !controlOpen && sleepTimer <= 0) {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
@@ -85,6 +85,7 @@ function frame(now) {
     updateParticles(dt);
     updateDrops(dt);
     updateFurnaces(dt);
+    updateFluids(dt);
     updateCrops(dt);
     updateMobSounds(dt);
     updateDebris(dt);
@@ -169,7 +170,7 @@ function frame(now) {
   updateDayCycle(dt);
   updateSky(dt);
   // Kamera suyun içindeyse ekran mavi tonlanır, sis 8 bloğa iner.
-  const cameraInWater = get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.water;
+  const cameraInWater = isWater(get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)));
   underwaterEl.hidden = !cameraInWater;
   const viewDistance = VIEW_DISTANCES[settings.viewDistance];
   scene.fog.near = cameraInWater ? 0 : dimension === 'nether' ? NETHER_FOG_NEAR : viewDistance * 0.43;

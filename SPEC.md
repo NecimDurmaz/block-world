@@ -75,6 +75,8 @@ tests/              otomatik testler
    | `mob-models.js` | `box()`/`pivot()` model yardımcıları; hayvan, zombi, iskelet, örümcek ve creeper modelleri |
    | `mobs.js` | `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | `arrows.js` | `projectiles`, `arrowMesh()`, `shootArrow()` (iskelet), `updateProjectiles()` (iskelet ve oyuncu okları) |
+   | `fluids.js` | Akış: `FLUIDS`, `fluidQueues`, `desiredLiquid()`, `stepFluid()`, `quench()`, `updateFluids()`, `clearFluids()` |
+   | `bucket.js` | Kova eşyaları ve tarifi, `heldBucket()`, `sourceInSight()`, `useBucket()` |
    | `bow.js` | Yay ve ip eşyaları, tarifler, `bowCharge`, `updateBow()`, `shootPlayerArrow()`, `arrowHitsMob()`, `pickUpArrow()` |
    | `items.js` | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
    | `nether-mobs.js` | Zombi domuz adam ve ghast modelleri ve türleri (`MOB_TYPES`'a eklenir), `angerPigmen()`, `updateGhast()`, ateş topu (`shootFireball()`, `updateFireball()`, `reflectFireball()`), Nether doğması (`updateNetherSpawning()`). `MOB_DROPS`'a eklediği için `items.js`'ten sonra yüklenir |
@@ -136,7 +138,7 @@ tests/              otomatik testler
 | 14 | `glass` | Cam | `glass`; çerçeve opak, içi saydam (`transparent`, `cutout`) |
 | 15 | `coal_ore` | Kömür cevheri | `coalOre` (taş + siyah benekler) |
 | 16 | `iron_ore` | Demir cevheri | `ironOre` (taş + bej benekler) |
-| 17 | `water` | Su | `water`; `fluid`, `transparent`, `hidden` (eşya olarak alınamaz, kırılamaz) |
+| 17 | `water` | Su (kaynak) | `water`; `fluid`, `transparent`, `hidden` (eşya olarak alınamaz, kırılamaz), `liquid: 'water'`, `level: 0` |
 | 47 | `tall_grass` | Uzun ot | `tallGrass`; `model: 'cross'`, `noCollide`, `cutout`, `replaceable`, `noDrop` (%12 buğday tohumu) |
 | 48 | `poppy` | Gelincik | `poppy`; uzun ot gibi, eşya düşürmez |
 | 49 | `dandelion` | Karahindiba | `dandelion`; uzun ot gibi, eşya düşürmez |
@@ -145,8 +147,10 @@ tests/              otomatik testler
 | 55 | `obsidian` | Obsidyen | `obsidian`; `breakTime: 36`, `pickaxe`, `minTier: 3` (demir kazmayla 6 sn, elmas kazmayla 4,5 sn) |
 | 56–57 | `portal_x`, `portal_z` | Portal | `model: 'portal'` (chunk mesh'inde değil, `portal.js`), `axis`, `fluid` (çarpışmasız, nişan geçer), `noDrop` |
 | 58 | `netherrack` | Kızıl taş | `netherrack`; `breakTime: 2`, `pickaxe`, `needsTool` |
-| 59 | `lava` | Lav | `lava`; `fluid`, `selfLit` (kendi ışıklı malzeme), `hidden`, `noDrop` |
+| 59 | `lava` | Lav (kaynak) | `lava`; `fluid`, `selfLit` (kendi ışıklı malzeme), `hidden`, `noDrop`, `liquid: 'lava'`, `level: 0` |
 | 60 | `glowstone` | Işıltı taşı | `glowstone`; `selfLit`, ışık kaynağı (`isLightSource`), kırılınca 2–4 `glowstone_dust` (`dropCount`) |
+| 63–69 | `water_flow_1` … `water_flow_7` | Su (akan) | kaynakla aynı, `level` 1–7, `noDrop` |
+| 70–76 | `lava_flow_1` … `lava_flow_7` | Lav (akan) | kaynakla aynı, `level` 1–7 |
 | 62 | `diamond_ore` | Elmas cevheri | `diamondOre` (taş + turkuaz benekler); `breakTime: 15`, `minTier: 3`, 1 `diamond` düşürür |
 | 61 | `chest` | Sandık | `chestTop` / `chestSide` (yanda koyu kilit çizgisi ve kilit); balta, 3,75 sn |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
@@ -234,7 +238,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 - **Blok kutuları:** Her katı bloğun hücre içinde bir çarpışma kutusu vardır (`blockBox`): `box` (kapı levhası), `height` (yatak 9/16) ya da tam hücre. `overlappingBoxes` varlığın kesiştiği kutuları bulur; `moveAxis` çarpışınca varlığı kutunun yüzüne dayar (yere iner, tavana değer, duvara yaslanır).
 - Çarpışma eksen eksen yapılır (`moveAxis(e, axis, d)`): önce x, sonra z, sonra y. `stepEntity(e, dt)` adım 0,4 bloktan büyükse alt adımlara böler ve yatayda çarpıp çarpmadığını döndürür. Aynı kod canlılar için de kullanılır; her varlık `{ x, y, z, w, h, vx, vy, vz, onGround }` taşır (`w` yarı genişlik). Kare süresi 0 ile 0,05 sn arasına sıkıştırılır.
-- **Su:** Oyuncunun kutusu suya değiyorsa yürüme hızı %50, yerçekimi 1/4, batma hızı en çok `SINK_SPEED = 3`; Boşluk basılıyken `SWIM_UP_SPEED = 3` ile yukarı yüzer. Suya düşen düşme hasarı almaz. Kamera suyun içindeyse ekran mavi tonlanır (`#underwater`) ve sis 0–8 bloğa iner. Hayvanlar suya girmez; düşmanlar suya doğmaz.
+- **Su:** Oyuncunun kutusu suya (kaynak ya da akan, `isWater`) değiyorsa yürüme hızı %50, yerçekimi 1/4, batma hızı en çok `SINK_SPEED = 3`; Boşluk basılıyken `SWIM_UP_SPEED = 3` ile yukarı yüzer. Suya düşen düşme hasarı almaz. Kamera suyun içindeyse ekran mavi tonlanır (`#underwater`) ve sis 0–8 bloğa iner. Hayvanlar suya girmez; düşmanlar suya doğmaz.
 - **Geri itilme:** `player.kx`, `player.kz` hıza eklenir ve her karede `e^(-6·dt)` ile söner.
 
 ### Can
@@ -457,6 +461,16 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - Durum: `chests["dünya:x,y,z"] = { dim, x, y, z, slots[27] }` (anahtar fırınlarla aynı, `furnaceKey`); ilk açılışta oluşturulur.
 - Sandık kırılınca içindekiler (aletlerin dayanıklılığı korunarak) yere saçılır, sandığın kendisi de düşer. Bütün sandıklar kayda yazılır.
 
+## Akan sıvılar ve kova
+
+- Sıvı yardımcıları (`blocks.js`): `liquidOf(b)` (`'water'`, `'lava'` ya da `null`), `liquidBlock(tür, seviye)`, `isWater`, `isLava`. Seviye 0 kaynak, 1–7 akan.
+- **Akış** (`fluids.js`): Her tür için bir kuyruk (`fluidQueues`); bütün dünya taranmaz. `set()` her çağrıldığında (`onBlockSet`, dünya üretiminden sonra bağlanır) hücre ya da komşusu sıvıysa hücre ve 6 komşusu kuyruğa girer. Su her 0,25 sn'de, lav her 1,5 sn'de bir adım ilerler (adım başına en çok 4000 hücre); önce bütün hücrelerin yeni hali hesaplanır, sonra yazılır.
+- Bir hücrenin olması gereken hali (`desiredLiquid`): kaynak kalır; üstünde aynı sıvı varsa seviye 1 (aşağı akış); değilse yandaki aynı sıvılardan, altı dolu olanların (aşağı akamayan) en düşük seviyesi + 1, en çok 7 (lav ana dünyada 3); yoksa hava (kaynağı kesilen akış sırayla çekilir). İki su kaynağına komşu, altı katı ya da su olan hücre yeni su kaynağı olur. Akış havaya ve bitkilere (`replaceable`) girer.
+- Su ile lav değince (`quench`): lav kaynağı obsidyen, akan lav kırık taş olur.
+- **Çizim:** Akan sıvının üst yüzü `1 − seviye / 8` yükseklikte (üstünde aynı sıvı varsa tam). Aynı sıvının komşusuna yüz çizilmez; yalnızca komşu daha alçaksa yan yüz görünür. Değişen hücrelerin chunk'ları (kenardaysa komşu chunk da) kirli işaretlenir; karede en çok 2 chunk yeniden kurulur.
+- Kuyruk kaydedilmez; dünya değişince (portal) boşalır. Yarıda kalmış akış sayfa yenilenince olduğu gibi durur.
+- **Kova:** Tarif `I.I` / `.I.` (demir külçe), 16'ya kadar yığılır (`maxStack`). Boş kovayla sağ tık bakış ışınındaki ilk sıvı kaynağını alır (araya katı blok girerse almaz) → su kovası / lav kovası (yığılmaz). Dolu kovayla sağ tık bakılan yüzün önüne (hava, bitki ya da akan sıvıysa) kaynak koyar ve kova boşalır. Nether'de su konamaz: "Su buharlaştı".
+
 ## Yay ve ok
 
 - Yay seçiliyken sağ tuş basılı tutulunca gerilir (`bowCharge`, 1 sn'de 0 → 1; blok konmaz). Gerilirken görüş alanı 10°'ye kadar daralır, gözden görünümde kol geri çekilir, 3. şahısta iki kol bakış yönünde öne uzanır.
@@ -607,7 +621,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -688,7 +702,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 37 | Elmas, demir ve elmas aletler | Yapıldı |
 | 38 | Zırh | Yapıldı |
 | 39 | Yay ve ok | Yapıldı |
-| 40 | Kova, akan su ve lav | Yapılmadı |
+| 40 | Kova, akan su ve lav | Yapıldı |
 | 41 | Biyomlar | Yapılmadı |
 | 42 | Sonsuz dünya | Yapılmadı |
 | 43 | Köyler ve köylü ticareti | Yapılmadı |

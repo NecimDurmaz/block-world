@@ -45,6 +45,7 @@ generateNether();
 function switchDimension(to) {
   dimension = to;
   world = worlds[to];
+  clearFluids();
   for (const m of [...mobs]) removeMob(m);
   for (const d of [...drops]) removeDrop(d);
   for (const a of projectiles) scene.remove(a.mesh);

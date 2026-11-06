@@ -27,7 +27,8 @@ const BLOCKS = [
   { name: 'Kömür cevheri', top: TILE.coalOre, side: TILE.coalOre, bottom: TILE.coalOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'coal' },
   { name: 'Demir cevheri', top: TILE.ironOre, side: TILE.ironOre, bottom: TILE.ironOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, minTier: 2 },
   // fluid: katı değil, nişan ışını geçer. transparent: arkasındaki yüzler çizilir, ayrı saydam mesh'te çizilir.
-  { name: 'Su', top: TILE.water, side: TILE.water, bottom: TILE.water, breakTime: Infinity, fluid: true, transparent: true, hidden: true },
+  // Sıvılar: liquid tür, level 0 kaynak (akan seviyeler 1–7 listenin sonunda)
+  { name: 'Su', top: TILE.water, side: TILE.water, bottom: TILE.water, breakTime: Infinity, fluid: true, transparent: true, hidden: true, liquid: 'water', level: 0 },
   // Meşaleler: tam blok değil (model: 'torch'), çarpışmasız (noCollide). lean: duvardan uzağa eğilme yönü [dx, dz].
   ...[[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].map(lean => ({
     name: 'Meşale', top: TILE.torch, side: TILE.torch, bottom: TILE.torch, breakTime: 0.05,
@@ -64,11 +65,14 @@ const BLOCKS = [
   ...['x', 'z'].map(axis => ({ name: 'Portal', top: TILE.obsidian, side: TILE.obsidian, bottom: TILE.obsidian, breakTime: Infinity, model: 'portal', axis, fluid: true, transparent: true, hidden: true, noDrop: true })),
   // Nether. selfLit: kendi ışığı var, gece/Nether karanlığından etkilenmez (ayrı malzeme).
   { name: 'Kızıl taş', top: TILE.netherrack, side: TILE.netherrack, bottom: TILE.netherrack, breakTime: 2, tool: 'pickaxe', needsTool: true },
-  { name: 'Lav', top: TILE.lava, side: TILE.lava, bottom: TILE.lava, breakTime: Infinity, fluid: true, selfLit: true, hidden: true, noDrop: true },
+  { name: 'Lav', top: TILE.lava, side: TILE.lava, bottom: TILE.lava, breakTime: Infinity, fluid: true, selfLit: true, hidden: true, noDrop: true, liquid: 'lava', level: 0 },
   // dropCount: düşen eşya adedi aralığı
   { name: 'Işıltı taşı', top: TILE.glowstone, side: TILE.glowstone, bottom: TILE.glowstone, breakTime: 1.5, selfLit: true, drop: 'glowstone_dust', dropCount: [2, 4] },
   { name: 'Sandık', top: TILE.chestTop, side: TILE.chestSide, bottom: TILE.chestTop, breakTime: 3.75, tool: 'axe' },
   { name: 'Elmas cevheri', top: TILE.diamondOre, side: TILE.diamondOre, bottom: TILE.diamondOre, breakTime: 15, tool: 'pickaxe', needsTool: true, minTier: 3, drop: 'diamond' },
+  // Akan su (63–69) ve akan lav (70–76): seviye 1–7, üst yüzü seviyeye göre alçak çizilir (fluids.js)
+  ...[1, 2, 3, 4, 5, 6, 7].map(level => ({ name: 'Su', top: TILE.water, side: TILE.water, bottom: TILE.water, breakTime: Infinity, fluid: true, transparent: true, hidden: true, noDrop: true, liquid: 'water', level })),
+  ...[1, 2, 3, 4, 5, 6, 7].map(level => ({ name: 'Lav', top: TILE.lava, side: TILE.lava, bottom: TILE.lava, breakTime: Infinity, fluid: true, selfLit: true, hidden: true, noDrop: true, liquid: 'lava', level })),
 ];
 const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
   torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -80,6 +84,12 @@ const DOOR_FIRST = 31;
 const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
 const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
 Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54, obsidian: 55, portal_x: 56, portal_z: 57, netherrack: 58, lava: 59, glowstone: 60, chest: 61, diamond_ore: 62 });
+for (let level = 1; level <= 7; level++) { B['water_flow_' + level] = 62 + level; B['lava_flow_' + level] = 69 + level; }
+// Sıvı yardımcıları: tür ('water', 'lava' ya da null), seviye, türe ve seviyeye göre blok
+const liquidOf = b => BLOCKS[b]?.liquid || null;
+const liquidBlock = (kind, level) => level === 0 ? B[kind] : B[kind + '_flow_' + level];
+const isWater = b => liquidOf(b) === 'water';
+const isLava = b => liquidOf(b) === 'lava';
 const isPortal = b => b === B.portal_x || b === B.portal_z;
 // Işık kaynağı: meşaleler ve ışıltı taşı (lav çok sayıda olduğundan ışık kaynağı sayılmaz, yalnızca kendisi parlar)
 const isLightSource = b => isTorch(b) || b === B.glowstone;

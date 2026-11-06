@@ -13,12 +13,12 @@ const fluidTimers = { water: 0, lava: 0 };
 const dirtyChunks = new Set();
 const SIDES = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
 const NEIGHBORS = [...SIDES, [0, 1, 0], [0, -1, 0]];
-const cellOf = i => [i % SX, Math.floor(i / (SX * SZ)), Math.floor(i / SX) % SZ];
+const cellOf = key => key.split(',').map(Number);
 
 function enqueueAround(x, y, z, kinds = ['water', 'lava']) {
   for (const [dx, dy, dz] of [[0, 0, 0], ...NEIGHBORS]) {
     if (!inBounds(x + dx, y + dy, z + dz)) continue;
-    for (const kind of kinds) fluidQueues[kind].add(index(x + dx, y + dy, z + dz));
+    for (const kind of kinds) fluidQueues[kind].add((x + dx) + ',' + (y + dy) + ',' + (z + dz));
   }
 }
 // Oyuncu ya da oyun bir bloğu değiştirince: hücre ya da komşusu sıvıysa çevresi yeniden hesaplanır.
@@ -65,10 +65,11 @@ function writeCell(x, y, z, b) {
   const cx = Math.floor(x / CH), cz = Math.floor(z / CH);
   dirtyChunks.add(cx + ',' + cz);
   // Chunk kenarındaki hücre komşu chunk'ın yüzlerini de etkiler
-  if (x % CH === 0 && cx > 0) dirtyChunks.add((cx - 1) + ',' + cz);
-  if (x % CH === CH - 1 && cx < SX / CH - 1) dirtyChunks.add((cx + 1) + ',' + cz);
-  if (z % CH === 0 && cz > 0) dirtyChunks.add(cx + ',' + (cz - 1));
-  if (z % CH === CH - 1 && cz < SZ / CH - 1) dirtyChunks.add(cx + ',' + (cz + 1));
+  const lx = x - cx * CH, lz = z - cz * CH;
+  if (lx === 0) dirtyChunks.add((cx - 1) + ',' + cz);
+  if (lx === CH - 1) dirtyChunks.add((cx + 1) + ',' + cz);
+  if (lz === 0) dirtyChunks.add(cx + ',' + (cz - 1));
+  if (lz === CH - 1) dirtyChunks.add(cx + ',' + (cz + 1));
 }
 function stepFluid(kind) {
   const cells = [...fluidQueues[kind]].slice(0, FLUID_STEP_LIMIT);
@@ -104,8 +105,7 @@ function updateFluids(dt) {
   for (const key of dirtyChunks) {
     if (n++ >= FLUID_REBUILDS_PER_FRAME) break;
     dirtyChunks.delete(key);
-    const [cx, cz] = key.split(',').map(Number);
-    buildChunk(cx, cz);
+    rebuildKey(key);
   }
 }
 // Dünya değişince (portal) kuyruklar boşalır.

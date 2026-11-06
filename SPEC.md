@@ -57,7 +57,7 @@ tests/              otomatik testler
    | --- | --- |
    | `textures.js` | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
    | `blocks.js` | `BLOCKS` tanımları, `B` kısaltmaları |
-   | `world-gen.js` | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
+   | `world-gen.js` | Chunk haritası (`worlds`, `world`, `modifiedChunks`), `get/set`, `ensureChunk()`, `ensureArea()`, gürültü fonksiyonları, biyomlar, `generateChunk()` |
    | `renderer.js` | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
    | `day-cycle.js` | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
    | `sky.js` | Bulutlar (`clouds`, `cloudTexture`) ve yıldızlar (`stars`), `updateSky()` |
@@ -75,6 +75,7 @@ tests/              otomatik testler
    | `mob-models.js` | `box()`/`pivot()` model yardımcıları; hayvan, zombi, iskelet, örümcek ve creeper modelleri |
    | `mobs.js` | `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | `arrows.js` | `projectiles`, `arrowMesh()`, `shootArrow()` (iskelet), `updateProjectiles()` (iskelet ve oyuncu okları) |
+   | `chunk-loader.js` | Yürüdükçe chunk üretme, mesh kurma ve kaldırma: `updateChunks()`, `nearestChunk()` |
    | `fluids.js` | Akış: `FLUIDS`, `fluidQueues`, `desiredLiquid()`, `stepFluid()`, `quench()`, `updateFluids()`, `clearFluids()` |
    | `bucket.js` | Kova eşyaları ve tarifi, `heldBucket()`, `sourceInSight()`, `useBucket()` |
    | `bow.js` | Yay ve ip eşyaları, tarifler, `bowCharge`, `updateBow()`, `shootPlayerArrow()`, `arrowHitsMob()`, `pickUpArrow()` |
@@ -95,16 +96,18 @@ tests/              otomatik testler
    | `game-actions.js` | Panel ve komutların ortak eylemleri: `godMode`, `safeMode`, `flyAllowed`, `flying`, `TIMES_OF_DAY`, `setGodMode()`, `setSafeMode()`, `setFlyAllowed()`, `healPlayer()`, `feedPlayer()`, `setTimeOfDay()`, `teleport()`, `clearInventory()`, `summonMob()`, `setSpawnHere()` |
    | `control-panel.js` | Kontrol paneli: `controlOpen`, `openControl()`, `closeControl()`, `renderControl()` |
    | `item-picker.js` | Eşya seçici: `openPicker()`, `filterPicker()`, `clickPicker()` |
-   | `nether.js` | `dimension`, `generateNether()`, `switchDimension()`, `portalLinks`, `createPortalNear()`, `travelThroughPortal()`, `updateLava()`. Yüklenirken `useBed` ve `RECIPES`'e eriştiği için `main.js`'ten hemen önce yüklenir |
+   | `nether.js` | `dimension`, `generateNetherChunk()`, `switchDimension()`, `portalLinks`, `createPortalNear()`, `travelThroughPortal()`, `updateLava()`. Yüklenirken `useBed` ve `RECIPES`'e eriştiği için `main.js`'ten hemen önce yüklenir |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
 
 ## Dünya
 
-- **Boyut:** `SX × SY × SZ = 96 × 48 × 96` blok. Sınırlı dünya; kenarlar görünmez duvardır (oyuncu dışarı çıkamaz).
-- **Veri:** `world = Uint8Array(SX * SY * SZ)`, indeks `(y * SZ + z) * SX + x`. Değer blok kimliğidir, `0` hava.
-- **Erişim:** `get(x, y, z)` dünya dışında hava döndürür, `y < 0` için taş döndürür (altta delik görünmesin diye). `set(x, y, z, id)` dünya dışını yok sayar.
+- **Boyut:** Yatayda sonsuz, yükseklik `SY = 48`. Dünya `CH = 16`'lık chunk'lardan oluşur; kenar duvarı yoktur.
+- **Veri:** Her dünya bir chunk haritasıdır: `worlds.overworld`, `worlds.nether` = `Map<"cx,cz", Uint8Array(16 × 48 × 16)>`, hücre indeksi `(y * 16 + lz) * 16 + lx` (`cellIndex`). Değer blok kimliğidir, `0` hava. `world` etkin dünyanın haritasıdır.
+- **Erişim:** `get(x, y, z)` yüklenmemiş chunk'ta ve `y ≥ 48`'de hava, `y < 0` için taş döndürür (altta delik görünmesin diye). `set(x, y, z, id)` yüklenmemiş chunk'ı yok sayar; üretim dışındaki her yazım chunk'ı değiştirilmiş sayar (`modifiedChunks[dimension]`) ve `onBlockSet`'i (sıvılar) çağırır. `inBounds` = yüklü chunk ve `0 ≤ y < 48`.
+- **Yükleme** (`chunk-loader.js`, oyun oynanırken her karede): çizim yarıçapı görüş mesafesine bağlıdır (40 / 70 / 120 blok → 3 / 5 / 8 chunk). Oyuncunun chunk'ından halka halka dışa doğru (`nearestChunk`), karede en çok 1 chunk verisi üretilir (yarıçap + 1) ve 2 mesh kurulur; mesh, chunk ve dört komşusunun verisi hazırsa kurulur (kenar yüzleri doğru çizilsin). Yarıçap + 1 dışındaki mesh'ler sahneden kaldırılır; 12 chunk ötedeki değişmemiş veri 2 sn'de bir bellekten silinir (değiştirilmiş chunk'lar kalır).
+- Açılışta doğma noktasının 3 chunk çevresi üretilir ve 2 chunk çevresi hemen çizilir; portaldan geçişte, ışınlanmada ve kayıt yüklenince de oyuncunun çevresi hemen hazırlanır (`buildAround`). Ekin ve portal taraması yalnızca değiştirilmiş chunk'lara bakar (`forEachModifiedCell`).
 - **Tohum:** `SEED = 20261106`, sabit. Her açılışta aynı dünya üretilir.
 - **Üretim chunk başınadır** (`generateChunk(cx, cz)`): her şey tohum ve koordinata bağlıdır, aynı chunk her zaman aynı çıkar. Chunk'a özgü rastgele üreteç `chunkRandom(cx, cz, tuz)`. Ağaçlar chunk kenarından 2 blok içeride, damarlar ve obsidyen öbekleri chunk içinde kalır (komşu chunk'a taşmaz).
 - **Biyomlar** (`biomeAt(x, z)`): iki düşük frekanslı gürültü, sıcaklık `t` ve nem `m` (`BIOME_SCALE = 64`). Çöl: `t > 0,57` ve `m < 0,47`; karlı: `t < 0,42`; orman: `m > 0,56`; gerisi ova. Gürültü kaydırmaları, 96×96 başlangıç alanında dört biyomun da (~%22'şer) görüneceği ve doğma noktasının ormanda olacağı biçimde seçildi.
@@ -120,7 +123,7 @@ tests/              otomatik testler
 - **Bitkiler:** Üstü boş çimen sütunlarında ova %15 uzun ot ve %3 çiçek, orman %8 ve %1 (yarı yarıya gelincik ve karahindiba); çöl ve karlıda yok.
 - **Biyom tonu:** Çimen üst yüzü ve yapraklar (`tint`) biyoma göre köşe rengiyle tonlanır (`BIOME_TINT`: ormanda koyu, çölde soluk sarı, karlıda soğuk).
 - **Kaktüs** hücreden biraz dar bir kutudur (`box`); değen oyuncu saniyede 1 hasar alır. **Buz** kaygandır: üstündeyken yatay hız hedefe yavaşça yaklaşır (`ICE_GRIP = 1,5`), bırakınca kayılır. Hayvanlar yalnızca çimende doğduğundan çölde ve karlıda doğmaz.
-- **Doğma noktası:** Dünyanın ortası, sütunun en üstü. (Bilinen sorun: ortada bir çukura denk gelebiliyor.)
+- **Doğma noktası:** `SPAWN_X, SPAWN_Z = 48, 48` (eski 96×96 dünyanın ortası), sütunun en üstü.
 
 ### Bloklar
 
@@ -277,7 +280,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 ### Nether
 
 - **Dünyalar:** `worlds = { overworld, nether }` iki ayrı `Uint8Array`; `world` etkin olanı gösterir ve bütün `get`/`set`/chunk kodu onu kullanır. `switchDimension(to)` dünyayı değiştirir; canlılar, yerdeki eşyalar, oklar ve parçacıklar silinir, bütün chunk'lar, portal düzlemleri ve ekin sayaçları yeniden kurulur. Ana dünyaya dönüşte hayvanlar yeniden doğar.
-- **Üretim** (`generateNether()`, yüklenirken bir kez): taban `3 + fbm·12`, tavan `35 + fbm·8` kızıl taş; arada 3B gürültüyle kızıl taş sütunlar; `y ≤ LAVA_LEVEL = 10` boşluklar lav; tavandan sarkan 45 ışıltı taşı öbeği.
+- **Üretim** (`generateNetherChunk(cx, cz)`, ana dünya gibi chunk chunk, gidilince): taban `3 + fbm·12`, tavan `35 + fbm·8` kızıl taş; arada 3B gürültüyle kızıl taş sütunlar; `y ≤ LAVA_LEVEL = 10` boşluklar lav; tavandan sarkan chunk başına 1–2 ışıltı taşı öbeği (chunk içinde kalır).
 - **Işık:** Lav ve ışıltı taşı üçüncü chunk tamponunda, parlaklıktan etkilenmeyen `glowMaterial` ile çizilir. Işıltı taşı meşale gibi çevresini aydınlatır; lav yalnızca kendisi parlar.
 - **Ortam:** Nether'de saat durur; gökyüzü ve sis `#3a0f0f`, sis 12–40 blok, parlaklık 0,6; güneş, ay, bulut ve yıldız gizlenir. Ana dünya canlıları Nether'de doğmaz.
 - **Geçiş:** Girilen portalın iç tabanının sol hücresi `portalLinks[from]`'a yazılır. Hedef dünyada bağlı portal hâlâ duruyorsa oraya, yoksa aynı X/Z yakınında (16 blok içinde) 4×5 çerçevenin ve önünün sığdığı katı zeminli bir yere yeni yanık portal kurulur (`createPortalNear`); yer bulunamazsa yer açılır. Oyuncu portalın önüne konur, "Nether'e geçtin" / "Dünyaya döndün" yazısı çıkar ve oyun kaydedilir.
@@ -631,18 +634,17 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
 - Tarayıcının IndexedDB'si: veritabanı `block-world`, depo `saves`, tek kayıt anahtarı `world1`. Veri yalnızca o tarayıcıda ve o adreste durur (Artifact ile yerel dosyanın kayıtları ayrıdır).
-- **Kayıt nesnesi** (`SAVE_VERSION = 2`; sürüm 1 kayıtları da yüklenir, Nether yeni üretilir):
+- **Kayıt nesnesi** (`SAVE_VERSION = 3`; sürüm 1–2 kayıtlarındaki 96×96 tek dizi açılışta chunk'lara bölünür ve hepsi değiştirilmiş sayılır, `loadLegacyWorld`):
 
   | Alan | İçerik |
   | --- | --- |
   | `version` | `2` |
-  | `world` | Ana dünya dizisi (`Uint8Array`, 442.368 bayt) |
-  | `nether` | Nether dizisi (aynı boyut) |
+  | `chunks` | Yalnızca değiştirilmiş chunk'lar: `{ overworld: { "cx,cz": Uint8Array(12.288) }, nether: { … } }`. Değişmemiş chunk'lar tohumdan yeniden üretilir |
   | `dimension` | Oyuncunun bulunduğu dünya: `'overworld'` ya da `'nether'` |
   | `portalLinks` | `{ overworld, nether }`: her dünyadaki bağlı portal `{ x, y, z, axis }` ya da `null` |
   | `player` | `{ x, y, z, yaw, pitch }` |
@@ -714,7 +716,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 39 | Yay ve ok | Yapıldı |
 | 40 | Kova, akan su ve lav | Yapıldı |
 | 41 | Biyomlar | Yapıldı |
-| 42 | Sonsuz dünya | Yapılmadı |
+| 42 | Sonsuz dünya | Yapıldı |
 | 43 | Köyler ve köylü ticareti | Yapılmadı |
 | 44 | Nether kalesi ve blaze | Yapılmadı |
 | 45 | Sohbet ve komutlar | Yapıldı |

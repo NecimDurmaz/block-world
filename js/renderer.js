@@ -76,8 +76,14 @@ const TORCH_RANGE = 7.5;
 function torchesNear(x0, z0, x1, z1) {
   const list = [];
   [x0, z0, x1, z1] = [x0, z0, x1, z1].map(Math.floor);
-  for (let y = 0; y < SY; y++) for (let z = Math.max(0, z0); z <= Math.min(SZ - 1, z1); z++) for (let x = Math.max(0, x0); x <= Math.min(SX - 1, x1); x++) {
-    if (isLightSource(world[index(x, y, z)])) list.push([x + 0.5, y + 0.6, z + 0.5]);
+  // Alanın değdiği her yüklü chunk'ın dizisi doğrudan taranır
+  for (let cz = Math.floor(z0 / CH); cz <= Math.floor(z1 / CH); cz++) for (let cx = Math.floor(x0 / CH); cx <= Math.floor(x1 / CH); cx++) {
+    const c = world.get(chunkKey(cx, cz));
+    if (!c) continue;
+    const zs = Math.max(z0, cz * CH), ze = Math.min(z1, cz * CH + CH - 1), xs = Math.max(x0, cx * CH), xe = Math.min(x1, cx * CH + CH - 1);
+    for (let y = 0; y < SY; y++) for (let z = zs; z <= ze; z++) for (let x = xs; x <= xe; x++) {
+      if (isLightSource(c[(y * CH + z - cz * CH) * CH + x - cx * CH])) list.push([x + 0.5, y + 0.6, z + 0.5]);
+    }
   }
   return list;
 }
@@ -242,24 +248,32 @@ function buildChunk(cx, cz) {
     chunkMeshes.set(key, meshes);
   }
 }
-for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
-
+function removeChunkMesh(key) {
+  for (const m of chunkMeshes.get(key) || []) { scene.remove(m); m.geometry.dispose(); }
+  chunkMeshes.delete(key);
+}
+function clearChunkMeshes() { for (const key of [...chunkMeshes.keys()]) removeChunkMesh(key); }
+// Yalnızca mesh'i kurulmuş chunk'lar yeniden kurulur (diğerleri sırası gelince kurulur, chunk-loader.js).
+const rebuildKey = key => { if (chunkMeshes.has(key)) buildChunk(...key.split(',').map(Number)); };
 // Meşale konunca ya da kırılınca ışığın yettiği bütün chunk'lar yeniden kurulur.
 function rebuildArea(x, z, r) {
-  const keys = new Set();
-  for (let cx = Math.floor(Math.max(0, x - r) / CH); cx <= Math.floor(Math.min(SX - 1, x + r) / CH); cx++)
-    for (let cz = Math.floor(Math.max(0, z - r) / CH); cz <= Math.floor(Math.min(SZ - 1, z + r) / CH); cz++) keys.add(cx + ',' + cz);
-  for (const key of keys) buildChunk(...key.split(',').map(Number));
+  for (let cx = Math.floor((x - r) / CH); cx <= Math.floor((x + r) / CH); cx++)
+    for (let cz = Math.floor((z - r) / CH); cz <= Math.floor((z + r) / CH); cz++) rebuildKey(chunkKey(cx, cz));
 }
 function rebuildAround(x, z) {
   const done = new Set();
   for (const [dx, dz] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]) {
-    const nx = x + dx, nz = z + dz;
-    if (nx < 0 || nz < 0 || nx >= SX || nz >= SZ) continue;
-    const cx = Math.floor(nx / CH), cz = Math.floor(nz / CH), key = cx + ',' + cz;
-    if (!done.has(key)) { done.add(key); buildChunk(cx, cz); }
+    const key = chunkKey(Math.floor((x + dx) / CH), Math.floor((z + dz) / CH));
+    if (!done.has(key)) { done.add(key); rebuildKey(key); }
   }
 }
+// Verisi yoksa üretip (r + 1 çevresiyle) r chunk çevresindeki mesh'leri hemen kurar (açılış, portal, ışınlanma).
+function buildAround(x, z, r) {
+  ensureArea(x, z, r + 1);
+  const pcx = Math.floor(x / CH), pcz = Math.floor(z / CH);
+  for (let cz = pcz - r; cz <= pcz + r; cz++) for (let cx = pcx - r; cx <= pcx + r; cx++) buildChunk(cx, cz);
+}
+buildAround(SPAWN_X, SPAWN_Z, 2);
 
 const highlight = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004)),

@@ -1,19 +1,56 @@
 // ---------- Dünya üretimi ----------
 // Dünya dizisi, gürültü fonksiyonları, biyomlar ve chunk başına dünya üretimi (arazi, mağara, göl, cevher, ağaç, bitki).
 
-const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
-// Etkin dünya (world) ana dünya ya da Nether dizisini gösterir; portaldan geçince değişir (nether.js).
-let world = new Uint8Array(SX * SY * SZ);
-const worlds = { overworld: world, nether: new Uint8Array(SX * SY * SZ) };
-const inBounds = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < SX && y < SY && z < SZ;
-const index = (x, y, z) => (y * SZ + z) * SX + x;
+const SY = 48, CH = 16, SEED = 20261106;
+// Doğma noktası: başlangıç alanının (ilk 96×96 blok) ortası
+const SPAWN_X = 48, SPAWN_Z = 48;
+// Sonsuz dünya: chunk haritası "cx,cz" -> Uint8Array(CH × SY × CH), hücre indeksi (y * CH + lz) * CH + lx.
+// Etkin dünya (world) ana dünyanın ya da Nether'in haritasıdır; portaldan geçince değişir (nether.js).
+const worlds = { overworld: new Map(), nether: new Map() };
+let world = worlds.overworld;
+// Oyuncunun değiştirdiği chunk'lar: kayda yazılır ve bellekten silinmez.
+const modifiedChunks = { overworld: new Set(), nether: new Set() };
+const chunkKey = (cx, cz) => cx + ',' + cz;
+const chunkAt = (x, z) => world.get(chunkKey(Math.floor(x / CH), Math.floor(z / CH)));
+const cellIndex = (x, y, z) => (y * CH + (z - Math.floor(z / CH) * CH)) * CH + (x - Math.floor(x / CH) * CH);
+// Yüklü bir chunk'ın içinde mi
+const inBounds = (x, y, z) => y >= 0 && y < SY && !!chunkAt(x, z);
+// Yüklenmemiş chunk hava döner; y < 0 taş (altta delik görünmesin).
 function get(x, y, z) {
   if (y < 0) return B.stone;
-  return inBounds(x, y, z) ? world[index(x, y, z)] : AIR;
+  if (y >= SY) return AIR;
+  const c = chunkAt(x, z);
+  return c ? c[cellIndex(x, y, z)] : AIR;
 }
 // onBlockSet: dünya üretildikten sonra fluids.js bağlar (değişen hücrenin çevresindeki sıvılar yeniden hesaplanır).
-let onBlockSet = null;
-const set = (x, y, z, v) => { if (!inBounds(x, y, z)) return; world[index(x, y, z)] = v; if (onBlockSet) onBlockSet(x, y, z); };
+let onBlockSet = null, generatingChunk = false;
+function set(x, y, z, v) {
+  if (y < 0 || y >= SY) return;
+  const c = chunkAt(x, z);
+  if (!c) return;
+  c[cellIndex(x, y, z)] = v;
+  if (generatingChunk) return;
+  modifiedChunks[dimension].add(chunkKey(Math.floor(x / CH), Math.floor(z / CH)));
+  if (onBlockSet) onBlockSet(x, y, z);
+}
+// Chunk yoksa üretir (dim verilmezse etkin dünyada). Üretildiyse true.
+function ensureChunk(cx, cz, dim) {
+  const map = dim ? worlds[dim] : world, key = chunkKey(cx, cz);
+  if (map.has(key)) return false;
+  const previous = world;
+  world = map;
+  map.set(key, new Uint8Array(CH * SY * CH));
+  generatingChunk = true;
+  (map === worlds.nether ? generateNetherChunk : generateChunk)(cx, cz);
+  generatingChunk = false;
+  world = previous;
+  return true;
+}
+// (x, z) bloğunun chunk'ı ve r chunk çevresi
+function ensureArea(x, z, r, dim) {
+  const pcx = Math.floor(x / CH), pcz = Math.floor(z / CH);
+  for (let cz = pcz - r; cz <= pcz + r; cz++) for (let cx = pcx - r; cx <= pcx + r; cx++) ensureChunk(cx, cz, dim);
+}
 
 function hash(x, z) {
   let h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + SEED) | 0;
@@ -191,4 +228,5 @@ function generateChunk(cx, cz) {
     else if (r < chance[1]) set(x, y, z, hash(x, z * 3) < 0.5 ? B.poppy : B.dandelion);
   }
 }
-for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) generateChunk(cx, cz);
+// Açılışta doğma noktasının çevresi hemen üretilir (başlangıç alanını kapsar); gerisi yürüdükçe (chunk-loader.js).
+ensureArea(SPAWN_X, SPAWN_Z, 3);

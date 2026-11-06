@@ -26,16 +26,15 @@ const portalMeshes = [];
 function rebuildPortalMeshes() {
   for (const m of portalMeshes) scene.remove(m);
   portalMeshes.length = 0;
-  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
-    const b = world[index(x, y, z)];
-    if (!isPortal(b)) continue;
+  // Portal yalnızca oyuncunun değiştirdiği chunk'larda olabilir
+  forEachModifiedCell(isPortal, (x, y, z, b) => {
     const mesh = new THREE.Mesh(portalGeometry, portalMaterial);
     mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
     if (b === B.portal_z) mesh.rotation.y = Math.PI / 2;
     mesh.renderOrder = 2;
     scene.add(mesh);
     portalMeshes.push(mesh);
-  }
+  });
 }
 
 // İç boşluğu tam 2x3 olan dikey çerçeve: (x, y, z) iç tabandaki iki hücreden biri. Köşeler isteğe bağlı.

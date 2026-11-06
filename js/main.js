@@ -104,6 +104,7 @@ function frame(now) {
     updateDrops(dt);
     updateFurnaces(dt);
     updateFluids(dt);
+    updateChunks(dt);
     updateCrops(dt);
     updateMobSounds(dt);
     updateDebris(dt);

@@ -4,7 +4,7 @@
 const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4, MAX_HEALTH = 20, MAX_FOOD = 20;
 // kx/kz: geri itilme hızı, her karede söner. fallPeak: havadayken ulaşılan en yüksek y.
 // w/h: çarpışma kutusunun yarı genişliği ve boyu (canlılarla ortak fizik bunları kullanır).
-const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, w: W, h: H, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, food: MAX_FOOD, fallPeak: null };
+const player = { x: SPAWN_X + 0.5, y: 0, z: SPAWN_Z + 0.5, w: W, h: H, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, food: MAX_FOOD, fallPeak: null };
 // Yatakla belirlenen doğma noktası; yoksa dünyanın ortası.
 let spawnPoint = null;
 function spawn() {
@@ -12,14 +12,14 @@ function spawn() {
     Object.assign(player, spawnPoint, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
     return;
   }
-  const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
+  const x = SPAWN_X, z = SPAWN_Z;
   let y = SY - 1;
   while (y > 0 && passable(get(x, y - 1, z))) y--;
   Object.assign(player, { x: x + 0.5, y: y, z: z + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
 }
 spawn();
 
-const solid = (x, y, z) => (x < 0 || z < 0 || x >= SX || z >= SZ) ? true : isSolid(get(x, y, z));
+const solid = (x, y, z) => isSolid(get(x, y, z));
 // Varlığın kutusu verilen blok türüyle (ya da test işleviyle, ör. isWater) kesişiyor mu
 function overlapsBlock(e, block) {
   const test = typeof block === 'function' ? block : b => b === block;
@@ -38,7 +38,6 @@ function overlappingBoxes(e, x, y, z) {
   for (let bx = Math.floor(x - e.w); bx <= Math.floor(x + e.w); bx++)
     for (let by = Math.floor(y); by <= Math.floor(y + e.h - 0.001); by++)
       for (let bz = Math.floor(z - e.w); bz <= Math.floor(z + e.w); bz++) {
-        if (bx < 0 || bz < 0 || bx >= SX || bz >= SZ) { boxes.push([bx, by, bz, bx + 1, by + 1, bz + 1]); continue; }
         const b = get(bx, by, bz);
         if (!isSolid(b)) continue;
         const [x0, y0, z0, x1, y1, z1] = blockBox(b);

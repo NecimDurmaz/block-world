@@ -4,12 +4,14 @@ document.getElementById('play').click();
 for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
 g.clock.time = 0.25;
 // Nether üretimi: kızıl taş taban/tavan, altta lav, ışıltı taşı var
-const nether = g.worlds.nether, at = (x, y, z) => nether[x + z * 96 + y * 96 * 96];
+// Nether chunk'ları gidince üretilir: başlangıç alanını şimdi üret
+g.ensureArea(48, 48, 3, 'nether');
+const nether = g.worlds.nether, at = (x, y, z) => nether.get(Math.floor(x / 16) + ',' + Math.floor(z / 16))[(y * 16 + z % 16) * 16 + x % 16];
 let netherrack = 0, lava = 0, glowstone = 0, lavaHigh = 0;
-for (let i = 0; i < nether.length; i++) {
-  const b = nether[i];
+for (const c of nether.values()) for (let i = 0; i < c.length; i++) {
+  const b = c[i];
   if (b === 58) netherrack++;
-  else if (b === 59) { lava++; if (Math.floor(i / (96 * 96)) > 10) lavaHigh++; }
+  else if (b === 59) { lava++; if (Math.floor(i / (16 * 16)) > 10) lavaHigh++; }
   else if (b === 60) glowstone++;
 }
 const generated = netherrack > 100000 && lava > 500 && lavaHigh === 0 && glowstone >= 20 && at(10, 0, 10) === 58;

@@ -36,7 +36,9 @@ function setTimeOfDay(time) {
   return `Saat ${clockText().split(' · ')[1]} oldu`;
 }
 function teleport(x, y, z) {
-  Object.assign(player, { x: Math.min(SX - 0.5, Math.max(0.5, x)), y: Math.min(SY + 10, Math.max(1, y)), z: Math.min(SZ - 0.5, Math.max(0.5, z)), vx: 0, vy: 0, vz: 0, fallPeak: null });
+  Object.assign(player, { x, y: Math.min(SY + 10, Math.max(1, y)), z, vx: 0, vy: 0, vz: 0, fallPeak: null });
+  // Uzağa ışınlanınca oranın chunk'ları hemen hazırlanır
+  buildAround(x, z, 1);
   return `Işınlandın: ${player.x.toFixed(1)} ${player.y.toFixed(1)} ${player.z.toFixed(1)}`;
 }
 function clearInventory() {

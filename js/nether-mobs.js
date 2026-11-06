@@ -145,7 +145,7 @@ const countKind = kind => mobs.filter(m => m.kind === kind && m.dying <= 0).leng
 function netherColumn() {
   const angle = Math.random() * Math.PI * 2, distance = NETHER_SPAWN_MIN + Math.random() * (NETHER_SPAWN_MAX - NETHER_SPAWN_MIN);
   const x = Math.floor(player.x + Math.cos(angle) * distance), z = Math.floor(player.z + Math.sin(angle) * distance);
-  return x < 3 || z < 3 || x >= SX - 3 || z >= SZ - 3 ? null : [x, z];
+  return inBounds(x, 1, z) ? [x, z] : null;
 }
 // Domuz adam: kızıl taş üstünde, iki blok boş hücre
 function pigmanSpot(x, z) {

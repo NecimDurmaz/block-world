@@ -16,7 +16,7 @@ function raycast() {
   let tmz = sz > 0 ? (z + 1 - o.z) * tdz : sz < 0 ? (o.z - z) * tdz : Infinity;
   let px = x, py = y, pz = z, t = 0;
   while (t <= maxDist) {
-    if (inBounds(x, y, z) && isTargetable(world[index(x, y, z)])) return { x, y, z, px, py, pz, t };
+    if (isTargetable(get(x, y, z))) return { x, y, z, px, py, pz, t };
     px = x; py = y; pz = z;
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; }

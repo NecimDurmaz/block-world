@@ -2,7 +2,7 @@
 // IndexedDB kaydı: kaydetme, yükleme, yeni dünya.
 
 // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
-const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 2, AUTOSAVE_MS = 30000;
+const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 3, AUTOSAVE_MS = 30000;
 const playButton = document.getElementById('play');
 const resetButton = document.getElementById('reset');
 const saveNote = document.getElementById('save-note');
@@ -32,8 +32,8 @@ function saveGame() {
     const tx = db.transaction(DB_STORE, 'readwrite');
     tx.objectStore(DB_STORE).put({
       version: SAVE_VERSION,
-      world: worlds.overworld,
-      nether: worlds.nether,
+      // Yalnızca oyuncunun değiştirdiği chunk'lar: { overworld: { "cx,cz": Uint8Array }, nether: { … } }
+      chunks: Object.fromEntries(['overworld', 'nether'].map(d => [d, Object.fromEntries([...modifiedChunks[d]].filter(k => worlds[d].has(k)).map(k => [k, worlds[d].get(k)]))])),
       dimension,
       portalLinks,
       player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
@@ -57,15 +57,35 @@ function saveGame() {
     };
   } catch (err) { /* kayıt yapılamazsa oyun sürer */ }
 }
+// Eski (sürüm 1–2) kayıtlardaki 96×96×48 tek dizi: indeks (y * 96 + z) * 96 + x. Chunk'lara bölünür, hepsi değiştirilmiş sayılır.
+const LEGACY_SIZE = 96;
+function loadLegacyWorld(data, dim) {
+  for (let cz = 0; cz < LEGACY_SIZE / CH; cz++) for (let cx = 0; cx < LEGACY_SIZE / CH; cx++) {
+    const c = new Uint8Array(CH * SY * CH);
+    for (let y = 0; y < SY; y++) for (let lz = 0; lz < CH; lz++) for (let lx = 0; lx < CH; lx++) {
+      c[(y * CH + lz) * CH + lx] = data[(y * LEGACY_SIZE + cz * CH + lz) * LEGACY_SIZE + cx * CH + lx];
+    }
+    worlds[dim].set(chunkKey(cx, cz), c);
+    modifiedChunks[dim].add(chunkKey(cx, cz));
+  }
+}
 function applySave(save) {
-  worlds.overworld.set(save.world);
-  // Sürüm 1 kayıtlarında Nether yok: yeni üretilen Nether kalır
-  if (save.nether?.length === worlds.nether.length) worlds.nether.set(save.nether);
+  if (save.version === SAVE_VERSION) {
+    for (const dim of ['overworld', 'nether']) for (const [key, data] of Object.entries(save.chunks?.[dim] || {})) {
+      worlds[dim].set(key, new Uint8Array(data));
+      modifiedChunks[dim].add(key);
+    }
+  } else {
+    loadLegacyWorld(save.world, 'overworld');
+    // Sürüm 1 kayıtlarında Nether yok: yeni üretilir
+    if (save.nether?.length === LEGACY_SIZE * SY * LEGACY_SIZE) loadLegacyWorld(save.nether, 'nether');
+  }
   dimension = save.dimension === 'nether' ? 'nether' : 'overworld';
   world = worlds[dimension];
   Object.assign(portalLinks, save.portalLinks || {});
-  for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
   Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
+  clearChunkMeshes();
+  buildAround(player.x, player.z, 2);
   player.health = save.health > 0 ? save.health : MAX_HEALTH;
   player.food = save.food ?? MAX_FOOD;
   for (const f of save.furnaces || []) furnaces[(f.dim || 'overworld') + ':' + f.x + ',' + f.y + ',' + f.z] = { dim: 'overworld', ...f };
@@ -90,7 +110,7 @@ async function loadGame() {
   try {
     db = await openDb();
     const save = await readSave();
-    const valid = save && (save.version === 1 || save.version === SAVE_VERSION) && save.world?.length === world.length;
+    const valid = save && (save.version === SAVE_VERSION || ([1, 2].includes(save.version) && save.world?.length === LEGACY_SIZE * SY * LEGACY_SIZE));
     if (valid) applySave(save);
     saveNote.textContent = valid ? 'Kayıt yüklendi. Oyun otomatik kaydedilir.' : 'Oyun otomatik kaydedilir.';
   } catch (err) {

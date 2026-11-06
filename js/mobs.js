@@ -92,13 +92,14 @@ function surfaceY(x, z) {
 function findGrass(pick, accept = () => true) {
   for (let i = 0; i < 60; i++) {
     const [x, z] = pick();
-    if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1 || !accept(x, z)) continue;
+    if (!inBounds(x, 1, z) || !accept(x, z)) continue;
     const y = surfaceY(x, z);
     if (get(x, y - 1, z) === B.grass) return [x + 0.5, y, z + 0.5];
   }
   return null;
 }
-const randomColumn = () => [Math.floor(Math.random() * SX), Math.floor(Math.random() * SZ)];
+// Oyuncunun 48 blok çevresinde rastgele sütun
+const randomColumn = () => [Math.floor(player.x + (Math.random() * 2 - 1) * 48), Math.floor(player.z + (Math.random() * 2 - 1) * 48)];
 const animalCount = () => mobs.filter(m => ANIMAL_KINDS.includes(m.kind)).length;
 
 // Sürü: aynı türden count tane, ilk hayvanın 8 blok çevresinde.
@@ -138,7 +139,7 @@ function trySpawnHostile(night) {
   for (let i = 0; i < 20; i++) {
     const angle = Math.random() * Math.PI * 2, distance = 16 + Math.random() * 16;
     const x = Math.floor(player.x + Math.cos(angle) * distance), z = Math.floor(player.z + Math.sin(angle) * distance);
-    if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1) continue;
+    if (!inBounds(x, 1, z)) continue;
     const spot = (night && Math.random() < 0.5 ? surfaceSpot(x, z) : null) || caveSpot(x, z);
     if (!spot || torchNearby(x, spot, z)) continue;
     // Düşmanlar: %40 iskelet, %20 örümcek, %15 creeper, kalanı zombi
@@ -368,11 +369,7 @@ function blast(x, y, z, r, maxDamage) {
   for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
     if (dx * dx + dy * dy + dz * dz <= r * r && cy + dy > 0) set(cx + dx, cy + dy, cz + dz, AIR);
   }
-  const chunks = new Set();
-  for (let x = cx - r - 1; x <= cx + r + 1; x += 1) for (let z = cz - r - 1; z <= cz + r + 1; z += 1) {
-    if (x >= 0 && z >= 0 && x < SX && z < SZ) chunks.add(Math.floor(x / CH) + ',' + Math.floor(z / CH));
-  }
-  for (const key of chunks) buildChunk(...key.split(',').map(Number));
+  rebuildArea(cx, cz, r + 1);
   const distance = Math.hypot(player.x - x, player.y + 0.9 - (y + 0.25), player.z - z);
   const damage = Math.round(maxDamage * (1 - distance / (r * 2)));
   if (damage > 0) damagePlayer(damage, x, z);

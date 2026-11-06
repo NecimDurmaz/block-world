@@ -388,6 +388,7 @@
     scene.fog.color.copy(sky);
     const brightness = NIGHT_BRIGHTNESS + (1 - NIGHT_BRIGHTNESS) * light;
     material.color.setScalar(brightness);
+    dropBlockMaterial.color.setScalar(brightness);
     for (const rig of lightRigs) {
       rig.hemi.intensity = HEMI_INTENSITY * brightness;
       rig.sun.intensity = SUN_INTENSITY * brightness;
@@ -612,8 +613,11 @@
       return;
     }
     if (!hit || hit.y === 0) return;
+    const broken = get(hit.x, hit.y, hit.z);
     set(hit.x, hit.y, hit.z, AIR);
     rebuildAround(hit.x, hit.z);
+    // Yaprak %10 olasılıkla düşer, diğer bloklar her zaman kendisini düşürür.
+    if (broken !== B.leaves || Math.random() < 0.1) dropItem(BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
   }
   function placeBlock() {
     punch = 0.25;
@@ -1036,7 +1040,7 @@
     // Ölüm: 0,5 sn yana devrilir, sonra kaybolur.
     if (m.dying > 0) {
       m.dying -= dt;
-      if (m.dying <= 0) removeMob(m);
+      if (m.dying <= 0) { dropLoot(m); removeMob(m); }
       return;
     }
     m.invulnerable = Math.max(0, m.invulnerable - dt);
@@ -1263,6 +1267,112 @@
   window.game.particles = particles;
   window.game.spawnMob = spawnMob;
 
+  // ---------- Eşyalar ----------
+  // Eşya anahtarları İngilizcedir. Blok eşyalarının anahtarı B'deki adıyla aynıdır.
+  const ITEMS = {};
+  const BLOCK_ITEM = {};
+  for (const [key, id] of Object.entries(B)) { ITEMS[key] = { name: BLOCKS[id].name, block: id }; BLOCK_ITEM[id] = key; }
+  // Blok olmayan eşyalar: 8x8 piksel desen, 2 kat büyütülerek 16x16 çizilir.
+  const ITEM_ART = {
+    raw_beef: ['Çiğ biftek', { r: '#c4302b', w: '#f0d0c8' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
+    raw_pork: ['Çiğ domuz eti', { r: '#f19a9a', w: '#ffd6d0' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
+    raw_chicken: ['Çiğ tavuk', { p: '#f3c7b4', w: '#f4f4f0' }, ['....pppp', '...ppppp', '..pppppp', '.ppppp..', '.pppp...', 'wpp.....', 'ww......', 'w.......']],
+    feather: ['Tüy', { w: '#f4f4f0', g: '#9a9a9a' }, ['......ww', '.....www', '....www.', '...www..', '..www...', '.www....', 'gw......', 'g.......']],
+    wool: ['Yün', { w: '#ececec', g: '#d6d6d6' }, ['wwwwwwww', 'wwgwwwww', 'wwwwwgww', 'wgwwwwww', 'wwwwgwww', 'wwwwwwgw', 'wwgwwwww', 'wwwwwwww']],
+    rotten_flesh: ['Çürük et', { g: '#6f8a3a', b: '#8a5a3a' }, ['..gggg..', '.ggbggg.', 'gggggbgg', 'ggbggggg', 'gggggbgg', '.ggbggg.', '..gggg..', '........']],
+    bone: ['Kemik', { w: '#ecebe2' }, ['......ww', '.....www', '....ww..', '...ww...', '..ww....', 'www.....', 'ww......', '........']],
+    arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
+  };
+  for (const [key, [name, palette, rows]] of Object.entries(ITEM_ART)) {
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const ic = c.getContext('2d');
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
+    ITEMS[key] = { name, canvas: c };
+  }
+  // HUD'da kullanılacak simge (data URL)
+  const iconCache = {};
+  function itemIcon(key) {
+    if (!iconCache[key]) iconCache[key] = ITEMS[key].block ? tileImage(BLOCKS[ITEMS[key].block].side) : ITEMS[key].canvas.toDataURL();
+    return iconCache[key];
+  }
+
+  // Ölen canlının düşürdükleri: [eşya, en az, en çok]
+  const MOB_DROPS = {
+    cow: [['raw_beef', 1, 3]], pig: [['raw_pork', 1, 3]], chicken: [['raw_chicken', 1, 1], ['feather', 0, 2]],
+    sheep: [['wool', 1, 1]], zombie: [['rotten_flesh', 0, 2]], skeleton: [['bone', 0, 2], ['arrow', 0, 2]],
+  };
+  function dropLoot(m) {
+    for (const [key, min, max] of MOB_DROPS[m.kind] || []) {
+      const count = min + Math.floor(Math.random() * (max - min + 1));
+      for (let i = 0; i < count; i++) dropItem(key, m.x, m.y + 0.5, m.z);
+    }
+  }
+
+  // Yerdeki eşyalar: 0,25'lik küp (blok) ya da düz simge; döner, hafifçe inip kalkar, 5 dk sonra kaybolur.
+  const ITEM_LIFETIME = 300, PICKUP_RANGE = 1.5;
+  const drops = [];
+  const dropBlockMaterial = new THREE.MeshBasicMaterial({ map: texture });
+  const dropFlatMaterials = {};
+  function dropMesh(key) {
+    const item = ITEMS[key];
+    if (item.block) {
+      const geo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+      const def = BLOCKS[item.block], uv = geo.attributes.uv;
+      // BoxGeometry yüzleri: +x, -x, +y, -y, +z, -z; her yüzde 4 köşe
+      for (let f = 0; f < 6; f++) {
+        const tile = f === 2 ? def.top : f === 3 ? def.bottom : def.side;
+        for (let v = f * 4; v < f * 4 + 4; v++) uv.setX(v, (tile + uv.getX(v)) / N_TILES);
+      }
+      return new THREE.Mesh(geo, dropBlockMaterial);
+    }
+    if (!dropFlatMaterials[key]) {
+      const t = new THREE.CanvasTexture(item.canvas);
+      t.magFilter = t.minFilter = THREE.NearestFilter;
+      dropFlatMaterials[key] = new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+    }
+    return new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), dropFlatMaterials[key]);
+  }
+  function dropItem(key, x, y, z) {
+    const mesh = dropMesh(key);
+    scene.add(mesh);
+    drops.push({ key, x, y, z, w: 0.125, h: 0.25, vx: (Math.random() - 0.5) * 2, vy: 3, vz: (Math.random() - 0.5) * 2, onGround: false, age: 0, mesh });
+  }
+  function removeDrop(d) {
+    scene.remove(d.mesh);
+    d.mesh.geometry.dispose();
+    drops.splice(drops.indexOf(d), 1);
+  }
+  // Toplanan eşyalar; madde 14'te envantere taşınacak.
+  const collected = {};
+  function collectItem(key) {
+    collected[key] = (collected[key] || 0) + 1;
+    return true;
+  }
+  function updateDrops(dt) {
+    for (const d of [...drops]) {
+      d.age += dt;
+      if (d.age > ITEM_LIFETIME) { removeDrop(d); continue; }
+      const dx = player.x - d.x, dy = player.y + 0.9 - d.y, dz = player.z - d.z, dist = Math.hypot(dx, dy, dz);
+      if (!dead && dist < PICKUP_RANGE) {
+        // Oyuncuya doğru çekilir; yeterince yaklaşınca toplanır.
+        if (dist < 0.6 && collectItem(d.key)) { toast('+1 ' + ITEMS[d.key].name); removeDrop(d); continue; }
+        d.x += dx / dist * 6 * dt; d.y += dy / dist * 6 * dt; d.z += dz / dist * 6 * dt;
+      } else {
+        const friction = d.onGround ? Math.exp(-dt * 8) : 1;
+        d.vx *= friction; d.vz *= friction;
+        d.vy = Math.max(d.vy - GRAVITY * dt, -20);
+        stepEntity(d, dt);
+      }
+    }
+  }
+  function renderDrops() {
+    for (const d of drops) {
+      d.mesh.position.set(d.x, d.y + 0.15 + Math.sin(d.age * 3) * 0.05, d.z);
+      d.mesh.rotation.y = d.age * 2;
+    }
+  }
+  Object.assign(window.game, { drops, collected, dropItem });
+
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
   const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 1, AUTOSAVE_MS = 30000;
@@ -1389,8 +1499,10 @@
       updateHostileSpawning(dt);
       updateProjectiles(dt);
       updateParticles(dt);
+      updateDrops(dt);
     }
     for (const m of mobs) renderMob(m);
+    renderDrops();
     // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
     if (playing) {
       if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);

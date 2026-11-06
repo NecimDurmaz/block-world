@@ -86,7 +86,7 @@ function frame(now) {
   aim.o.copy(eye); aim.d.copy(dir); aim.max = 6; aim.start = 0;
   if (view === 1) {
     camera.position.copy(eye);
-    camera.rotation.set(p.pitch, p.yaw, 0);
+    camera.rotation.set(p.pitch, p.yaw, rollSign * HURT_ROLL * cameraRoll / 0.2);
   } else if (view === 0) {
     // Omuz üstü: kamera sağ omzun üstündeki noktadan geriye çekilir; karakter ekranın solunda kalır, nişangâh boş kalır.
     const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
@@ -99,7 +99,7 @@ function frame(now) {
     // Engel yaklaşınca hemen öne gelir, açılınca yumuşakça geri çekilir.
     cameraDistance = target < cameraDistance ? target : cameraDistance + (target - cameraDistance) * Math.min(1, dt * 5);
     camera.position.copy(shoulder).addScaledVector(back, cameraDistance);
-    camera.rotation.set(p.pitch, p.yaw, 0);
+    camera.rotation.set(p.pitch, p.yaw, rollSign * HURT_ROLL * cameraRoll / 0.2);
     aim.o.copy(camera.position); aim.max = 6 + cameraDistance; aim.start = cameraDistance;
   } else {
     const dist = cameraClearance(eye, dir, CAMERA_DISTANCE);

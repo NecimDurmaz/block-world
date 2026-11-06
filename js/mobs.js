@@ -187,7 +187,7 @@ function updateMob(m, dt) {
   // Ölüm: 0,5 sn yana devrilir, sonra kaybolur.
   if (m.dying > 0) {
     m.dying -= dt;
-    if (m.dying <= 0) { dropLoot(m); removeMob(m); }
+    if (m.dying <= 0) { dropLoot(m); emitSmoke(m); removeMob(m); }
     return;
   }
   m.invulnerable = Math.max(0, m.invulnerable - dt);
@@ -325,18 +325,29 @@ function skyAbove(m) {
 const particles = [];
 const particleGeometry = new THREE.BoxGeometry(0.12, 0.12, 0.12);
 const flameMaterials = [0xff9a1f, 0xe8401c, 0xffd23a].map(color => new THREE.MeshBasicMaterial({ color }));
+const smokeMaterials = [0x8a8a8a, 0xa8a8a8, 0x6e6e6e].map(color => new THREE.MeshBasicMaterial({ color }));
 function emitFlames(m, dt) {
   if (Math.random() > dt * 10) return;
   const mesh = new THREE.Mesh(particleGeometry, flameMaterials[Math.floor(Math.random() * flameMaterials.length)]);
   mesh.position.set(m.x + (Math.random() - 0.5) * m.w * 2, m.y + Math.random() * m.h, m.z + (Math.random() - 0.5) * m.w * 2);
   scene.add(mesh);
-  particles.push({ mesh, life: 0.6 });
+  particles.push({ mesh, life: 0.6, maxLife: 0.6, rise: 1.5 });
+}
+// Ölüm dumanı: canlının kutusundan 8 gri küp yükselir, büyüyüp kaybolur.
+function emitSmoke(m) {
+  for (let i = 0; i < 8; i++) {
+    const mesh = new THREE.Mesh(particleGeometry, smokeMaterials[i % smokeMaterials.length]);
+    mesh.position.set(m.x + (Math.random() - 0.5) * m.w * 2, m.y + Math.random() * m.h, m.z + (Math.random() - 0.5) * m.w * 2);
+    mesh.scale.setScalar(1.5);
+    scene.add(mesh);
+    particles.push({ mesh, life: 1, maxLife: 1, rise: 0.8, smoke: true });
+  }
 }
 function updateParticles(dt) {
   for (const pt of [...particles]) {
     pt.life -= dt;
-    pt.mesh.position.y += dt * 1.5;
-    pt.mesh.scale.setScalar(Math.max(0.01, pt.life / 0.6));
+    pt.mesh.position.y += dt * pt.rise;
+    pt.mesh.scale.setScalar(Math.max(0.01, (pt.smoke ? 2.5 : 1) * pt.life / pt.maxLife));
     if (pt.life <= 0) { scene.remove(pt.mesh); particles.splice(particles.indexOf(pt), 1); }
   }
 }

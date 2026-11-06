@@ -40,6 +40,7 @@ tests/              otomatik testler
    | `sleep` | Uyurken ekranı karartan katman |
    | `underwater` | Kamera suyun içindeyken ekranı mavi tonlayan katman |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
+   | `low-health` | Can 4 ve altındayken ekran kenarını koyu kırmızıya karartan katman |
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
@@ -218,6 +219,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 - `player.health`, en fazla `MAX_HEALTH = 20`. HUD'da 10 kalp; her kalp 2 puan (dolu, yarım, boş). Kalpler 9×9 piksellik canvas görselleridir.
 - `damagePlayer(amount, sourceX, sourceZ)`: canı düşürür, 0,5 sn hasarsızlık verir, ekran kenarını 0,2 sn kırmızı yakar. Kaynak verilirse oyuncuyu kaynaktan uzağa 4 blok/sn iter ve 6 blok/sn yukarı zıplatır; kaynak verilmezse (düşme gibi) itmez. Konsoldan test için `window.damagePlayer` olarak da açıktır.
+- **Geri bildirim:** Hasar alınca kamera 0,2 sn yana yatar (en çok `HURT_ROLL = 0.1` rad, yön rastgele, giderek düzelir; önden görünüm hariç). Can `LOW_HEALTH = 4` ve altındayken ekran kenarı kararır (`#low-health`) ve kalpler 0,5 sn'de bir 0,1 sn boyunca ±2 piksel titrer.
 - **Yenilenme:** Can 20'den azsa, açlık en az `REGEN_FOOD = 18` ise ve son 5 sn hasar alınmadıysa, oyun duraklatılmamışken her 4 sn'de 1 puan geri gelir.
 
 ### Tarım
@@ -319,6 +321,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 **Oklar:** `projectiles` dizisinde `{ x, y, z, vx, vy, vz, stuck, life, mesh }`. Hız `ARROW_SPEED = 20` blok/sn, yerçekimi `ARROW_GRAVITY = 6`; atış, uçuş süresine göre yerçekimini telafi edecek kadar yukarı nişan alır. Her karede 4 alt adımla ilerler. Oyuncunun kutusuna girerse `ARROW_DAMAGE = 3` hasar verir ve uçuş yönünde iter; bloğa değerse takılı kalır ve 3 sn sonra silinir. Model: kahverengi gövde, gri uç, beyaz tüy; `lookAt` ile uçuş yönüne döner. Oklar kaydedilmez.
 
 **Creeper:** Kovalarken oyuncuya `CREEPER_TRIGGER = 3` blok kalınca durur ve fitil (`fuse`) yanar: beyaz yanıp söner, 1,25 katına kadar şişer. Oyuncu `CREEPER_CANCEL = 5` bloktan uzaklaşırsa fitil sıfırlanır. `CREEPER_FUSE = 1.5` sn dolunca `explode()`: merkezin `EXPLOSION_RADIUS = 3` blok yarıçaplı küresindeki bütün bloklar silinir (`y = 0` hariç), etkilenen chunk'lar yeniden kurulur, oyuncuya `round(12 × (1 − uzaklık / 6))` hasar verilir ve creeper kaybolur.
+
+**Ölüm dumanı:** Ölen canlı devrilme bittiğinde kaybolurken kutusundan 8 gri küp yükselir (0,8 blok/sn), 1 sn'de küçülerek kaybolur (`emitSmoke`, yanma parçacıklarıyla aynı `particles` dizisi; `smoke: true`).
 
 **Gün ışığı:** Gündüz (`daylight ≥ 0,5`) `burns` türleri (zombi, iskelet) başlarının üstündeki sütunda hiç blok yoksa (`skyAbove`; yaprak da gölge sayılır) saniyede 1 hasar alır, her yanışta 0,3 sn kırmızılaşır ve üstlerinden turuncu-kırmızı-sarı küçük küpler (0,12 blok) yükselir (saniyede ~10, 0,6 sn ömür, 1,5 blok/sn yükselir ve küçülür). `passiveByDay` türü (örümcek) gündüz saldırmaz, hayvan gibi dolaşır. Creeper etkilenmez.
 
@@ -521,7 +525,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 29 | Kırılma parçacıkları | Yapıldı |
 | 30 | Duraklat menüsü ve ayarlar | Yapıldı |
 | 31 | Bulutlar ve yıldızlar | Yapıldı |
-| 32 | Hasar ve ölüm geri bildirimleri | Yapılmadı |
+| 32 | Hasar ve ölüm geri bildirimleri | Yapıldı |
 | 33 | Obsidyen ve Nether portalı | Yapılmadı |
 | 34 | Nether boyutu | Yapılmadı |
 | 35 | Nether yaratıkları | Yapılmadı |

@@ -29,12 +29,18 @@ function renderHearts() {
 renderHearts();
 
 let invulnerable = 0, hurtFlash = 0, lastDamageAt = -Infinity, regenTimer = 0;
+// Hasar alınca kamera 0,2 sn yana yatar (cameraRoll: kalan süre, rollSign: yön)
+const HURT_ROLL = 0.1, LOW_HEALTH = 4;
+let cameraRoll = 0, rollSign = 1, heartShakeTimer = 0;
+const lowHealthEl = document.getElementById('low-health');
 // Kaynak verilmezse (ör. düşme) geri itme olmaz.
 function damagePlayer(amount, sourceX, sourceZ) {
   if (invulnerable > 0 || player.health <= 0) return;
   player.health = Math.max(0, player.health - amount);
   invulnerable = 0.5;
   hurtFlash = 0.2;
+  cameraRoll = 0.2;
+  rollSign = Math.random() < 0.5 ? -1 : 1;
   hurtSound();
   lastDamageAt = performance.now();
   regenTimer = 0;
@@ -74,6 +80,17 @@ function updateHealth(dt) {
   invulnerable = Math.max(0, invulnerable - dt);
   hurtFlash = Math.max(0, hurtFlash - dt);
   hurtEl.style.opacity = hurtFlash / 0.2;
+  cameraRoll = Math.max(0, cameraRoll - dt);
+  // Can 4 ve altındayken ekran kenarı kararır, kalpler 0,5 sn'de bir kısa süre titrer.
+  const low = player.health > 0 && player.health <= LOW_HEALTH;
+  lowHealthEl.style.opacity = low ? 1 : 0;
+  heartShakeTimer = low ? heartShakeTimer - dt : 0;
+  if (heartShakeTimer <= 0 && low) heartShakeTimer = 0.5;
+  const shaking = low && heartShakeTimer > 0.4;
+  heartEls.forEach(el => {
+    el.classList.toggle('shake', shaking);
+    if (shaking) el.style.setProperty('--shake', (Math.random() * 4 - 2).toFixed(1) + 'px');
+  });
   if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || player.food < REGEN_FOOD || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
   regenTimer += dt;
   if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }

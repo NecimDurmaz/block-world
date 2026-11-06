@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dünyası**. Oyunun tamamı tek bir dosyadadır: `block-world.html`. Bu dosya, bu depoda çalışan her yapay zekâ ajanı için kuralları ve çalışma düzenini anlatır.
+Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dünyası**. Oyunun tamamı tek bir dosyadadır: `index.html`. Bu dosya, bu depoda çalışan her yapay zekâ ajanı için kuralları ve çalışma düzenini anlatır.
 
 Önce şunları oku:
 
@@ -13,7 +13,7 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
 
 ### Teknik
 
-- **Tek dosya.** Oyunun tamamı `block-world.html` içinde kalır. Build adımı, npm, bundler, ayrı JS/CSS dosyası yok.
+- **Tek dosya.** Oyunun tamamı `index.html` içinde kalır. Build adımı, npm, bundler, ayrı JS/CSS dosyası yok.
 - **Tek dış kütüphane: Three.js r128,** cdnjs'ten yüklenir: `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`. Yeni kütüphane ekleme, sürümü değiştirme.
 - **Dış dosya yok.** Resim, model ve ses dosyası kullanılmaz. Dokular 16×16 pikselde canvas ile kodla çizilir (mevcut atlas düzenine eklenir). Sesler WebAudio API ile kodla üretilir.
 - **Tarayıcı kısıtları.** Oyun hem claude.ai Artifact olarak hem de çift tıklanan yerel dosya (`file://`) olarak çalışmalı.
@@ -53,7 +53,7 @@ Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde v
 3. **Sözdizimini denetle.** Satır içi betiği ayıklayıp Node ile kontrol et:
 
    ```bash
-   awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' block-world.html > /tmp/block-world.js && node --check /tmp/block-world.js
+   awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html > /tmp/block-world.js && node --check /tmp/block-world.js
    ```
 
 4. **Test yaz ve çalıştır.** Maddenin kabul ölçütünü `tests/NN-kisa-ad.js` dosyasında otomatik teste çevir ve görünmez Chrome'da çalıştır (bkz. "Test"). Test geçmeli, konsolda hata olmamalı. Görsel bir değişiklikse ekran görüntüsü alıp bak.
@@ -72,7 +72,7 @@ Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde v
    - Başlık: `feat(#<madde no>): <maddenin kısa adı>`. Hata düzeltmesi `fix:`, yalnızca belge `docs:`.
    - Gövdede yapılanları 2–5 madde halinde yaz.
    - Commit mesajına `Co-Authored-By` satırı ekleme.
-   - Uzak depoya push yapma; depo yereldir.
+   - Uzak depoya (`origin`, GitHub) yalnızca kullanıcı isterse push yap.
 
 Bir maddenin bir kısmını bilerek yapmadıysan (örneğin tarayıcı kısıtı yüzünden), bunu hem commit gövdesine hem SPEC.md'deki tabloya not olarak yaz.
 
@@ -105,18 +105,19 @@ Oyunu yerel bir sunucuyla aç:
 python3 -m http.server 8765
 ```
 
-Sonra tarayıcıda `http://localhost:8765/block-world.html` adresine git.
+Sonra tarayıcıda `http://localhost:8765/index.html` adresine git.
 
 Bilinen tuzaklar:
 
 - **Arka plandaki sekme durur.** Tarayıcı paneli gizliyken `requestAnimationFrame` çalışmaz ya da çok yavaşlar. Bu yüzden oyun ilerlemez ve ekran görüntüsü eski kareyi gösterir. Test ederken panelin görünür olduğundan emin ol.
 - **WebGL ekran görüntüsü.** Tuvali okumak için `requestAnimationFrame` içinde, oyunun kendi karesi çizildikten hemen sonra `drawImage` ile 2B bir tuvale kopyala; kare bittikten sonra okunan WebGL tuvali boş gelir.
 - **Kodla girdi.** Tuşları `window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }))` ile, bakışı tuval üzerinde `mousedown` → `document` üzerinde `mousemove` (`movementX/Y`) → `mouseup` ile verebilirsin. Nişan ışını bir sonraki karede güncellenir; bakışı değiştirdikten sonra tıklamadan önce bir kare bekle.
-- **macOS dosya adları büyük/küçük harfe duyarsızdır.** `Block-World.html` ile `block-world.html` aynı dosyadır. Yalnızca harf büyüklüğü farklı bir adla yazarsan asıl dosyanın üzerine yazarsın.
+- **macOS dosya adları büyük/küçük harfe duyarsızdır.** `Index.html` ile `index.html` aynı dosyadır. Yalnızca harf büyüklüğü farklı bir adla yazarsan asıl dosyanın üzerine yazarsın.
 
 ---
 
 ## Yayınlama
 
 - **Artifact:** Oyun claude.ai'da bir Artifact olarak yayınlıdır. Güncellerken aynı Artifact adresine yayınla ki link değişmesin.
-- **Paylaşılan dosya:** `block-world.html` tek başına çift tıklanarak açılabilen tam bir HTML belgesidir (`<!doctype html>`, `<head>`, `<body>`). Bu yapıyı koru. Three.js internetten yüklendiği için oyun internet bağlantısı ister.
+- **GitHub Pages:** Depo `origin` (GitHub) üzerinden GitHub Pages ile yayınlanır. Pages kök dizindeki `index.html` dosyasını açtığı için oyun dosyasının adı `index.html` olarak kalmalıdır.
+- **Paylaşılan dosya:** `index.html` tek başına çift tıklanarak açılabilen tam bir HTML belgesidir (`<!doctype html>`, `<head>`, `<body>`). Bu yapıyı koru. Three.js internetten yüklendiği için oyun internet bağlantısı ister.

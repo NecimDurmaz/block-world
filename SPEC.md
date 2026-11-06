@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosya | `block-world.html` (tek dosya) |
+| Dosya | `index.html` (tek dosya) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -18,7 +18,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 
 ## Dosya yapısı
 
-`block-world.html` sırasıyla şunları içerir:
+`index.html` sırasıyla şunları içerir:
 
 1. `<head>`: başlık, Roboto (Google Fonts), tüm CSS. CSS değişkenleri `:root` bloğundadır. `[hidden] { display: none !important; }` kuralı, `display` verilmiş panellerin `hidden` ile gizlenebilmesi için gereklidir; silme.
 2. `<body>` içinde HUD öğeleri:

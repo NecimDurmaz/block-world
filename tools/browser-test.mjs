@@ -82,7 +82,7 @@ try {
   await send('Runtime.enable');
   await send('Page.enable');
   const openGame = async () => {
-    await send('Page.navigate', { url: `http://127.0.0.1:${port}/block-world.html` });
+    await send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html` });
     for (let i = 0; i < 100; i++) {
       if (await evaluate('document.readyState === "complete" && !!window.game?.ready').catch(() => false)) return;
       await sleep(100);

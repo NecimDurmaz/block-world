@@ -1,12 +1,12 @@
 # Blok Dünyası: Minecraft tarzı özellik listesi
 
-Bu liste, `block-world.html` oyununa bir yapay zekâ asistanına **tek tek** yaptırılacak özellikleri sıralar. Her madde tek bir istekle yapılabilecek boyuttadır. Maddeleri sırayla ver; her birinden sonra oyunu açıp kabul ölçütünü kontrol et, sonra sonrakine geç.
+Bu liste, `index.html` oyununa bir yapay zekâ asistanına **tek tek** yaptırılacak özellikleri sıralar. Her madde tek bir istekle yapılabilecek boyuttadır. Maddeleri sırayla ver; her birinden sonra oyunu açıp kabul ölçütünü kontrol et, sonra sonrakine geç.
 
 ---
 
 ## Ortak talimat (her isteğin başına bunu ekle)
 
-> Ekteki `block-world.html` bir tarayıcı oyunu. Aşağıdaki **tek** maddeyi ekle, başka bir şeye dokunma.
+> Ekteki `index.html` bir tarayıcı oyunu. Aşağıdaki **tek** maddeyi ekle, başka bir şeye dokunma.
 >
 > - Her şey tek HTML dosyasında kalacak. Build adımı, npm, ayrı JS/CSS dosyası yok.
 > - Dış kütüphane olarak yalnızca zaten yüklü olan Three.js r128 (cdnjs) kullanılacak. Yeni kütüphane ekleme.

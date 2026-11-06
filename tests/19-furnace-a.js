@@ -21,7 +21,8 @@ g.clickSlot(slotOf('sand')); g.clickFurnace(0);
 g.clickSlot(slotOf('coal')); g.clickFurnace(1);
 await wait(300);
 const lit = g.getBlock(40, 40, 42) === 13;
-await wait(5300);
+const f0 = g.furnaces['overworld:40,40,42'];
+for (let i = 0; i < 90 && f0.slots[2]?.key !== 'glass'; i++) await wait(100);
 const f = g.furnaces['overworld:40,40,42'];
 const glass = f.slots[2]?.key === 'glass';
 g.clickFurnace(2); g.clickSlot(30);
@@ -29,7 +30,7 @@ const tookGlass = g.inventory[30]?.key === 'glass';
 // Et koy, paneli kapat, beklerken pişsin
 g.clickSlot(slotOf('raw_beef')); g.clickFurnace(0);
 g.closeInventory();
-await wait(5500);
+for (let i = 0; i < 90 && f.slots[2]?.key !== 'cooked_beef'; i++) await wait(100);
 const cooked = f.slots[2]?.key === 'cooked_beef';
 // Kalıcılık için bir et daha koy ve kaydet
 f.slots[0] = { key: 'raw_pork', count: 3 };

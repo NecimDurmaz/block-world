@@ -32,16 +32,17 @@ function closeChat() {
   chatEl.classList.remove('open');
   chatInput.hidden = true;
   chatInput.blur();
-  if (!fallbackLook && playing) {
+  if (!fallbackLook && playing && !inventoryOpen) {
     try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
   }
 }
 chatInput.addEventListener('keydown', e => {
   e.stopPropagation(); // oyun tuşları sohbet yazarken çalışmasın
   if (e.key === 'Enter') {
+    // Önce komut çalışır: bir panel açtıysa sohbet kapanırken fare kilitlenmez.
     const text = chatInput.value.trim();
-    closeChat();
     if (text) submitChat(text);
+    closeChat();
   } else if (e.key === 'Escape') closeChat();
 });
 chatInput.addEventListener('keyup', e => e.stopPropagation());
@@ -61,8 +62,8 @@ const COMMANDS = {
   help: { usage: '/help', about: 'Komutları listeler', run: () => {
     for (const cmd of Object.values(COMMANDS)) chatLine(`${cmd.usage} — ${cmd.about}`, 'info');
   } },
-  give: { usage: '/give <eşya> [adet]', about: 'Envanterine eşya verir', run: args => {
-    if (!args.length) return chatLine('Kullanım: /give <eşya> [adet]', 'error');
+  give: { usage: '/give [eşya] [adet]', about: 'Envanterine eşya verir; adsız yazılırsa eşya panelini açar', run: args => {
+    if (!args.length) return openPicker();
     const last = args[args.length - 1], hasCount = /^\d+$/.test(last) && args.length > 1;
     const count = hasCount ? Math.min(64 * INVENTORY_SIZE, Number(last)) : 1;
     const key = findItem((hasCount ? args.slice(0, -1) : args).join(' '));

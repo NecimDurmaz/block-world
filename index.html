@@ -24,6 +24,10 @@
 <div id="inventory" hidden>
   <div class="panel inv-panel">
     <h2 id="inv-title">Envanter</h2>
+    <div class="picker" id="picker-ui" hidden>
+      <input id="picker-search" type="text" placeholder="Eşya ara…" autocomplete="off" spellcheck="false">
+      <div class="inv-grid" id="picker-grid"></div>
+    </div>
     <div class="chest" id="chest-ui" hidden><div class="inv-grid" id="chest-grid"></div></div>
     <div class="furnace" id="furnace-ui" hidden>
       <div class="furnace-col">
@@ -132,6 +136,7 @@
 <script src="js/sound.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/item-picker.js"></script>
 <script src="js/nether.js"></script>
 <script src="js/main.js"></script>
 </body>

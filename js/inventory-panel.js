@@ -53,6 +53,7 @@ function openInventory(size = 2) {
   openFurnaceKey = openChestKey = null;
   document.getElementById('furnace-ui').hidden = true;
   document.getElementById('chest-ui').hidden = true;
+  document.getElementById('picker-ui').hidden = true;
   document.getElementById('craft-ui').hidden = false;
   document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';
   document.getElementById('craft-grid').classList.toggle('small', size === 2);

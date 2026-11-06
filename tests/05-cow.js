@@ -18,5 +18,5 @@ const moved = cows.slice(1).filter((m, i) => Math.hypot(m.x - start[i + 1][0], m
 const insideBlock = cows.some(m => g.getBlock(Math.floor(m.x), Math.floor(m.y + 0.5), Math.floor(m.z)) !== 0);
 // Basamağın öbür tarafına geçtiyse üstüne çıkmış demektir
 const climbed = maxY >= py + 2 && climber.z < pz + 3;
-return { ok: cows.length === 6 && onGrass && moved > 0 && !insideBlock && climbed,
+return { ok: cows.length >= 4 && onGrass && moved > 0 && !insideBlock && climbed,
   cows: cows.length, onGrass, moved, insideBlock, climbed, climber: [climber.x.toFixed(2), climber.y.toFixed(2), climber.z.toFixed(2)] };

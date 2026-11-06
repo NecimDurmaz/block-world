@@ -753,10 +753,65 @@
       box(1, 3, 1, horn, -4.5, 6, -2), box(1, 3, 1, horn, 4.5, 6, -2)));
     return { root, legs };
   }
+  function buildPig() {
+    const pink = '#efa3a0', dark = '#d7807d';
+    const skin = paint(4, 4, [[pink, 0, 0, 4, 4], [dark, 1, 2, 1, 1]]);
+    const face = paint(8, 8, [[pink, 0, 0, 8, 8], ['#ffffff', 1, 3, 1, 1], ['#111111', 2, 3, 1, 1], ['#111111', 5, 3, 1, 1], ['#ffffff', 6, 3, 1, 1]]);
+    const snout = paint(4, 3, [[dark, 0, 0, 4, 3], ['#7a3f3d', 0, 1, 1, 1], ['#7a3f3d', 3, 1, 1, 1]]);
+    const root = new THREE.Group();
+    const legs = [[-3, -5], [3, -5], [-3, 5], [3, 5]].map(([x, z]) => {
+      const leg = pivot(x, 6, z, box(4, 6, 4, skin, 0, -3, 0));
+      root.add(leg);
+      return leg;
+    });
+    root.add(box(10, 8, 14, skin, 0, 10, 0));
+    root.add(pivot(0, 12, -7, box(8, 8, 8, [skin, skin, skin, skin, skin, face], 0, 0, -4), box(4, 3, 1, snout, 0, -1, -8.5)));
+    return { root, legs };
+  }
+  function buildChicken() {
+    const white = '#f4f4f0', yellow = '#e8b82a', red = '#c8302c';
+    const feathers = paint(4, 4, [[white, 0, 0, 4, 4], ['#dcdcd6', 1, 2, 1, 1]]);
+    const face = paint(4, 6, [[white, 0, 0, 4, 6], ['#111111', 0, 2, 1, 1], ['#111111', 3, 2, 1, 1]]);
+    const legMat = paint(1, 1, [[yellow, 0, 0, 1, 1]]);
+    const root = new THREE.Group();
+    const legs = [-1.5, 1.5].map(x => {
+      const leg = pivot(x, 5, 0, box(1, 5, 1, legMat, 0, -2.5, 0));
+      root.add(leg);
+      return leg;
+    });
+    root.add(box(6, 6, 8, feathers, 0, 8, 0), box(1, 4, 6, feathers, -3.5, 9, 0), box(1, 4, 6, feathers, 3.5, 9, 0));
+    root.add(pivot(0, 11, -4,
+      box(4, 6, 3, [feathers, feathers, feathers, feathers, feathers, face], 0, 2, -1.5),
+      box(4, 2, 2, legMat, 0, 2, -4),                                     // gaga
+      box(2, 2, 1, paint(1, 1, [[red, 0, 0, 1, 1]]), 0, 0, -3.5),         // gıdı
+      box(1, 2, 3, paint(1, 1, [[red, 0, 0, 1, 1]]), 0, 6, -1.5)));       // ibik
+    return { root, legs };
+  }
+  function buildSheep() {
+    const wool = '#ececec', gray = '#8f8f8f';
+    const fleece = paint(4, 4, [[wool, 0, 0, 4, 4], ['#dedede', 1, 1, 1, 1], ['#dedede', 3, 2, 1, 1]]);
+    const legMat = paint(4, 8, [[gray, 0, 0, 4, 8], [wool, 0, 0, 4, 3]]);
+    const face = paint(6, 6, [[gray, 0, 0, 6, 6], ['#ffffff', 0, 2, 1, 1], ['#111111', 1, 2, 1, 1], ['#111111', 4, 2, 1, 1], ['#ffffff', 5, 2, 1, 1], ['#6b5b5b', 2, 4, 2, 1]]);
+    const grayMat = paint(1, 1, [[gray, 0, 0, 1, 1]]);
+    const root = new THREE.Group();
+    const legs = [[-3, -5], [3, -5], [-3, 5], [3, 5]].map(([x, z]) => {
+      const leg = pivot(x, 8, z, box(4, 8, 4, legMat, 0, -4, 0));
+      root.add(leg);
+      return leg;
+    });
+    root.add(box(10, 9, 14, fleece, 0, 12.5, 0));
+    root.add(pivot(0, 15, -7, box(6, 6, 7, [grayMat, grayMat, fleece, grayMat, grayMat, face], 0, 0, -3.5)));
+    return { root, legs };
+  }
 
+  // slowFall: düşerken yerçekimi 1/4 (tavuk kanat çırpar)
   const MOB_TYPES = {
     cow: { name: 'İnek', health: 10, w: 0.45, h: 1.2, speed: 1.2, build: buildCow },
+    pig: { name: 'Domuz', health: 10, w: 0.4, h: 0.9, speed: 1.1, build: buildPig },
+    chicken: { name: 'Tavuk', health: 4, w: 0.25, h: 0.8, speed: 1.0, slowFall: true, build: buildChicken },
+    sheep: { name: 'Koyun', health: 8, w: 0.45, h: 1.1, speed: 1.1, build: buildSheep },
   };
+  const ANIMAL_KINDS = ['cow', 'pig', 'chicken', 'sheep'];
   const mobs = [];
 
   function spawnMob(kind, x, y, z) {
@@ -776,17 +831,44 @@
     while (y > 0 && get(x, y - 1, z) === AIR) y--;
     return y;
   }
-  // Rastgele bir çimen sütununa koyar; bulamazsa null döner.
-  function spawnOnGrass(kind) {
-    for (let i = 0; i < 50; i++) {
-      const x = 2 + Math.floor(Math.random() * (SX - 4)), z = 2 + Math.floor(Math.random() * (SZ - 4));
+  // Uygun bir çimen sütunu arar: accept(x, z) koşulunu sağlayan ilk yer; bulamazsa null.
+  function findGrass(pick, accept = () => true) {
+    for (let i = 0; i < 60; i++) {
+      const [x, z] = pick();
+      if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1 || !accept(x, z)) continue;
       const y = surfaceY(x, z);
-      if (get(x, y - 1, z) === B.grass) return spawnMob(kind, x + 0.5, y, z + 0.5);
+      if (get(x, y - 1, z) === B.grass) return [x + 0.5, y, z + 0.5];
     }
     return null;
   }
+  const randomColumn = () => [Math.floor(Math.random() * SX), Math.floor(Math.random() * SZ)];
+  const animalCount = () => mobs.filter(m => ANIMAL_KINDS.includes(m.kind)).length;
+
+  // Sürü: aynı türden count tane, ilk hayvanın 8 blok çevresinde.
+  function spawnHerd(kind, count, accept) {
+    const center = findGrass(randomColumn, accept);
+    if (!center) return;
+    for (let i = 0; i < count && animalCount() < MAX_ANIMALS; i++) {
+      const spot = i === 0 ? center : findGrass(() => [
+        Math.floor(center[0] + (Math.random() * 2 - 1) * 8), Math.floor(center[2] + (Math.random() * 2 - 1) * 8)]);
+      if (spot) spawnMob(kind, ...spot);
+    }
+  }
+  // Açılışta her türden 4'lük sürü: toplam sınır olan 16'yı doldurur.
   function spawnInitialAnimals() {
-    for (let i = 0; i < 6; i++) spawnOnGrass('cow');
+    for (const kind of ANIMAL_KINDS) spawnHerd(kind, 4);
+  }
+  // Gündüz, sınırın altındaysa her 30 sn'de oyuncudan 24+ blok uzağa 1 hayvan.
+  let animalSpawnTimer = 0;
+  function updateAnimalSpawning(dt) {
+    animalSpawnTimer += dt;
+    if (animalSpawnTimer < 30) return;
+    animalSpawnTimer = 0;
+    if (daylight(clock.time) < 0.5 || animalCount() >= MAX_ANIMALS) return;
+    const far = (x, z) => Math.hypot(x + 0.5 - player.x, z + 0.5 - player.z) >= 24;
+    const kind = ANIMAL_KINDS[Math.floor(Math.random() * ANIMAL_KINDS.length)];
+    const spot = findGrass(randomColumn, far);
+    if (spot) spawnMob(kind, ...spot);
   }
 
   // Dolaşma: 2–5 sn rastgele yöne yürü, 2–4 sn dur. Önde 1 blokluk basamak varsa zıpla,
@@ -812,7 +894,8 @@
     m.vz = -Math.cos(m.yaw) * speed + m.kz;
     const knockDecay = Math.exp(-dt * 6);
     m.kx *= knockDecay; m.kz *= knockDecay;
-    m.vy = Math.max(m.vy - GRAVITY * dt, -40);
+    const gravity = m.type.slowFall && m.vy < 0 ? GRAVITY / 4 : GRAVITY;
+    m.vy = Math.max(m.vy - gravity * dt, -40);
     stepEntity(m, dt);
     m.walkPhase += dt * Math.hypot(m.vx, m.vz) * 4;
   }
@@ -821,8 +904,8 @@
     root.position.set(m.x, m.y, m.z);
     root.rotation.y = m.yaw;
     const swing = Math.sin(m.walkPhase) * 0.6 * Math.min(1, Math.hypot(m.vx, m.vz) / m.type.speed);
-    legs[0].rotation.x = legs[3].rotation.x = swing;
-    legs[1].rotation.x = legs[2].rotation.x = -swing;
+    // Çapraz bacaklar birlikte sallanır (2 bacaklılarda 0 ileri, 1 geri).
+    legs.forEach((leg, i) => { leg.rotation.x = (i === 0 || i === 3 ? 1 : -1) * swing; });
   }
   window.game.mobs = mobs;
 
@@ -946,7 +1029,10 @@
 
     p.vy = Math.max(p.vy - GRAVITY * dt, -40);
     stepEntity(p, dt);
-    if (playing) for (const m of mobs) updateMob(m, dt);
+    if (playing) {
+      for (const m of mobs) updateMob(m, dt);
+      updateAnimalSpawning(dt);
+    }
     for (const m of mobs) renderMob(m);
     // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
     if (playing) {

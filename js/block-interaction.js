@@ -41,6 +41,7 @@ function attackMob() {
 function breakBlockAt(hit) {
   const broken = get(hit.x, hit.y, hit.z);
   set(hit.x, hit.y, hit.z, AIR);
+  blockSound(broken, 'break');
   // Bu bloğa dayanan meşaleler düşer
   // Kapının diğer yarısı da kalkar
   if (isDoor(broken)) {
@@ -126,6 +127,9 @@ function updateMining(dt, hit) {
   const key = target.x + ',' + target.y + ',' + target.z;
   if (key !== miningState.key) { miningState.key = key; miningState.progress = 0; }
   miningState.progress += dt / breakTimeOf(get(target.x, target.y, target.z));
+  // Kazarken 0,25 sn'de bir çıtırtı
+  miningState.digTimer = (miningState.digTimer || 0) - dt;
+  if (miningState.digTimer <= 0) { miningState.digTimer = 0.25; blockSound(get(target.x, target.y, target.z), 'dig'); }
   if (punch <= 0) punch = 0.25; // kol vurmaya devam eder
   if (miningState.progress >= 1) {
     breakBlockAt(target);
@@ -212,6 +216,7 @@ function placeBlock() {
   if (!slot || !ITEMS[slot.key].block) return;
   if (mobs.some(m => x < m.x + m.w && x + 1 > m.x - m.w && y < m.y + m.h && y + 1 > m.y && z < m.z + m.w && z + 1 > m.z - m.w)) return;
   set(x, y, z, ITEMS[slot.key].block);
+  blockSound(ITEMS[slot.key].block, 'place');
   rebuildAround(x, z);
   takeFromSlot(selected, 1);
 }

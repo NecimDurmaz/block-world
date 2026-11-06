@@ -34,6 +34,7 @@ function look(dx, dy) {
 }
 
 function start() {
+  initAudio();
   overlay.hidden = true;
   playing = true;
   fallbackLook = false;

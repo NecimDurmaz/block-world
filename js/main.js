@@ -41,6 +41,7 @@ function frame(now) {
     const sprintNow = (sprinting || keys.ShiftLeft || keys.ShiftRight) && p.food > SPRINT_FOOD;
     const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : 1);
     updateHunger(dt, sprintNow && len > 0);
+    updateSteps(dt, len > 0 && !inWater, sprintNow);
     p.vx = (len ? mx / len * speed : 0) + p.kx;
     p.vz = (len ? mz / len * speed : 0) + p.kz;
     if (keys.Space && inWater) p.vy = SWIM_UP_SPEED;
@@ -62,6 +63,7 @@ function frame(now) {
     updateDrops(dt);
     updateFurnaces(dt);
     updateCrops(dt);
+    updateMobSounds(dt);
   }
   for (const m of mobs) renderMob(m);
   renderDrops();

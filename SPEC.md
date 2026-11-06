@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (26 betik, sırayla yüklenir) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (27 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -43,7 +43,7 @@ tests/              otomatik testler
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
-   | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), kayıt durumu (`#save-note`) |
+   | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), "Ses: açık/kapalı" (`#sound-toggle`), kayıt durumu (`#save-note`) |
    | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
 
 - **Betikler:** `<body>` sonunda önce Three.js r128, sonra `js/` altındaki oyun betikleri bu sırayla yüklenir. Bunlar ES modülü değil, klasik betiklerdir: her dosyanın üst düzey `const`/`let`/`function` tanımları bütün betiklerin paylaştığı genel kapsamdadır. Bu sayede oyun `file://` üzerinden (çift tıklayarak) da açılır.
@@ -75,6 +75,7 @@ tests/              otomatik testler
    | `furnace.js` | `furnaces`, `SMELTING`, `FUEL`, `openFurnace()`, `clickFurnace()`, `updateFurnaces()`, `removeFurnace()`, `renderFurnace()` |
    | `held-tool.js` | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki alet (`fpTool`, `tpTool`, `updateHeldTool()`) |
    | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
+   | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -416,9 +417,18 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `WWW` | buğday | ekmek |
   | (Aletler tablosu) | tahta ya da kırık taş + çubuk | 8 alet |
 
+## Ses
+
+- Tek `AudioContext`, ilk "Oyna" tıklamasında açılır (`initAudio`). Bütün sesler kodla üretilir; dosya yok.
+- **Gürültü sesleri** (`playNoise`: beyaz gürültü → filtre → zarf): blok kırılınca (`break`), kazarken 0,25 sn'de bir (`dig`), koyunca (`place`), yürürken adım (`step`, 0,4 sn'de bir, koşarken 0,3; yalnızca yerde ve suyun dışında), hasar (`hurt`). Filtre frekansı bloğun malzemesine göre değişir (`blockMaterialFreq`): toprak 700 Hz, ahşap 1100, taş 2600, yaprak ve bitki 4200, cam 5200.
+- **Ton sesleri** (`playTone`: osilatör, frekans kayması, isteğe bağlı vibrato ve alçak geçiren filtre): eşya toplama (`pop`), canlılar (`MOB_SOUNDS`): inek alçak "mö", domuz kısa hırıltı, tavuk tiz "gıt", koyun titreşimli "mee", zombi inleme.
+- **Canlı sesleri:** her canlı 5–12 sn arayla; oyuncuya `SOUND_RANGE = 16` bloktan yakınsa çalar, ses seviyesi uzaklıkla doğrusal azalır.
+- **Aç/kapat:** Duraklatma panelindeki "Ses" düğmesi (`setSound`); ayar kayda yazılır (`soundOn`).
+- `soundLog`: son 50 sesin adı ve şiddeti (ses kapalıyken de tutulur; testler için).
+
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -432,6 +442,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
   | `food` | Açlık (yoksa 20) |
+  | `soundOn` | Ses açık mı (yoksa açık) |
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
   | `furnaces` | Fırınların dizisi: `{ x, y, z, slots, burn, burnMax, progress }` |
   | `selected` | Seçili hotbar yuvası (0–8) |
@@ -480,7 +491,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 25 | Çiçek, uzun ot ve süs bitkileri | Yapıldı |
 | 26 | Buğday tarımı ve ekmek | Yapıldı |
 | 27 | Mağaralar | Yapıldı |
-| 28 | Ses efektleri | Yapılmadı |
+| 28 | Ses efektleri | Yapıldı |
 | 29 | Kırılma parçacıkları | Yapılmadı |
 | 30 | Duraklat menüsü ve ayarlar | Yapılmadı |
 | 31 | Bulutlar ve yıldızlar | Yapılmadı |

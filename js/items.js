@@ -142,7 +142,7 @@ function updateDrops(dt) {
     d.pickupDelay = Math.max(0, (d.pickupDelay || 0) - dt);
     if (!dead && dist < PICKUP_RANGE && !d.pickupDelay) {
       // Oyuncuya doğru çekilir; yeterince yaklaşınca toplanır.
-      if (dist < 0.6 && collectItem(d)) { toast('+1 ' + ITEMS[d.key].name); removeDrop(d); continue; }
+      if (dist < 0.6 && collectItem(d)) { toast('+1 ' + ITEMS[d.key].name); popSound(); removeDrop(d); continue; }
       d.x += dx / dist * 6 * dt; d.y += dy / dist * 6 * dt; d.z += dz / dist * 6 * dt;
     } else {
       const friction = d.onGround ? Math.exp(-dt * 8) : 1;

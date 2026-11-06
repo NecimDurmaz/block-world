@@ -35,6 +35,7 @@ function damagePlayer(amount, sourceX, sourceZ) {
   player.health = Math.max(0, player.health - amount);
   invulnerable = 0.5;
   hurtFlash = 0.2;
+  hurtSound();
   lastDamageAt = performance.now();
   regenTimer = 0;
   const dx = player.x - sourceX, dz = player.z - sourceZ, len = Math.hypot(dx, dz);

@@ -15,7 +15,7 @@ const args = process.argv.slice(2);
 const testFiles = args.filter(a => a.endsWith('.js'));
 const shotFile = args.find(a => a.endsWith('.png'));
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.md': 'text/plain; charset=utf-8' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const server = createServer(async (req, res) => {

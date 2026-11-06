@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosya | `block-world.html` (tek dosya, yaklaşık 640 satır) |
+| Dosya | `block-world.html` (tek dosya) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -30,6 +30,8 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `info` | Sol üstte konum: `X 48 · Y 13 · Z 48` |
    | `blockname` | Hotbar üstünde 1,5 sn görünen bildirim (blok adı, kamera adı) |
    | `hotbar` | 9 yuvalı blok çubuğu |
+   | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
+   | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
    | `overlay` | Başlangıç / duraklatma paneli, tuş listesi (`.keys`) ve "Oyna" düğmesi (`#play`) |
 
 3. Three.js r128 betiği.
@@ -46,6 +48,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()`, `placeBlock()` |
    | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
+   | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()` |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -118,6 +121,13 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 
 - Çarpışma eksen eksen yapılır (`moveAxis`): önce x, sonra z, sonra y. Adım 0,4 bloktan büyükse alt adımlara bölünür. Kare süresi en çok 0,05 sn.
 - `y < -20` olursa oyuncu doğma noktasına ışınlanır.
+- **Geri itilme:** `player.kx`, `player.kz` hıza eklenir ve her karede `e^(-6·dt)` ile söner.
+
+### Can
+
+- `player.health`, en fazla `MAX_HEALTH = 20`. HUD'da 10 kalp; her kalp 2 puan (dolu, yarım, boş). Kalpler 9×9 piksellik canvas görselleridir.
+- `damagePlayer(amount, sourceX, sourceZ)`: canı düşürür, 0,5 sn hasarsızlık verir, ekran kenarını 0,2 sn kırmızı yakar. Kaynak verilirse oyuncuyu kaynaktan uzağa 4 blok/sn iter ve 6 blok/sn yukarı zıplatır; kaynak verilmezse (düşme gibi) itmez. Konsoldan test için `window.damagePlayer` olarak da açıktır.
+- **Yenilenme:** Can 20'den azsa ve son 5 sn hasar alınmadıysa, oyun duraklatılmamışken her 4 sn'de 1 puan geri gelir.
 
 ### Kontroller
 
@@ -161,7 +171,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | --- | --- | --- |
 | — | Temel oyun: arazi, ağaçlar, yürüme, kırma/koyma, hotbar | Yapıldı |
 | — | Oyuncu modeli, üç kamera, gözden kol, W-W koşma | Yapıldı |
-| 1 | Can barı | Yapılmadı |
+| 1 | Can barı | Yapıldı |
 | 2 | Düşme hasarı, ölüm ve yeniden doğma | Yapılmadı |
 | 3 | Sabah / akşam döngüsü | Yapılmadı |
 | 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapılmadı |

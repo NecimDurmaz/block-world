@@ -36,7 +36,11 @@
   .slot { width: 44px; height: 44px; border: 2px solid transparent; border-radius: var(--ew-radius-btn); background-size: cover; image-rendering: pixelated; position: relative; cursor: pointer; }
   .slot span { position: absolute; left: 3px; top: 1px; font-size: 11px; font-weight: 500; text-shadow: 0 1px 2px #000; }
   .slot.active { border-color: var(--hud-fg); box-shadow: 0 0 0 2px var(--ew-primary); }
-  #blockname { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
+  #status { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
+  #hearts { display: flex; gap: 2px; }
+  #hearts i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
+  #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
+  #blockname { position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
   #info { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 12px; font-variant-numeric: tabular-nums; padding: 4px 8px; background: var(--hud-bg); border-radius: var(--ew-radius-btn); }
   #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(28, 46, 95, 0.55); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .panel { background: var(--ew-bg); color: var(--ew-text); border: 1px solid var(--ew-border); border-radius: var(--ew-radius); box-shadow: 0 0 6px 2px rgba(161, 161, 161, 0.22); padding: 24px; max-width: 420px; width: 100%; display: grid; gap: 16px; }
@@ -56,6 +60,8 @@
 <div id="info">X 0 · Y 0 · Z 0</div>
 <div id="blockname"></div>
 <div id="hotbar"></div>
+<div id="status"><div id="hearts"></div></div>
+<div id="hurt"></div>
 <div id="overlay">
   <div class="panel">
     <h1>Blok Dünyası</h1>
@@ -368,8 +374,9 @@
   fpScene.add(fpArm);
 
   // ---------- Oyuncu ve fizik ----------
-  const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4;
-  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, onGround: false };
+  const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4, MAX_HEALTH = 20;
+  // kx/kz: geri itilme hızı, her karede söner
+  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH };
   function spawn() {
     const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
     let y = SY - 1;
@@ -544,6 +551,61 @@
   }
   selectSlot(0);
 
+  // ---------- Can ----------
+  // Kalp: 7x6 piksellik şekil, 1 piksel koyu çerçeveyle 9x9 tuvale çizilir.
+  const HEART_SHAPE = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+  function heartImage(fill) { // 0 boş, 1 yarım, 2 dolu
+    const c = document.createElement('canvas'); c.width = c.height = 9;
+    const hg = c.getContext('2d');
+    const eachPixel = fn => HEART_SHAPE.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') fn(x, y); }));
+    hg.fillStyle = '#1a0a0a';
+    eachPixel((x, y) => { for (const [ox, oy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) hg.fillRect(x + ox, y + oy, 1, 1); });
+    eachPixel((x, y) => {
+      const red = fill === 2 || (fill === 1 && x < 4);
+      hg.fillStyle = !red ? '#4a3a3a' : (x === 1 && y === 1 ? '#ff9c9c' : '#d8302d');
+      hg.fillRect(x + 1, y + 1, 1, 1);
+    });
+    return c.toDataURL();
+  }
+  const HEART_IMAGES = [0, 1, 2].map(heartImage);
+  const heartsEl = document.getElementById('hearts');
+  const hurtEl = document.getElementById('hurt');
+  const heartEls = Array.from({ length: MAX_HEALTH / 2 }, () => heartsEl.appendChild(document.createElement('i')));
+  document.getElementById('status').style.width = hotbar.offsetWidth + 'px';
+  function renderHearts() {
+    heartEls.forEach((el, i) => {
+      el.style.backgroundImage = `url(${HEART_IMAGES[Math.max(0, Math.min(2, player.health - i * 2))]})`;
+    });
+  }
+  renderHearts();
+
+  let invulnerable = 0, hurtFlash = 0, lastDamageAt = -Infinity, regenTimer = 0;
+  // Kaynak verilmezse (ör. düşme) geri itme olmaz.
+  function damagePlayer(amount, sourceX, sourceZ) {
+    if (invulnerable > 0 || player.health <= 0) return;
+    player.health = Math.max(0, player.health - amount);
+    invulnerable = 0.5;
+    hurtFlash = 0.2;
+    lastDamageAt = performance.now();
+    regenTimer = 0;
+    const dx = player.x - sourceX, dz = player.z - sourceZ, len = Math.hypot(dx, dz);
+    if (len > 0) {
+      player.kx = dx / len * 4;
+      player.kz = dz / len * 4;
+      player.vy = 6;
+    }
+    renderHearts();
+  }
+  window.damagePlayer = damagePlayer; // konsoldan test için
+  function updateHealth(dt) {
+    invulnerable = Math.max(0, invulnerable - dt);
+    hurtFlash = Math.max(0, hurtFlash - dt);
+    hurtEl.style.opacity = hurtFlash / 0.2;
+    if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
+    regenTimer += dt;
+    if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
+  }
+
   // ---------- Oyun döngüsü ----------
   let last = performance.now(), walkPhase = 0, walkAmp = 0;
   function frame(now) {
@@ -562,10 +624,13 @@
       const len = Math.hypot(mx, mz);
       if (!keys.KeyW) sprinting = false;
       const speed = (sprinting || keys.ShiftLeft || keys.ShiftRight) ? 6.2 : 4.3;
-      p.vx = len ? mx / len * speed : 0;
-      p.vz = len ? mz / len * speed : 0;
+      p.vx = (len ? mx / len * speed : 0) + p.kx;
+      p.vz = (len ? mz / len * speed : 0) + p.kz;
       if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
     } else { p.vx = p.vz = 0; }
+    const knockDecay = Math.exp(-dt * 6);
+    p.kx *= knockDecay; p.kz *= knockDecay;
+    updateHealth(dt);
 
     p.vy = Math.max(p.vy - GRAVITY * dt, -40);
     const steps = Math.ceil(Math.max(Math.abs(p.vx), Math.abs(p.vy), Math.abs(p.vz)) * dt / 0.4) || 1;

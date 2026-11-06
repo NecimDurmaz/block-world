@@ -564,7 +564,7 @@ Bu maddeler 37'den hemen sonra yapılır.
 - **Minecraft'ta:** Yaratıcı modda boşluğa iki kez hızlıca basınca uçulur; boşluk yükseltir, Shift alçaltır; yine iki kez basınca iniş.
 - **Bu oyunda:**
   - Kontrol panelinde (madde 51) "Uçma" anahtarı; kayda yazılır. Yalnızca açıkken uçulabilir.
-  - Boşluğa 0,3 sn içinde iki kez basınca uçuş açılır/kapanır. Uçarken yerçekimi yok; boşluk yukarı, Shift aşağı (saniyede 7,5 blok), yatay hız yürümenin 2,5 katı, W-W ile daha hızlı. Yere değince uçuş biter. Uçarken ve uçuştan sonra düşme hasarı yok.
+  - Boşluğa 0,3 sn içinde iki kez basınca uçuş açılır/kapanır. Uçarken yerçekimi yok; boşluk yukarı, Shift aşağı (saniyede 7,5 blok), yatay hız yürümenin 2,5 katı, W-W ile daha hızlı. Yere değince uçuş biter. Uçma izni açıkken düşme hasarı yok.
   - Anahtar kapatılınca uçuş hemen biter.
 - **Kabul ölçütü:** Panelden uçma açılınca iki kez boşlukla havalanılıyor, boşluk/Shift ile yükselip alçalınıyor; yere inince düşme hasarı yok; anahtar kapalıyken iki kez boşluk sadece zıplatıyor.
 - **Bağımlılık:** 3, 51

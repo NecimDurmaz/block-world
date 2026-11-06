@@ -7,6 +7,7 @@ let controlOpen = false;
 const TOGGLES = {
   safe: { on: () => safeMode, set: setSafeMode },
   god: { on: () => godMode, set: setGodMode },
+  fly: { on: () => flyAllowed, set: setFlyAllowed },
   sound: { on: () => settings.sound, set: on => { settings.sound = on; applySettings(); saveSettings(); return on ? 'Ses açık' : 'Ses kapalı'; } },
 };
 const tpInputs = ['x', 'y', 'z'].map(a => document.getElementById('tp-' + a));
@@ -91,4 +92,4 @@ function closeControl() {
 }
 // Ana menüden: oyunu başlatıp paneli açar.
 document.getElementById('open-control').addEventListener('click', () => { start(); openControl(); });
-Object.assign(window.game, { openControl, closeControl, isControlOpen: () => controlOpen });
+Object.assign(window.game, { isFlying: () => flying, isFlyAllowed: () => flyAllowed, openControl, closeControl, isControlOpen: () => controlOpen });

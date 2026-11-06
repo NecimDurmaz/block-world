@@ -3,7 +3,7 @@
 
 const keys = {};
 const VIEWS = ['Arkadan', 'Gözden', 'Önden'];
-let selected = 0, playing = false, dead = false, inventoryOpen = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0;
+let selected = 0, playing = false, dead = false, inventoryOpen = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0, lastSpaceTap = 0;
 const overlay = document.getElementById('overlay');
 const canvas = renderer.domElement;
 
@@ -18,6 +18,11 @@ window.addEventListener('keydown', e => {
     const now = performance.now();
     if (now - lastWTap < 300) sprinting = true;
     lastWTap = now;
+  }
+  // Uçma açıkken boşluğa 300 ms içinde iki kez basmak uçuşu açar/kapatır.
+  if (e.code === 'Space' && !e.repeat && flyAllowed && playing) {
+    const now = performance.now();
+    if (now - lastSpaceTap < 300) { flying = !flying; lastSpaceTap = 0; } else lastSpaceTap = now;
   }
   keys[e.code] = true;
   if (e.code === 'Space') e.preventDefault();

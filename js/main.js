@@ -4,6 +4,8 @@
 let last = performance.now(), walkPhase = 0, walkAmp = 0;
 // Eğilme (Shift): hız çarpanı, kameranın alçalması; crouch 0–1 arası yumuşak geçiş
 const CROUCH_SPEED = 0.3, CROUCH_DROP = 0.3;
+// Uçma: yatay hız çarpanı ve dikey hız (blok/sn)
+const FLY_SPEED = 2.5, FLY_VERTICAL = 7.5;
 let crouching = false, crouch = 0;
 // Eğilirken ayağın altında (x, z) konumunda destek var mı
 const supported = (p, x, z) => collides({ w: W, h: 0.05 }, x, p.y - 0.06, z);
@@ -44,30 +46,34 @@ function frame(now) {
     const len = Math.hypot(mx, mz);
     if (!keys.KeyW) sprinting = false;
     if (p.food <= SPRINT_FOOD) sprinting = false;
-    crouching = !!(keys.ShiftLeft || keys.ShiftRight);
+    // Uçarken Shift alçaltır, eğilmez.
+    crouching = !flying && !!(keys.ShiftLeft || keys.ShiftRight);
     if (crouching) sprinting = false;
     const sprintNow = sprinting && p.food > SPRINT_FOOD;
-    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1) * (crouching ? CROUCH_SPEED : 1);
+    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1) * (crouching ? CROUCH_SPEED : 1) * (flying ? FLY_SPEED : 1);
     updateHunger(dt, sprintNow && len > 0);
     updateSteps(dt, len > 0 && !inWater, sprintNow);
     p.vx = (len ? mx / len * speed : 0) + p.kx;
     p.vz = (len ? mz / len * speed : 0) + p.kz;
-    if (keys.Space && (inWater || inLava)) p.vy = SWIM_UP_SPEED;
+    if (flying) p.vy = ((keys.Space ? 1 : 0) - (keys.ShiftLeft || keys.ShiftRight ? 1 : 0)) * FLY_VERTICAL;
+    else if (keys.Space && (inWater || inLava)) p.vy = SWIM_UP_SPEED;
     else if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
-  } else { p.vx = p.vz = 0; crouching = false; }
+  } else { p.vx = p.vz = 0; crouching = false; if (flying) p.vy = 0; }
   crouch += ((crouching ? 1 : 0) - crouch) * Math.min(1, dt * 12);
   const knockDecay = Math.exp(-dt * 6);
   p.kx *= knockDecay; p.kz *= knockDecay;
   updateHealth(dt);
 
-  // Suda yerçekimi 1/4, batma hızı sınırlı
-  p.vy = inWater || inLava ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
+  // Suda yerçekimi 1/4, batma hızı sınırlı; uçarken yerçekimi yok
+  if (!flying) p.vy = inWater || inLava ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
   // Eğilirken blok kenarından düşülmez: adım desteksiz bırakacaksa o eksendeki hareket durur.
   if (crouching && p.onGround) {
     if (!supported(p, p.x + p.vx * dt, p.z)) p.vx = 0;
     if (!supported(p, p.x + p.vx * dt, p.z + p.vz * dt)) p.vz = 0;
   }
   stepEntity(p, dt);
+  // Yere değince uçuş biter
+  if (flying && p.onGround) flying = false;
   if (playing) {
     for (const m of mobs) updateMob(m, dt);
     if (dimension === 'overworld') {
@@ -88,7 +94,8 @@ function frame(now) {
   renderDrops();
   // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
   if (playing) {
-    if (inWater || inLava) p.fallPeak = null; // suya düşen hasar almaz
+    // Suya düşen ve uçma açıkken düşen hasar almaz
+    if (inWater || inLava || flyAllowed) p.fallPeak = null;
     else if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);
     else if (p.fallPeak !== null) {
       const fall = p.fallPeak - p.y;

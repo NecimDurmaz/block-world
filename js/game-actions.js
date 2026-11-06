@@ -2,7 +2,8 @@
 // Kontrol panelinin ve sohbet komutlarının ortak kullandığı eylemler. Her eylem sonucu anlatan bir metin döndürür.
 
 // godMode: ölümsüzlük, safeMode: güvenli mod (canavarlar saldırmaz; kayda yazılır).
-let godMode = false, safeMode = false;
+// flyAllowed: uçma izni (panel; kayda yazılır), flying: şu an uçuyor mu (iki kez boşluk).
+let godMode = false, safeMode = false, flyAllowed = false, flying = false;
 const TIMES_OF_DAY = { day: ['Sabah', 0.02], noon: ['Öğle', 0.25], night: ['Akşam', 0.6], midnight: ['Gece yarısı', 0.75] };
 
 function setGodMode(on) {
@@ -13,6 +14,11 @@ function setSafeMode(on) {
   safeMode = on;
   document.getElementById('safe-note').hidden = !on;
   return safeMode ? 'Güvenli mod açık: canavarlar saldırmaz' : 'Güvenli mod kapalı';
+}
+function setFlyAllowed(on) {
+  flyAllowed = on;
+  if (!on) flying = false;
+  return on ? 'Uçma açık: iki kez boşluğa bas' : 'Uçma kapalı';
 }
 function healPlayer() {
   player.health = MAX_HEALTH;

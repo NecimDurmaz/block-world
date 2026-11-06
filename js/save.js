@@ -43,6 +43,7 @@ function saveGame() {
       chests: Object.values(chests).map(c => ({ ...c, slots: c.slots.map(st => st && { ...st }) })),
       spawnPoint,
       safeMode,
+      flyAllowed,
       selected,
       inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
       armor: armor.map(s => s && { key: s.key, count: 1, ...extraOf(s) }),
@@ -72,6 +73,7 @@ function applySave(save) {
   for (const c of save.chests || []) chests[c.dim + ':' + c.x + ',' + c.y + ',' + c.z] = { ...c, slots: c.slots.map(st => st && ITEMS[st.key] ? st : null) };
   spawnPoint = save.spawnPoint || null;
   setSafeMode(!!save.safeMode);
+  setFlyAllowed(!!save.flyAllowed);
   scanCrops();
   rebuildPortalMeshes();
   renderHearts();

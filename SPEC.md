@@ -89,7 +89,7 @@ tests/              otomatik testler
    | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
    | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
    | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), sohbet dışı eylemler `game-actions.js`'te |
-   | `game-actions.js` | Panel ve komutların ortak eylemleri: `godMode`, `safeMode`, `TIMES_OF_DAY`, `setGodMode()`, `setSafeMode()`, `healPlayer()`, `feedPlayer()`, `setTimeOfDay()`, `teleport()`, `clearInventory()`, `summonMob()`, `setSpawnHere()` |
+   | `game-actions.js` | Panel ve komutların ortak eylemleri: `godMode`, `safeMode`, `flyAllowed`, `flying`, `TIMES_OF_DAY`, `setGodMode()`, `setSafeMode()`, `setFlyAllowed()`, `healPlayer()`, `feedPlayer()`, `setTimeOfDay()`, `teleport()`, `clearInventory()`, `summonMob()`, `setSpawnHere()` |
    | `control-panel.js` | Kontrol paneli: `controlOpen`, `openControl()`, `closeControl()`, `renderControl()` |
    | `item-picker.js` | Eşya seçici: `openPicker()`, `filterPicker()`, `clickPicker()` |
    | `nether.js` | `dimension`, `generateNether()`, `switchDimension()`, `portalLinks`, `createPortalNear()`, `travelThroughPortal()`, `updateLava()`. Yüklenirken `useBed` ve `RECIPES`'e eriştiği için `main.js`'ten hemen önce yüklenir |
@@ -309,6 +309,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) | Koş. W bırakılınca ya da eğilince koşma biter. Koşarken görüş alanı 75° → 85°. Ctrl kullanılmaz (tarayıcıda Ctrl+W sekmeyi kapatır). |
 | Shift (basılı) | Eğil: hız ×0,3 (`CROUCH_SPEED`), göz 0,3 blok alçalır (`CROUCH_DROP`, yumuşak geçiş), model 0,15 alçalır ve kollar öne gelir. Yerdeyken bir adım ayağın altını desteksiz bırakacaksa o eksendeki hareket durur (`supported`): blok kenarından düşülmez, kenarda sarkarak blok konabilir. |
+| Boşluk-Boşluk (300 ms içinde) | Uçma izni açıkken (kontrol paneli) uçuşu açar/kapatır. Uçarken yerçekimi yok; boşluk yükseltir, Shift alçaltır (`FLY_VERTICAL = 7,5` blok/sn), yatay hız ×2,5 (`FLY_SPEED`; W-W ile koşarak daha hızlı). Yere değince uçuş biter. Uçma izni açıkken düşme hasarı yok. İzin kapatılınca uçuş hemen biter. |
 | Sol tık (basılı tut) | Basınca bakılan canlıya vurur; basılı tutuldukça bakılan bloğu kazar (yedek modda 6 pikselden fazla sürüklemek bakıştır, kazmayı keser) |
 | Sağ tık | Seçili yuvadaki bloğu koy; meşale bir bloğun üstüne dik, yan yüzüne eğik konur (tavana konmaz) (canlıların ya da oyuncunun içine konmaz); çalışma masasına bakılıyorsa 3×3 üretimi açar; elde yemek varsa basılı tutunca yer |
 | 1–9 / tekerlek | Hotbar yuvası seç |
@@ -585,7 +586,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
   | Bölüm | Denetimler | Eylem (`game-actions.js`) |
   | --- | --- | --- |
-  | Oyun modu | Güvenli mod, Ölümsüzlük, Ses anahtarları (açıkken yeşil, "AÇIK") | `setSafeMode`, `setGodMode`, `settings.sound` + `applySettings`/`saveSettings` |
+  | Oyun modu | Güvenli mod, Ölümsüzlük, Uçma, Ses anahtarları (2×2; açıkken yeşil, "AÇIK") | `setSafeMode`, `setGodMode`, `setFlyAllowed`, `settings.sound` + `applySettings`/`saveSettings` |
   | Saat | Sabah, Öğle, Akşam, Gece yarısı (`TIMES_OF_DAY`); başlıkta o anki saat | `setTimeOfDay` |
   | Oyuncu | Canı doldur, Karnı doyur, Doğma noktası burası, Envanteri boşalt (ikinci basışta) | `healPlayer`, `feedPlayer`, `setSpawnHere`, `clearInventory` |
   | Eşyalar | Eşya seç ve al: paneli kapatıp eşya seçiciyi açar | `openPicker` |
@@ -596,7 +597,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -616,6 +617,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikt
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
   | `furnaces` | Fırınların dizisi: `{ dim, x, y, z, slots, burn, burnMax, progress }` (`dim` yoksa ana dünya) |
   | `safeMode` | Güvenli mod açık mı (yoksa kapalı) |
+  | `flyAllowed` | Uçma izni (yoksa kapalı); uçuşun kendisi kaydedilmez |
   | `armor` | 4 zırh yuvası: `{ key, count: 1, durability }` ya da `null` |
   | `chests` | Sandıkların dizisi: `{ dim, x, y, z, slots[27] }`; alan yoksa sandık yok |
   | `selected` | Seçili hotbar yuvası (0–8) |
@@ -689,4 +691,4 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 50 | Güvenli mod (`/safe`) | Yapıldı |
 | 51 | Kontrol paneli | Yapıldı |
 | 52 | Eğilme | Yapıldı |
-| 53 | Uçma | Yapılmadı |
+| 53 | Uçma | Yapıldı |

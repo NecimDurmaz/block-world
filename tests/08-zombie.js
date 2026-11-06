@@ -2,20 +2,20 @@
 const g = window.game, p = g.player;
 document.getElementById('play').click();
 for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
-const zombies = () => g.mobs.filter(m => m.kind === 'zombie');
+const hostiles = () => g.mobs.filter(m => m.type.hostile);
 
-// Gece olunca 10 sn içinde, oyuncudan 16–32 blok uzakta zombi doğar
+// Gece olunca 10 sn içinde, oyuncudan 16–32 blok uzakta bir düşman doğar
 g.clock.time = 0.75;
-for (let i = 0; i < 130 && !zombies().length; i++) await wait(100);
-const spawned = zombies()[0];
+for (let i = 0; i < 130 && !hostiles().length; i++) await wait(100);
+const spawned = hostiles()[0];
 const spawnDistance = spawned ? Math.hypot(spawned.x - p.x, spawned.z - p.z) : null;
 const spawnOk = !!spawned && spawnDistance >= 15 && spawnDistance <= 33;
 
 // Havada düz bir platform: zombi 6 blok önde, oyuncuya yürüyüp vurmalı
 for (let x = 30; x < 50; x++) for (let z = 30; z < 50; z++) g.setBlock(x, 39, z, 3);
 Object.assign(p, { x: 40.5, y: 40, z: 45.5, yaw: 0, pitch: -0.2, vx: 0, vy: 0, vz: 0, health: 20 });
-const z = spawned;
-Object.assign(z, { x: 40.5, y: 40, z: 39.5, vx: 0, vy: 0, vz: 0 });
+g.clock.time = 0.25; // başka düşman doğmasın
+const z = g.spawnMob('zombie', 40.5, 40, 39.5);
 let approached = false, minDist = 99;
 for (let i = 0; i < 80 && p.health === 20; i++) {
   await wait(100);
@@ -41,7 +41,7 @@ const killed = z.health <= 0;
 
 // 64 bloktan uzaklaşan düşman silinir
 await wait(800);
-const other = g.mobs.find(m => m.kind === 'zombie');
+const other = g.mobs.find(m => m.type.hostile && m.dying <= 0);
 let despawned = true;
 if (other) {
   Object.assign(other, { x: 1.5, z: 1.5 });

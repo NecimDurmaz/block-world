@@ -49,9 +49,11 @@
   .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
   .keys kbd { font-family: var(--ew-font); font-weight: 500; color: var(--ew-text-strong); background: #eceef4; border-radius: var(--ew-radius-btn); padding: 1px 6px; white-space: nowrap; justify-self: start; }
   .note { font-size: 12px; color: var(--ew-text-muted); }
-  #play { font: 500 15px var(--ew-font); color: #fff; background: var(--ew-primary); border: 0; border-radius: var(--ew-radius-btn); padding: 10px 16px; cursor: pointer; }
-  #play:hover { background: var(--ew-primary-dark); }
-  #play:focus-visible { outline: 2px solid var(--ew-secondary); outline-offset: 2px; }
+  .primary { font: 500 15px var(--ew-font); color: #fff; background: var(--ew-primary); border: 0; border-radius: var(--ew-radius-btn); padding: 10px 16px; cursor: pointer; }
+  .primary:hover { background: var(--ew-primary-dark); }
+  .primary:focus-visible { outline: 2px solid var(--ew-secondary); outline-offset: 2px; }
+  #death { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(141, 18, 19, 0.6); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  #death h1 { color: var(--ew-secondary); }
 </style>
 </head>
 <body>
@@ -62,6 +64,12 @@
 <div id="hotbar"></div>
 <div id="status"><div id="hearts"></div></div>
 <div id="hurt"></div>
+<div id="death" hidden>
+  <div class="panel">
+    <h1>Öldün!</h1>
+    <button id="respawn" class="primary" type="button">Yeniden doğ</button>
+  </div>
+</div>
 <div id="overlay">
   <div class="panel">
     <h1>Blok Dünyası</h1>
@@ -77,7 +85,7 @@
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
-    <button id="play" type="button">Oyna</button>
+    <button id="play" class="primary" type="button">Oyna</button>
     <p class="note">Klavye ve fare gerektirir. Fare kilitlenemezse sürükleyerek bakabilirsin.</p>
   </div>
 </div>
@@ -375,13 +383,13 @@
 
   // ---------- Oyuncu ve fizik ----------
   const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4, MAX_HEALTH = 20;
-  // kx/kz: geri itilme hızı, her karede söner
-  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH };
+  // kx/kz: geri itilme hızı, her karede söner. fallPeak: havadayken ulaşılan en yüksek y.
+  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, fallPeak: null };
   function spawn() {
     const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
     let y = SY - 1;
     while (y > 0 && get(x, y - 1, z) === AIR) y--;
-    Object.assign(player, { x: x + 0.5, y: y, z: z + 0.5, vx: 0, vy: 0, vz: 0 });
+    Object.assign(player, { x: x + 0.5, y: y, z: z + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
   }
   spawn();
 
@@ -410,7 +418,7 @@
   // ---------- Girdi ----------
   const keys = {};
   const VIEWS = ['Arkadan', 'Gözden', 'Önden'];
-  let selected = 0, playing = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0;
+  let selected = 0, playing = false, dead = false, fallbackLook = false, view = 0, sprinting = false, lastWTap = 0;
   const overlay = document.getElementById('overlay');
   const canvas = renderer.domElement;
 
@@ -452,7 +460,7 @@
   }
   function pause() {
     playing = false;
-    overlay.hidden = false;
+    overlay.hidden = dead;
     for (const k in keys) keys[k] = false;
   }
   document.getElementById('play').addEventListener('click', start);
@@ -595,8 +603,29 @@
       player.vy = 6;
     }
     renderHearts();
+    if (player.health <= 0) die();
   }
-  window.damagePlayer = damagePlayer; // konsoldan test için
+  // Konsoldan test için
+  window.damagePlayer = damagePlayer;
+  window.game = { player, damagePlayer };
+
+  const deathEl = document.getElementById('death');
+  function die() {
+    player.health = 0;
+    renderHearts();
+    dead = true;
+    playing = false;
+    deathEl.hidden = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  document.getElementById('respawn').addEventListener('click', () => {
+    dead = false;
+    deathEl.hidden = true;
+    player.health = MAX_HEALTH;
+    renderHearts();
+    spawn();
+    start();
+  });
   function updateHealth(dt) {
     invulnerable = Math.max(0, invulnerable - dt);
     hurtFlash = Math.max(0, hurtFlash - dt);
@@ -609,7 +638,8 @@
   // ---------- Oyun döngüsü ----------
   let last = performance.now(), walkPhase = 0, walkAmp = 0;
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    // rAF zaman damgası, betiğin başladığı andan önce olabilir; negatif dt fiziği ters çevirir.
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
     last = now;
     const p = player;
 
@@ -640,7 +670,16 @@
       moveAxis('z', p.vz * dt / steps);
       moveAxis('y', p.vy * dt / steps);
     }
-    if (p.y < -20) spawn();
+    // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
+    if (playing) {
+      if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);
+      else if (p.fallPeak !== null) {
+        const fall = p.fallPeak - p.y;
+        p.fallPeak = null;
+        if (fall > 3.5) damagePlayer(Math.round(fall - 3));
+      }
+      if (p.y < -20) die();
+    }
 
     // Kamera: 0 arkadan, 1 gözden, 2 önden. Arkada/önde duvar varsa kamera yaklaşır.
     const eye = new THREE.Vector3(p.x, p.y + EYE, p.z);

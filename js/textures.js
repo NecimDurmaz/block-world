@@ -4,10 +4,10 @@
 // Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
 window.game = {};
 
-const T = 16, N_TILES = 43;
+const T = 16, N_TILES = 50;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39, chestTop: 40, chestSide: 41, diamondOre: 42,
+  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39, chestTop: 40, chestSide: 41, diamondOre: 42, snowGrassTop: 43, snowGrassSide: 44, ice: 45, cactusSide: 46, cactusTop: 47, spruceLog: 48, spruceLeaves: 49,
 };
 
 function mulberry32(a) {
@@ -168,6 +168,29 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
   px(TILE.chestTop, x, y, wood);
   const lock = x >= 7 && x <= 8 && y >= 5 && y <= 8;
   px(TILE.chestSide, x, y, lock ? (y === 5 ? '#e0e0e0' : '#a8a8a8') : y === 5 ? shade([60, 40, 22], 1) : wood);
+}
+// Karlı çimen: beyaz üst, yanda toprak üstünde kar
+noisyTile(TILE.snowGrassTop, [240, 244, 248], 0.08);
+noisyTile(TILE.snowGrassSide, [134, 96, 67], 0.35);
+for (let x = 0; x < T; x++) {
+  const depth = 2 + Math.floor(rnd() * 3);
+  for (let y = 0; y < depth; y++) px(TILE.snowGrassSide, x, y, shade([240, 244, 248], 0.92 + rnd() * 0.08));
+}
+// Buz: açık mavi, beyaz çizgiler
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  px(TILE.ice, x, y, (x + y * 2) % 11 === 0 ? '#e6f4ff' : shade([150, 196, 240], 0.94 + rnd() * 0.12));
+}
+// Kaktüs: koyu dikey şeritli yeşil, açık dikenler; üstte halka
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  const edge = x === 0 || x === 15;
+  px(TILE.cactusSide, x, y, edge ? '#2f5a1c' : x % 4 === 1 ? shade([60, 112, 38], 1) : (y + x) % 5 === 0 ? '#d8e8b0' : shade([86, 150, 54], 0.92 + rnd() * 0.12));
+  const r = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+  px(TILE.cactusTop, x, y, r > 6.5 ? '#2f5a1c' : r > 4.5 ? shade([86, 150, 54], 1) : shade([110, 170, 70], 0.95 + rnd() * 0.1));
+}
+// Ladin: koyu kahverengi kabuk, koyu yeşil yaprak
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  px(TILE.spruceLog, x, y, shade([74, 52, 32], (x % 3 === 0 ? 0.75 : 1) * (0.85 + rnd() * 0.3)));
+  px(TILE.spruceLeaves, x, y, rnd() < 0.2 ? shade([20, 44, 26], 1) : shade([46, 86, 52], 0.75 + rnd() * 0.4));
 }
 // Kumtaşı
 for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {

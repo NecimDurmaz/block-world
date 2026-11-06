@@ -106,15 +106,20 @@ tests/              otomatik testler
 - **Veri:** `world = Uint8Array(SX * SY * SZ)`, indeks `(y * SZ + z) * SX + x`. Değer blok kimliğidir, `0` hava.
 - **Erişim:** `get(x, y, z)` dünya dışında hava döndürür, `y < 0` için taş döndürür (altta delik görünmesin diye). `set(x, y, z, id)` dünya dışını yok sayar.
 - **Tohum:** `SEED = 20261106`, sabit. Her açılışta aynı dünya üretilir.
-- **Arazi:** 4 oktavlı değer gürültüsü (`fbm`) ile yükseklik haritası, `h = 6 + fbm^1.4 * 34`.
-  - `h ≤ 14`: üstte 3 blok kum, altı taş.
-  - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
-- **Mağaralar:** Arazi kurulduktan hemen sonra, her sütunda `y = 2` ile yüzeyin 4 altı arasında iki 3B değer gürültüsünün (`valueNoise3`) aynı anda 0,5'e yakın olduğu hücreler (`a² + b² < CAVE_RADIUS²`, `CAVE_RADIUS = 0.075`) oyulur; kıvrımlı tüneller çıkar (yer altının ~%8'i). Tüneller yamaçlarda alçak komşu sütunlara ağız açar. Mağaralar aydınlıktır (ışık hesabı yok).
-- **Obsidyen:** Mağaralardan sonra, chunk başına ~1 öbek: y 2–8 arasında, altı taş olan bir mağara tabanı hücresinin altındaki taş ve yanındaki 1–3 taş obsidyene döner (`mulberry32(SEED + 13)`).
-- **Göller:** `y ≤ WATER_LEVEL = 12`'de arazi yüzeyinin üstünde kalan boşluklar suyla dolar (alçak kumlu bölgeler göl olur); mağaralar kuru kalır. Akan su yok.
-- **Bitkiler:** Ağaçlardan sonra, üstü boş her çimen sütununun %12'sine uzun ot, %2'sine çiçek (yarı yarıya gelincik ve karahindiba) konur (`mulberry32(SEED + 11)`).
-- **Cevherler:** Arazi kurulduktan sonra chunk başına ~8 kömür damarı (y 1–30) ve ~4 demir damarı (y 1–20), her biri 3–8 blokluk rastgele yürüyüş; yalnızca taşın yerini alır (`mulberry32(SEED + 7)`). Yalnızca yeni üretilen dünyada; kayıttan yüklenen dünya değişmez.
-- **Ağaçlar:** 160 deneme; yalnızca çimen üstüne. 4–5 blok kütük, üstünde yaprak kümesi.
+- **Üretim chunk başınadır** (`generateChunk(cx, cz)`): her şey tohum ve koordinata bağlıdır, aynı chunk her zaman aynı çıkar. Chunk'a özgü rastgele üreteç `chunkRandom(cx, cz, tuz)`. Ağaçlar chunk kenarından 2 blok içeride, damarlar ve obsidyen öbekleri chunk içinde kalır (komşu chunk'a taşmaz).
+- **Biyomlar** (`biomeAt(x, z)`): iki düşük frekanslı gürültü, sıcaklık `t` ve nem `m` (`BIOME_SCALE = 64`). Çöl: `t > 0,57` ve `m < 0,47`; karlı: `t < 0,42`; orman: `m > 0,56`; gerisi ova. Gürültü kaydırmaları, 96×96 başlangıç alanında dört biyomun da (~%22'şer) görüneceği ve doğma noktasının ormanda olacağı biçimde seçildi.
+- **Arazi:** 4 oktavlı değer gürültüsü (`fbm`) ile `heightAt(x, z) = 6 + fbm^1.4 * 34 * (1 − 0,4 × çöllük)`; çöllük sıcaklık ve nemden sürekli hesaplandığı için biyom sınırlarında yükseklik yumuşak geçer.
+  - `h ≤ 14`: üstte 3 blok kum, altı taş (kıyı ve göl tabanı).
+  - Çöl: üstte 4 blok kum, altında 3 blok kumtaşı, sonra taş.
+  - Karlı: üstte karlı çimen, altında 3 blok toprak. Ova ve orman: çimen ve 3 blok toprak.
+- **Mağaralar:** Her sütunda `y = 2` ile yüzeyin 4 altı arasında iki 3B değer gürültüsünün (`valueNoise3`) aynı anda 0,5'e yakın olduğu hücreler (`a² + b² < CAVE_RADIUS²`, `CAVE_RADIUS = 0.075`) oyulur; kıvrımlı tüneller çıkar (yer altının ~%7'si). Tüneller yamaçlarda alçak komşu sütunlara ağız açar. Mağaralar aydınlıktır (ışık hesabı yok).
+- **Obsidyen:** Chunk başına ~1 öbek: y 2–8 arasında, altı taş olan bir mağara tabanı hücresinin altındaki taş ve yanındaki 1–3 taş obsidyene döner.
+- **Göller:** `y ≤ WATER_LEVEL = 12`'de arazi yüzeyinin üstünde kalan boşluklar su kaynağıyla dolar; mağaralar kuru kalır. Karlı biyomda göl yüzeyi (y = 12) buzdur.
+- **Cevherler:** Chunk başına 8 kömür damarı (y 1–30) ve 4 demir damarı (y 1–20), 3–8 blokluk; 1 elmas damarı (y 1–10), 1–4 blokluk; rastgele yürüyüş, yalnızca taşın yerini alır.
+- **Ağaç ve kaktüs:** Chunk başına biyoma göre deneme: orman 7 meşe, ova 1 (%60), karlı 3 ladin (6–7 blok gövde, koni biçimli yaprak), çöl 2 kaktüs (kum üstünde 1–3 blok). Meşe: 4–5 blok kütük, üstünde yaprak kümesi.
+- **Bitkiler:** Üstü boş çimen sütunlarında ova %15 uzun ot ve %3 çiçek, orman %8 ve %1 (yarı yarıya gelincik ve karahindiba); çöl ve karlıda yok.
+- **Biyom tonu:** Çimen üst yüzü ve yapraklar (`tint`) biyoma göre köşe rengiyle tonlanır (`BIOME_TINT`: ormanda koyu, çölde soluk sarı, karlıda soğuk).
+- **Kaktüs** hücreden biraz dar bir kutudur (`box`); değen oyuncu saniyede 1 hasar alır. **Buz** kaygandır: üstündeyken yatay hız hedefe yavaşça yaklaşır (`ICE_GRIP = 1,5`), bırakınca kayılır. Hayvanlar yalnızca çimende doğduğundan çölde ve karlıda doğmaz.
 - **Doğma noktası:** Dünyanın ortası, sütunun en üstü. (Bilinen sorun: ortada bir çukura denk gelebiliyor.)
 
 ### Bloklar
@@ -151,6 +156,11 @@ tests/              otomatik testler
 | 60 | `glowstone` | Işıltı taşı | `glowstone`; `selfLit`, ışık kaynağı (`isLightSource`), kırılınca 2–4 `glowstone_dust` (`dropCount`) |
 | 63–69 | `water_flow_1` … `water_flow_7` | Su (akan) | kaynakla aynı, `level` 1–7, `noDrop` |
 | 70–76 | `lava_flow_1` … `lava_flow_7` | Lav (akan) | kaynakla aynı, `level` 1–7 |
+| 77 | `snowy_grass` | Karlı çimen | `snowGrassTop` / `snowGrassSide` / `dirt`; kürek, toprak düşürür |
+| 78 | `ice` | Buz | `ice`; yarı saydam, kaygan, kazma, bir şey düşmez |
+| 79 | `cactus` | Kaktüs | `cactusTop` / `cactusSide`; dar kutu (`box`), değince hasar |
+| 80 | `spruce_log` | Ladin kütüğü | `logTop` / `spruceLog`; balta, 1 → 4 tahta |
+| 81 | `spruce_leaves` | Ladin yaprağı | `spruceLeaves`; bir şey düşmez |
 | 62 | `diamond_ore` | Elmas cevheri | `diamondOre` (taş + turkuaz benekler); `breakTime: 15`, `minTier: 3`, 1 `diamond` düşürür |
 | 61 | `chest` | Sandık | `chestTop` / `chestSide` (yanda koyu kilit çizgisi ve kilit); balta, 3,75 sn |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
@@ -176,7 +186,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 ### Dokular
 
 - Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 37` doku, atlas `592 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide, diamondOre`.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide, diamondOre, snowGrassTop, snowGrassSide, ice, cactusSide, cactusTop, spruceLog, spruceLeaves`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -621,7 +631,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -703,7 +713,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 38 | Zırh | Yapıldı |
 | 39 | Yay ve ok | Yapıldı |
 | 40 | Kova, akan su ve lav | Yapıldı |
-| 41 | Biyomlar | Yapılmadı |
+| 41 | Biyomlar | Yapıldı |
 | 42 | Sonsuz dünya | Yapılmadı |
 | 43 | Köyler ve köylü ticareti | Yapılmadı |
 | 44 | Nether kalesi ve blaze | Yapılmadı |

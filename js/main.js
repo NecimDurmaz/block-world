@@ -6,6 +6,21 @@ let last = performance.now(), walkPhase = 0, walkAmp = 0;
 const CROUCH_SPEED = 0.3, CROUCH_DROP = 0.3;
 // Uçma: yatay hız çarpanı ve dikey hız (blok/sn)
 const FLY_SPEED = 2.5, FLY_VERTICAL = 7.5;
+// Buz tutuşu (küçük: kaygan) ve kaktüs hasarı (saniyede 1)
+const ICE_GRIP = 1.5;
+let cactusTimer = 0;
+// Oyuncu kutusu (0,1 genişletilmiş) bir kaktüsün dar kutusuna değiyor mu
+function touchingCactus(p) {
+  const m = 0.1;
+  for (let x = Math.floor(p.x - p.w - m); x <= Math.floor(p.x + p.w + m); x++)
+    for (let y = Math.floor(p.y); y <= Math.floor(p.y + p.h); y++)
+      for (let z = Math.floor(p.z - p.w - m); z <= Math.floor(p.z + p.w + m); z++) {
+        if (get(x, y, z) !== B.cactus) continue;
+        const [x0, , z0, x1, , z1] = BLOCKS[B.cactus].box;
+        if (p.x - p.w - m < x + x1 && p.x + p.w + m > x + x0 && p.z - p.w - m < z + z1 && p.z + p.w + m > z + z0) return true;
+      }
+  return false;
+}
 let crouching = false, crouch = 0;
 // Eğilirken ayağın altında (x, z) konumunda destek var mı
 const supported = (p, x, z) => collides({ w: W, h: 0.05 }, x, p.y - 0.06, z);
@@ -34,6 +49,7 @@ function frame(now) {
 
   const inWater = overlapsBlock(p, isWater);
   const inLava = overlapsBlock(p, isLava);
+  const onIce = p.onGround && get(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z)) === B.ice;
   if (playing) updateSleep(dt);
   if (playing && !inventoryOpen && !chatOpen && !controlOpen && sleepTimer <= 0) {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
@@ -53,8 +69,10 @@ function frame(now) {
     const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1) * (crouching ? CROUCH_SPEED : 1) * (flying ? FLY_SPEED : 1);
     updateHunger(dt, sprintNow && len > 0);
     updateSteps(dt, len > 0 && !inWater, sprintNow);
-    p.vx = (len ? mx / len * speed : 0) + p.kx;
-    p.vz = (len ? mz / len * speed : 0) + p.kz;
+    const targetVx = (len ? mx / len * speed : 0) + p.kx, targetVz = (len ? mz / len * speed : 0) + p.kz;
+    // Buzda kayar: hız hedefe yavaşça yaklaşır
+    if (onIce) { const k = Math.min(1, dt * ICE_GRIP); p.vx += (targetVx - p.vx) * k; p.vz += (targetVz - p.vz) * k; }
+    else { p.vx = targetVx; p.vz = targetVz; }
     if (flying) p.vy = ((keys.Space ? 1 : 0) - (keys.ShiftLeft || keys.ShiftRight ? 1 : 0)) * FLY_VERTICAL;
     else if (keys.Space && (inWater || inLava)) p.vy = SWIM_UP_SPEED;
     else if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
@@ -91,6 +109,9 @@ function frame(now) {
     updateDebris(dt);
     updatePortal(dt);
     updateLava(dt, inLava);
+    // Kaktüse değen oyuncu saniyede 1 hasar alır
+    cactusTimer -= dt;
+    if (cactusTimer <= 0 && touchingCactus(p)) { cactusTimer = 1; damagePlayer(1); }
   }
   for (const m of mobs) renderMob(m);
   renderDrops();

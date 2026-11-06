@@ -7,11 +7,12 @@ const BED_DIRS = [['east', [1, 0]], ['west', [-1, 0]], ['south', [0, 1]], ['nort
 // drop: kırılınca kendisi yerine düşen eşya.
 const BLOCKS = [
   null,
-  { name: 'Çimen', top: TILE.grassTop, side: TILE.grassSide, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
+  // tint: biyoma göre tonlanan yüzler ('top' ya da 'all')
+  { name: 'Çimen', top: TILE.grassTop, side: TILE.grassSide, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel', tint: 'top' },
   { name: 'Toprak', top: TILE.dirt, side: TILE.dirt, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
   { name: 'Taş', top: TILE.stone, side: TILE.stone, bottom: TILE.stone, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'cobble' },
   { name: 'Kütük', top: TILE.logTop, side: TILE.logSide, bottom: TILE.logTop, breakTime: 3, tool: 'axe' },
-  { name: 'Yaprak', top: TILE.leaves, side: TILE.leaves, bottom: TILE.leaves, breakTime: 0.3 },
+  { name: 'Yaprak', top: TILE.leaves, side: TILE.leaves, bottom: TILE.leaves, breakTime: 0.3, tint: 'all' },
   { name: 'Kum', top: TILE.sand, side: TILE.sand, bottom: TILE.sand, breakTime: 0.75, tool: 'shovel' },
   { name: 'Tahta', top: TILE.planks, side: TILE.planks, bottom: TILE.planks, breakTime: 3, tool: 'axe' },
   { name: 'Tuğla', top: TILE.brick, side: TILE.brick, bottom: TILE.brick, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
@@ -73,6 +74,12 @@ const BLOCKS = [
   // Akan su (63–69) ve akan lav (70–76): seviye 1–7, üst yüzü seviyeye göre alçak çizilir (fluids.js)
   ...[1, 2, 3, 4, 5, 6, 7].map(level => ({ name: 'Su', top: TILE.water, side: TILE.water, bottom: TILE.water, breakTime: Infinity, fluid: true, transparent: true, hidden: true, noDrop: true, liquid: 'water', level })),
   ...[1, 2, 3, 4, 5, 6, 7].map(level => ({ name: 'Lav', top: TILE.lava, side: TILE.lava, bottom: TILE.lava, breakTime: Infinity, fluid: true, selfLit: true, hidden: true, noDrop: true, liquid: 'lava', level })),
+  { name: 'Karlı çimen', top: TILE.snowGrassTop, side: TILE.snowGrassSide, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel', drop: 'dirt' },
+  // Buz: kaygan (üstünde sürtünme az), yarı saydam; kırılınca bir şey düşmez
+  { name: 'Buz', top: TILE.ice, side: TILE.ice, bottom: TILE.ice, breakTime: 0.5, tool: 'pickaxe', transparent: true, noDrop: true },
+  { name: 'Kaktüs', top: TILE.cactusTop, side: TILE.cactusSide, bottom: TILE.cactusTop, breakTime: 0.4, model: 'box', box: [1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16] },
+  { name: 'Ladin kütüğü', top: TILE.logTop, side: TILE.spruceLog, bottom: TILE.logTop, breakTime: 3, tool: 'axe' },
+  { name: 'Ladin yaprağı', top: TILE.spruceLeaves, side: TILE.spruceLeaves, bottom: TILE.spruceLeaves, breakTime: 0.3, noDrop: true, tint: 'all' },
 ];
 const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
   torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -85,6 +92,8 @@ const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
 const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
 Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54, obsidian: 55, portal_x: 56, portal_z: 57, netherrack: 58, lava: 59, glowstone: 60, chest: 61, diamond_ore: 62 });
 for (let level = 1; level <= 7; level++) { B['water_flow_' + level] = 62 + level; B['lava_flow_' + level] = 69 + level; }
+// Biyom blokları
+Object.assign(B, { snowy_grass: 77, ice: 78, cactus: 79, spruce_log: 80, spruce_leaves: 81 });
 // Sıvı yardımcıları: tür ('water', 'lava' ya da null), seviye, türe ve seviyeye göre blok
 const liquidOf = b => BLOCKS[b]?.liquid || null;
 const liquidBlock = (kind, level) => level === 0 ? B[kind] : B[kind + '_flow_' + level];

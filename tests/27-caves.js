@@ -2,8 +2,8 @@
 const g = window.game, p = g.player;
 document.getElementById('play').click();
 for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
-// Arazi yüzeyi: hava, su ve bitkiler atlanır (göl suyu mağara sayılmasın)
-const surface = (x, z) => { let y = 47; while (y > 0 && [0, 17, 47, 48, 49].includes(g.getBlock(x, y, z))) y--; return y; };
+// Arazi yüzeyi: hava, su, bitkiler ve göl buzu atlanır (göl suyu mağara sayılmasın)
+const surface = (x, z) => { let y = 47; while (y > 0 && [0, 17, 47, 48, 49, 78].includes(g.getBlock(x, y, z))) y--; return y; };
 const tops = [];
 for (let z = 0; z < 96; z++) for (let x = 0; x < 96; x++) tops.push(surface(x, z));
 let carved = 0, under = 0, openings = 0, oreWalls = 0, floodedCave = 0;
@@ -28,6 +28,6 @@ g.clock.time = 0.25;
 let caveMob = null;
 for (let i = 0; i < 10 && !caveMob; i++) caveMob = g.trySpawnHostile(false);
 let covered = false;
-if (caveMob) for (let y = Math.floor(caveMob.y + 2); y < 48; y++) if (![0, 17, 47, 48, 49].includes(g.getBlock(Math.floor(caveMob.x), y, Math.floor(caveMob.z)))) covered = true;
+if (caveMob) for (let y = Math.floor(caveMob.y + 2); y < 48; y++) if (![0, 17, 47, 48, 49, 78].includes(g.getBlock(Math.floor(caveMob.x), y, Math.floor(caveMob.z)))) covered = true;
 return { ok: frac > 0.03 && frac < 0.15 && openings > 50 && oreWalls > 10 && floodedCave === 0 && !!caveMob && covered,
   frac: +frac.toFixed(3), openings, oreWalls, floodedCave, caveMob: !!caveMob, covered };

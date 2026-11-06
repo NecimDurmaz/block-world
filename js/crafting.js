@@ -7,6 +7,7 @@ let craftSize = 2;
 // Şekilli tarifler: desen satırları, harf -> eşya anahtarı. Desen ızgarada kaydırılabilir.
 const RECIPES = [
   { pattern: ['L'], keys: { L: 'log' }, out: ['planks', 4] },
+  { pattern: ['L'], keys: { L: 'spruce_log' }, out: ['planks', 4] },
   { pattern: ['P', 'P'], keys: { P: 'planks' }, out: ['stick', 4] },
   { pattern: ['PP', 'PP'], keys: { P: 'planks' }, out: ['crafting_table', 1] },
   { pattern: ['C', 'S'], keys: { C: 'coal', S: 'stick' }, out: ['torch', 4] },

@@ -184,6 +184,9 @@ function buildChunk(cx, cz) {
   const buffers = [0, 1, 2].map(() => ({ pos: [], uv: [], col: [], light: [], idx: [] })); // 0 opak, 1 saydam, 2 kendi ışıklı
   const range = Math.ceil(TORCH_RANGE);
   const torches = torchesNear(cx * CH - range, cz * CH - range, cx * CH + CH - 1 + range, cz * CH + CH - 1 + range);
+  // Biyom tonu sütun başına bir kez hesaplanır
+  const tints = new Map();
+  const tintAt = (x, z) => tints.get(x * 4096 + z) || tints.set(x * 4096 + z, BIOME_TINT[biomeAt(x, z)]).get(x * 4096 + z);
   for (let y = 0; y < SY; y++) for (let z = cz * CH; z < cz * CH + CH; z++) for (let x = cx * CH; x < cx * CH + CH; x++) {
     const b = get(x, y, z);
     if (b === AIR) continue;
@@ -207,10 +210,13 @@ function buildChunk(cx, cz) {
       const base = pos.length / 3;
       // Yüzün meşale ışığı: yüz merkezinin en yakın meşaleye uzaklığı
       const lit = torches.length ? torchLightAt(torches, x + 0.5 + f.dir[0] * 0.5, y + 0.5 + f.dir[1] * 0.5, z + 0.5 + f.dir[2] * 0.5) : 0;
+      // Çimen üstü ve yapraklar biyoma göre tonlanır
+      const tint = def.tint === 'all' || (def.tint === 'top' && f.dir[1] === 1) ? tintAt(x, z) : null;
       for (const [p, t] of f.corners) {
         pos.push(x + p[0], y + p[1] * top, z + p[2]);
         uv.push(u0 + (u1 - u0) * t[0], t[1] ? 1 - EPS : EPS);
-        col.push(f.light, f.light, f.light);
+        if (tint) col.push(f.light * tint[0], f.light * tint[1], f.light * tint[2]);
+        else col.push(f.light, f.light, f.light);
         light.push(lit);
       }
       idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);

@@ -120,4 +120,4 @@ resetButton.addEventListener('click', () => {
 setInterval(() => { if (playing) saveGame(); }, AUTOSAVE_MS);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 window.addEventListener('pagehide', saveGame);
-Object.assign(window.game, { getBlock: get, setBlock: set, saveGame });
+Object.assign(window.game, { getBlock: get, setBlock: set, saveGame, biomeAt, temp: temperatureAt, hum: humidityAt });

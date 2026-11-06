@@ -1,0 +1,207 @@
+# Blok Dünyası: teknik şartname
+
+Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da bir şey değiştiğinde bu belge de aynı commit'te güncellenir. Yapılacaklar [minecraft-feature-list.md](minecraft-feature-list.md) dosyasındadır; çalışma kuralları [AGENTS.md](AGENTS.md) dosyasındadır.
+
+## Özet
+
+| | |
+| --- | --- |
+| Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
+| Dosya | `block-world.html` (tek dosya, yaklaşık 640 satır) |
+| Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
+| Arayüz dili | Türkçe |
+| Kod dili | İngilizce adlar, Türkçe yorumlar |
+| Platform | Masaüstü tarayıcı, klavye + fare. Telefon desteklenmiyor. |
+| Çalışma biçimi | claude.ai Artifact ya da çift tıklanan yerel dosya. İnternet gerekir (Three.js). |
+
+---
+
+## Dosya yapısı
+
+`block-world.html` sırasıyla şunları içerir:
+
+1. `<head>`: başlık, Roboto (Google Fonts), tüm CSS. CSS değişkenleri `:root` bloğundadır.
+2. `<body>` içinde HUD öğeleri:
+
+   | id | Görevi |
+   | --- | --- |
+   | `game` | WebGL tuvalinin yerleştiği kap |
+   | `crosshair` | Ekran ortasındaki artı işareti (önden kamerada gizlenir) |
+   | `info` | Sol üstte konum: `X 48 · Y 13 · Z 48` |
+   | `blockname` | Hotbar üstünde 1,5 sn görünen bildirim (blok adı, kamera adı) |
+   | `hotbar` | 9 yuvalı blok çubuğu |
+   | `overlay` | Başlangıç / duraklatma paneli, tuş listesi (`.keys`) ve "Oyna" düğmesi (`#play`) |
+
+3. Three.js r128 betiği.
+4. Oyunun betiği: tek bir kendini çağıran fonksiyon `(() => { ... })()`. Bölümleri:
+
+   | Bölüm başlığı | İçerik |
+   | --- | --- |
+   | Dokular | 16×16 piksellik doku atlası, `TILE` sabitleri, `tileImage()` |
+   | Bloklar | `BLOCKS` tanımları, `B` kısaltmaları, `HOTBAR` sırası |
+   | Dünya üretimi | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
+   | Three.js sahnesi | Renderer, sahne, kamera, ışıklar, kol sahnesi, chunk mesh'leri, seçim çerçevesi |
+   | Oyuncu modeli | Bloklu insan modeli ve gözden görünümdeki kol |
+   | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, AABB çarpışma |
+   | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
+   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()`, `placeBlock()` |
+   | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
+   | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
+
+---
+
+## Dünya
+
+- **Boyut:** `SX × SY × SZ = 96 × 48 × 96` blok. Sınırlı dünya; kenarlar görünmez duvardır (oyuncu dışarı çıkamaz).
+- **Veri:** `world = Uint8Array(SX * SY * SZ)`, indeks `(y * SZ + z) * SX + x`. Değer blok kimliğidir, `0` hava.
+- **Erişim:** `get(x, y, z)` dünya dışında hava döndürür, `y < 0` için taş döndürür (altta delik görünmesin diye). `set(x, y, z, id)` dünya dışını yok sayar.
+- **Tohum:** `SEED = 20261106`, sabit. Her açılışta aynı dünya üretilir.
+- **Arazi:** 4 oktavlı değer gürültüsü (`fbm`) ile yükseklik haritası, `h = 6 + fbm^1.4 * 34`.
+  - `h ≤ 14`: üstte 3 blok kum, altı taş.
+  - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
+- **Ağaçlar:** 160 deneme; yalnızca çimen üstüne. 4–5 blok kütük, üstünde yaprak kümesi.
+- **Doğma noktası:** Dünyanın ortası, sütunun en üstü. (Bilinen sorun: ortada bir çukura denk gelebiliyor.)
+
+### Bloklar
+
+| Kimlik | Sabit (`B.`) | Ad (arayüz) | Üst / yan / alt doku |
+| --- | --- | --- | --- |
+| 0 | — | Hava | — |
+| 1 | `grass` | Çimen | `grassTop` / `grassSide` / `dirt` |
+| 2 | `dirt` | Toprak | `dirt` |
+| 3 | `stone` | Taş | `stone` |
+| 4 | `log` | Kütük | `logTop` / `logSide` / `logTop` |
+| 5 | `leaves` | Yaprak | `leaves` |
+| 6 | `sand` | Kum | `sand` |
+| 7 | `planks` | Tahta | `planks` |
+| 8 | `brick` | Tuğla | `brick` |
+| 9 | `cobble` | Kırık taş | `cobble` |
+
+Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
+
+**Hotbar sırası (1–9):** Çimen, Toprak, Taş, Kırık taş, Tahta, Kütük, Tuğla, Kum, Yaprak. Bloklar sınırsızdır.
+
+### Dokular
+
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 11` doku, atlas `176 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble`.
+- Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
+- Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
+
+---
+
+## Çizim
+
+- **Chunk:** `16 × SY × 16` blokluk dilimler (`CH = 16`), toplam 36 mesh. Her mesh yalnızca havaya bakan yüzleri içerir.
+- **Yüz gölgesi:** Işık hesabı yok, köşe rengiyle sabit gölge: üst 1,0, doğu/batı 0,8, kuzey/güney 0,65, alt 0,5.
+- **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri.
+- **Yeniden kurma:** Blok değişince `rebuildAround(x, z)` o chunk'ı ve gerekiyorsa komşusunu yeniden kurar.
+- **Gökyüzü:** Sabit `#9cc8ef`, aynı renkte sis (30–70 blok).
+- **İki geçişli çizim:** `renderer.autoClear = false`. Önce dünya sahnesi, sonra gözden görünümde derinlik temizlenip kol sahnesi (`fpScene`, `fpCam`) çizilir; böylece kol duvarın içine girmez.
+- **Işıklar:** Dünya ışıksızdır. Oyuncu modeli ve kol için `HemisphereLight` (0,8) + `DirectionalLight` (0,5), `addLights()` ile iki sahneye de eklenir.
+
+---
+
+## Oyuncu
+
+### Fizik
+
+| Sabit | Değer | Anlamı |
+| --- | --- | --- |
+| `W` | 0,3 | AABB yarı genişliği (blok) |
+| `H` | 1,8 | Boy |
+| `EYE` | 1,62 | Göz yüksekliği |
+| `GRAVITY` | 26 | Yerçekimi (blok/sn²) |
+| `JUMP` | 8,4 | Zıplama hızı (yaklaşık 1,3 blok) |
+| Yürüme | 4,3 | blok/sn |
+| Koşma | 6,2 | blok/sn |
+
+- Çarpışma eksen eksen yapılır (`moveAxis`): önce x, sonra z, sonra y. Adım 0,4 bloktan büyükse alt adımlara bölünür. Kare süresi en çok 0,05 sn.
+- `y < -20` olursa oyuncu doğma noktasına ışınlanır.
+
+### Kontroller
+
+| Tuş | İş |
+| --- | --- |
+| W A S D | Yürü |
+| Fare | Bak (fare kilidiyle). Kilit reddedilirse sol tuşla sürükleyerek bak. |
+| Boşluk | Zıpla |
+| W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
+| Sol tık | Bloğu kır (yedek modda: sürüklemeden kısa tık) |
+| Sağ tık | Blok koy |
+| 1–9 / tekerlek | Blok seç |
+| V | Kamera: arkadan → gözden → önden |
+| Esc | Duraklat (fare kilidi bırakılınca panel açılır) |
+
+### Kamera
+
+- **Arkadan (varsayılan):** Gözden 4 blok geride, bakış doğrultusunda. Arada blok varsa yaklaşır (en az 0,3 blok). Nişan ışını kameradan başlar, menzil `6 + uzaklık`.
+- **Gözden:** Göz hizasında, sağ altta oyuncunun kolu. Nişan ışını gözden başlar, menzil 6.
+- **Önden:** Oyuncunun önünde, oyuncuya bakar. Artı işareti gizlenir; nişan ışını gözden başlar.
+
+### Model
+
+- Bloklu insan: 1 piksel = `P = 0.05625` blok, toplam 32 piksel = 1,8 blok. Baş 8×8×8, gövde 8×12×4, kollar ve bacaklar 4×12×4.
+- Renkler: ten `#c99a76`, saç `#4a3222`, tişört `#40598e`, pantolon `#393f4f`, ayakkabı `#212121`.
+- Animasyon: yürürken kollar ve bacaklar ters fazda sallanır, baş bakışla eğilir, kırma/koymada sağ kol vurur (0,25 sn).
+
+---
+
+## Kayıt
+
+Henüz yok. Sayfa yenilenince dünya baştan üretilir.
+
+---
+
+## Özellik durumu
+
+Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
+
+| # | Özellik | Durum |
+| --- | --- | --- |
+| — | Temel oyun: arazi, ağaçlar, yürüme, kırma/koyma, hotbar | Yapıldı |
+| — | Oyuncu modeli, üç kamera, gözden kol, W-W koşma | Yapıldı |
+| 1 | Can barı | Yapılmadı |
+| 2 | Düşme hasarı, ölüm ve yeniden doğma | Yapılmadı |
+| 3 | Sabah / akşam döngüsü | Yapılmadı |
+| 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapılmadı |
+| 5 | Canlı altyapısı ve inek | Yapılmadı |
+| 6 | Domuz, tavuk ve koyun | Yapılmadı |
+| 7 | Canlılara vurma | Yapılmadı |
+| 8 | Zombi | Yapılmadı |
+| 9 | İskelet | Yapılmadı |
+| 10 | Örümcek | Yapılmadı |
+| 11 | Creeper | Yapılmadı |
+| 12 | Düşmanların gün ışığında yanması | Yapılmadı |
+| 13 | Eşya düşmesi ve toplama | Yapılmadı |
+| 14 | Sınırlı hotbar ve envanter ekranı | Yapılmadı |
+| 15 | Blok kırma süresi ve çatlama | Yapılmadı |
+| 16 | Üretim ve çalışma masası | Yapılmadı |
+| 17 | Aletler | Yapılmadı |
+| 18 | Açlık barı ve yemek | Yapılmadı |
+| 19 | Fırın ve pişirme | Yapılmadı |
+| 20 | Maden cevherleri | Yapılmadı |
+| 21 | Su | Yapılmadı |
+| 22 | Meşale ve basit ışık | Yapılmadı |
+| 23 | Yatak | Yapılmadı |
+| 24 | Kapı ve cam | Yapılmadı |
+| 25 | Çiçek, uzun ot ve süs bitkileri | Yapılmadı |
+| 26 | Buğday tarımı ve ekmek | Yapılmadı |
+| 27 | Mağaralar | Yapılmadı |
+| 28 | Ses efektleri | Yapılmadı |
+| 29 | Kırılma parçacıkları | Yapılmadı |
+| 30 | Duraklat menüsü ve ayarlar | Yapılmadı |
+| 31 | Bulutlar ve yıldızlar | Yapılmadı |
+| 32 | Hasar ve ölüm geri bildirimleri | Yapılmadı |
+| 33 | Obsidyen ve Nether portalı | Yapılmadı |
+| 34 | Nether boyutu | Yapılmadı |
+| 35 | Nether yaratıkları | Yapılmadı |
+| 36 | Sandık | Yapılmadı |
+| 37 | Elmas, demir ve elmas aletler | Yapılmadı |
+| 38 | Zırh | Yapılmadı |
+| 39 | Yay ve ok | Yapılmadı |
+| 40 | Kova, akan su ve lav | Yapılmadı |
+| 41 | Biyomlar | Yapılmadı |
+| 42 | Sonsuz dünya | Yapılmadı |
+| 43 | Köyler ve köylü ticareti | Yapılmadı |
+| 44 | Nether kalesi ve blaze | Yapılmadı |

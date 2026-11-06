@@ -19,6 +19,7 @@ function renderInventory() {
   paintSlot(resultEl, result);
   if (result) resultEl.querySelector('.count').textContent = result.count > 1 ? result.count : '';
   renderFurnace();
+  renderChest();
   updateHeldTool();
   paintSlot(heldEl, held);
   heldEl.hidden = !held;
@@ -49,8 +50,9 @@ const clickSlot = (i, right) => clickIn(inventory, i, right);
 // size: 2 envanterde, 3 çalışma masasında
 function openInventory(size = 2) {
   craftSize = size;
-  openFurnaceKey = null;
+  openFurnaceKey = openChestKey = null;
   document.getElementById('furnace-ui').hidden = true;
+  document.getElementById('chest-ui').hidden = true;
   document.getElementById('craft-ui').hidden = false;
   document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';
   document.getElementById('craft-grid').classList.toggle('small', size === 2);
@@ -71,7 +73,7 @@ function closeInventory() {
   // Izgarada kalanlar envantere döner.
   for (let i = 0; i < 9; i++) if (craftGrid[i]) { giveOrDrop(craftGrid[i]); craftGrid[i] = null; }
   inventoryOpen = false;
-  openFurnaceKey = null;
+  openFurnaceKey = openChestKey = null;
   invEl.hidden = true;
   tooltipEl.hidden = true;
   renderInventory();

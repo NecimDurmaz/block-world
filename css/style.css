@@ -105,3 +105,4 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 .primary:focus-visible { outline: 2px solid var(--ew-secondary); outline-offset: 2px; }
 #death { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(141, 18, 19, 0.6); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 #death h1 { color: var(--ew-secondary); }
+.chest { padding-bottom: 4px; }

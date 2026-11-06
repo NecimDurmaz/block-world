@@ -74,6 +74,7 @@ function breakBlockAt(hit) {
   const def = BLOCKS[broken], tool = selectedTool();
   if (tool) useTool();
   if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
+  if (broken === B.chest) removeChest(hit.x, hit.y, hit.z);
   // Çerçeveden obsidyen kırılınca bitişik portal söner
   if (broken === B.obsidian) extinguishPortalNear(hit.x, hit.y, hit.z);
   // Bitkiler eşya düşürmez; uzun ot %12 olasılıkla buğday tohumu verir.
@@ -168,6 +169,7 @@ function placeBlock() {
     openFurnace(hit.x, hit.y, hit.z);
     return;
   }
+  if (get(hit.x, hit.y, hit.z) === B.chest && !targetedMob(hit)) { openChest(hit.x, hit.y, hit.z); return; }
   const { px: x, py: y, pz: z } = hit;
   if (!inBounds(x, y, z) || (isTargetable(get(x, y, z)) && !BLOCKS[get(x, y, z)].replaceable)) return;
   const p = player;

@@ -40,6 +40,7 @@ function saveGame() {
       health: player.health,
       food: player.food,
       furnaces: Object.values(furnaces).map(f => ({ ...f, slots: f.slots.map(st => st && { ...st }) })),
+      chests: Object.values(chests).map(c => ({ ...c, slots: c.slots.map(st => st && { ...st }) })),
       spawnPoint,
       selected,
       inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
@@ -65,6 +66,8 @@ function applySave(save) {
   player.health = save.health > 0 ? save.health : MAX_HEALTH;
   player.food = save.food ?? MAX_FOOD;
   for (const f of save.furnaces || []) furnaces[(f.dim || 'overworld') + ':' + f.x + ',' + f.y + ',' + f.z] = { dim: 'overworld', ...f };
+  // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
+  for (const c of save.chests || []) chests[c.dim + ':' + c.x + ',' + c.y + ',' + c.z] = { ...c, slots: c.slots.map(st => st && ITEMS[st.key] ? st : null) };
   spawnPoint = save.spawnPoint || null;
   scanCrops();
   rebuildPortalMeshes();

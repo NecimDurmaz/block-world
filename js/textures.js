@@ -4,10 +4,10 @@
 // Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
 window.game = {};
 
-const T = 16, N_TILES = 40;
+const T = 16, N_TILES = 42;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39,
+  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39, chestTop: 40, chestSide: 41,
 };
 
 function mulberry32(a) {
@@ -159,6 +159,14 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
   px(TILE.doorLower, x, y, y === 7 && !frame ? shade([92, 64, 38], 1) : wood);
   const pane = !frame && y >= 3 && y <= 9 && x !== 7 && x !== 8;
   px(TILE.doorUpper, x, y, pane ? '#a9cbe0' : wood);
+}
+// Sandık: koyu çerçeveli tahta; yanda ortada koyu kilit çizgisi ve gümüş kilit
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  const frame = x === 0 || x === 15 || y === 0 || y === 15;
+  const wood = frame ? shade([84, 56, 30], 0.95 + rnd() * 0.1) : shade([160, 112, 56], 0.88 + rnd() * 0.2);
+  px(TILE.chestTop, x, y, wood);
+  const lock = x >= 7 && x <= 8 && y >= 5 && y <= 8;
+  px(TILE.chestSide, x, y, lock ? (y === 5 ? '#e0e0e0' : '#a8a8a8') : y === 5 ? shade([60, 40, 22], 1) : wood);
 }
 // Kumtaşı
 for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {

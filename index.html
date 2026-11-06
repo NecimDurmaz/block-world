@@ -11,6 +11,7 @@
 <div id="game"></div>
 <div id="crosshair"></div>
 <div id="info">X 0 · Y 0 · Z 0</div>
+<div id="hint">K: Kontrol paneli · E: Envanter</div>
 <div id="blockname"></div>
 <div id="saved" hidden>Kaydedildi</div>
 <div id="hotbar"></div>
@@ -89,6 +90,23 @@
           <button class="mc-btn toggle" type="button" data-toggle="sound"><b>Ses</b><small>Efektler ve canlı sesleri</small><i class="state"></i></button>
         </div>
       </section>
+      <section class="control-wide">
+        <h3>Görünüm</h3>
+        <div class="control-view">
+          <span>Kamera</span>
+          <div class="control-buttons">
+            <button class="mc-btn" type="button" data-view="0">Arkadan</button>
+            <button class="mc-btn" type="button" data-view="1">Gözden</button>
+            <button class="mc-btn" type="button" data-view="2">Önden</button>
+          </div>
+          <span>Görüş mesafesi</span>
+          <div class="control-buttons">
+            <button class="mc-btn" type="button" data-distance="short">Kısa</button>
+            <button class="mc-btn" type="button" data-distance="normal">Normal</button>
+            <button class="mc-btn" type="button" data-distance="far">Uzak</button>
+          </div>
+        </div>
+      </section>
       <section>
         <h3>Saat <span class="control-hint" id="control-clock"></span></h3>
         <div class="control-buttons" id="control-times"></div>
@@ -164,10 +182,9 @@
       <kbd>Q</kbd><span>Seçili eşyadan birini at</span>
       <kbd>Sağ tık (basılı)</kbd><span>Eldeki yemeği ye</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
-      <kbd>K</kbd><span>Kontrol paneli: güvenli mod, saat, eşyalar…</span>
+      <kbd>K</kbd><span>Kontrol paneli: bütün özellikler düğmelerle (güvenli mod, uçma, saat, eşyalar…)</span>
       <kbd>H</kbd><span>Rehberi gizle / göster</span>
       <kbd>T</kbd><span>Sohbet</span>
-      <kbd>/</kbd><span>Komut yaz (/help)</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
     <div class="actions">

@@ -654,11 +654,13 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 ## Kontrol paneli
 
 - K tuşu (oyun sırasında, sohbet kapalıyken) ve ana menüdeki "Kontrol paneli" düğmesi (oyunu başlatıp açar) `#control` panelini açar; Esc, K, "Kapat" ya da panelin dışına tıklamak kapatır. Açıkken (`controlOpen`) oyun durmaz; oyuncu yürümez, kazamaz, hotbar ve E/Q/T çalışmaz, fare kilidi bırakılır (gecikerek gelen kilit hemen bırakılır).
+- Bütün özellikler bu panelden açılıp kapanır; sohbet komutları yalnızca yedektir ve menüdeki tuş listesinde gösterilmez. Oyun ekranının sol üstünde, konum bilgisinin altında sürekli bir ipucu durur (`#hint`: "K: Kontrol paneli · E: Envanter").
 - Görünüm Minecraft gibidir: gri kabartma panel, koyu gömük bölümler, taş düğmeler (`.mc-btn`, üzerine gelince mavimsi). Geniş ekranda iki sütun, 640 px altında tek sütun.
 
   | Bölüm | Denetimler | Eylem (`game-actions.js`) |
   | --- | --- | --- |
   | Oyun modu | Güvenli mod, Ölümsüzlük, Uçma, Rehber, Ses anahtarları (2×2; açıkken yeşil, "AÇIK") | `setSafeMode`, `setGodMode`, `setFlyAllowed`, `settings.sound` + `applySettings`/`saveSettings` |
+  | Görünüm | Kamera: Arkadan, Gözden, Önden (V ile aynı); Görüş mesafesi: Kısa, Normal, Uzak (ayarlardakiyle aynı). Seçili olan yeşil | `view`, `settings.viewDistance` + `applySettings`/`saveSettings` |
   | Saat | Sabah, Öğle, Akşam, Gece yarısı (`TIMES_OF_DAY`); başlıkta o anki saat | `setTimeOfDay` |
   | Oyuncu | Canı doldur, Karnı doyur, Doğma noktası burası, Envanteri boşalt (ikinci basışta) | `healPlayer`, `feedPlayer`, `setSpawnHere`, `clearInventory` |
   | Eşyalar | Eşya seç ve al: paneli kapatıp eşya seçiciyi açar | `openPicker` |
@@ -676,7 +678,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Rehber
 
-- Hiç Minecraft oynamamış biri için adım adım görevler (`guide.js`, `GUIDE_STEPS`). Sağ üstte Minecraft'taki ilerleme bildirimi gibi koyu bir kart (`#guide`): "Rehber · n/16", sarı başlık, nasıl yapılacağı (tuşlar, ne nereye), mavi ipucu satırı. Yalnızca oynarken görünür.
+- Hiç Minecraft oynamamış biri için adım adım görevler (`guide.js`, `GUIDE_STEPS`). Sağ üstte Minecraft'taki ilerleme bildirimi gibi koyu bir kart (`#guide`): "Rehber · n/16", sarı başlık, nasıl yapılacağı (tuşlar, ne nereye), mavi ipucu satırı. Yalnızca oynarken ve envanter ya da kontrol paneli kapalıyken görünür.
 - Adımlar (sırayla): etrafına bak ve yürü (5 blok), kütük kır, envanteri aç, tahta yap, çalışma masası yap ve koy, tahta kazma yap, taş kaz, taş kazma yap, et bul ve ye, meşale yap, yatak yap ve gece uyu, kömür ve demir bul, fırında demir erit, demir kazma ve çakmak yap, portal kur ve yak, Nether'e geç. Sonunda "Rehber tamamlandı!".
 - Her adımın tamamlanma koşulu oyundaki gerçek durumdur: envanterde eşya (`hasItem`) ya da başka dosyalarda işaretlenen olay (`guideFlags`: envanter açıldı, yemek yendi, uyunuldu, çalışma masası kondu, portal yandı) ya da boyut. 0,5 sn'de bir denetlenir; tamamlanınca "Tamamlandı: …" bildirimi, kısa bir ses ve kartın yeşil çerçevesi. Önceden yapılmış adımlar art arda geçilir.
 - H kartı gizler/gösterir; aynı ayar (`settings.guide`, ayarlarda "Rehber" kutusu, kontrol panelinde "Rehber" anahtarı) ayarlarla birlikte saklanır. Adım (`guideStep`) kayda yazılır.

@@ -16,6 +16,11 @@ q('[data-toggle="god"]').click();
 q('[data-toggle="sound"]').click();
 const soundOff = !g.isSoundOn() && !g.settings.sound;
 q('[data-toggle="sound"]').click();
+// Görünüm: kamera ve görüş mesafesi
+q('[data-view="1"]').click();
+q('[data-distance="far"]').click();
+const viewOk = q('[data-view="1"]').classList.contains('on') && g.settings.viewDistance === 'far' && q('[data-distance="far"]').classList.contains('on');
+q('[data-distance="normal"]').click();
 q('[data-time="midnight"]').click();
 const midnight = Math.abs(g.clock.time - 0.75) < 0.01;
 p.health = 5; p.food = 5;
@@ -39,5 +44,5 @@ g.closeInventory();
 key('KeyK');
 key('Escape');
 const closed = !g.isControlOpen();
-return { ok: opened && noInventory && toggles && soundOff && midnight && healed && summoned && tp && firstClick && cleared && picker && closed,
-  opened, noInventory, toggles, soundOff, midnight, healed, summoned, tp, firstClick, cleared, picker, closed };
+return { ok: viewOk && opened && noInventory && toggles && soundOff && midnight && healed && summoned && tp && firstClick && cleared && picker && closed,
+  viewOk, opened, noInventory, toggles, soundOff, midnight, healed, summoned, tp, firstClick, cleared, picker, closed };

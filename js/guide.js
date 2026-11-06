@@ -43,7 +43,8 @@ const GUIDE_STEPS = [
 let guideStep = 0, guideTimer = 0, guideDoneFlash = 0;
 const guideEl = document.getElementById('guide');
 function renderGuide() {
-  guideEl.hidden = !settings.guide || !playing || guideStep > GUIDE_STEPS.length;
+  // Panel açıkken (envanter, kontrol paneli) kart paneli örtmesin diye gizlenir
+  guideEl.hidden = !settings.guide || !playing || inventoryOpen || controlOpen || guideStep > GUIDE_STEPS.length;
   if (guideEl.hidden) return;
   const finished = guideStep >= GUIDE_STEPS.length, step = GUIDE_STEPS[guideStep];
   document.getElementById('guide-count').textContent = finished ? 'Rehber' : `Rehber · ${guideStep + 1}/${GUIDE_STEPS.length}`;

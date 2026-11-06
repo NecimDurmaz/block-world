@@ -44,6 +44,19 @@ for (const [kind, type] of Object.entries(MOB_TYPES)) {
   b.addEventListener('click', () => toast(summonMob(kind)));
   mobsEl.appendChild(b);
 }
+// Görünüm: kamera (V ile de değişir) ve görüş mesafesi (ayarlardakiyle aynı)
+controlEl.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+  view = Number(b.dataset.view);
+  toast('Kamera: ' + VIEWS[view]);
+  renderControl();
+}));
+controlEl.querySelectorAll('[data-distance]').forEach(b => b.addEventListener('click', () => {
+  settings.viewDistance = b.dataset.distance;
+  applySettings();
+  saveSettings();
+  toast('Görüş mesafesi: ' + b.textContent);
+  renderControl();
+}));
 controlEl.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
   const t = TOGGLES[b.dataset.toggle];
   toast(t.set(!t.on()));
@@ -70,6 +83,8 @@ function renderControl() {
     b.setAttribute('aria-pressed', on);
     b.querySelector('.state').textContent = on ? 'AÇIK' : 'KAPALI';
   });
+  controlEl.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', Number(b.dataset.view) === view));
+  controlEl.querySelectorAll('[data-distance]').forEach(b => b.classList.toggle('on', b.dataset.distance === settings.viewDistance));
   document.getElementById('control-clock').textContent = clockText().split(' · ')[1];
   if (!confirmClear) controlEl.querySelector('[data-action="clear"]').textContent = 'Envanteri boşalt';
 }

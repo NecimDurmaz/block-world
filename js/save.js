@@ -38,7 +38,6 @@ function saveGame() {
       food: player.food,
       furnaces: Object.values(furnaces).map(f => ({ ...f, slots: f.slots.map(st => st && { ...st }) })),
       spawnPoint,
-      soundOn,
       selected,
       inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
       time: clock.time,
@@ -60,7 +59,6 @@ function applySave(save) {
   for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
   spawnPoint = save.spawnPoint || null;
   scanCrops();
-  setSound(save.soundOn ?? true);
   renderHearts();
   renderFood();
   // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
@@ -84,6 +82,8 @@ async function loadGame() {
   }
   // Canlılar kaydedilmez; dünya yüklendikten sonra yeniden doğar.
   spawnInitialAnimals();
+  if (db) await loadSettings();
+  applySettings();
   playButton.disabled = false;
   window.game.ready = true;
 }
@@ -103,4 +103,3 @@ setInterval(() => { if (playing) saveGame(); }, AUTOSAVE_MS);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 window.addEventListener('pagehide', saveGame);
 Object.assign(window.game, { getBlock: get, setBlock: set, saveGame });
-loadGame();

@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (28 betik, sırayla yüklenir) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (29 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -43,7 +43,7 @@ tests/              otomatik testler
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
-   | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), "Ses: açık/kapalı" (`#sound-toggle`), kayıt durumu (`#save-note`) |
+   | `overlay` | Başlangıç / duraklatma menüsü. `#menu-main`: tuş listesi (`.keys`), "Oyna" / oyun başladıktan sonra "Devam et" (`#play`, kayıt okunana kadar pasif), "Ayarlar" (`#open-settings`), "Kaydet" (`#save-now`, oyun başladıktan sonra), "Yeni dünya" (`#reset`, kırmızı), kayıt durumu (`#save-note`). `#menu-settings`: ayar denetimleri ve "Geri" |
    | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
 
 - **Betikler:** `<body>` sonunda önce Three.js r128, sonra `js/` altındaki oyun betikleri bu sırayla yüklenir. Bunlar ES modülü değil, klasik betiklerdir: her dosyanın üst düzey `const`/`let`/`function` tanımları bütün betiklerin paylaştığı genel kapsamdadır. Bu sayede oyun `file://` üzerinden (çift tıklayarak) da açılır.
@@ -77,6 +77,7 @@ tests/              otomatik testler
    | `held-tool.js` | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki alet (`fpTool`, `tpTool`, `updateHeldTool()`) |
    | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
+   | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -423,18 +424,32 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - Blok kırılınca 12, kazarken 0,2 sn'de bir 2 parça (`spawnDebris`). Parça 0,1 blokluk bir küptür ve bloğun yan dokusundan rastgele 4×4 piksellik bir kesit taşır (gece kararır).
 - Rastgele hızla saçılır, yerçekimiyle düşer, katı bir bloğa değince yerde kalır, son 0,3 sn'de küçülür ve `DEBRIS_LIFE = 0.8` sn'de kaybolur. Aynı anda en çok `MAX_DEBRIS = 200` parça; fazlası en eskiden silinir.
 
+## Ayarlar
+
+- Duraklatma menüsündeki "Ayarlar" düğmesi ayar görünümünü açar. Her değişiklik hemen uygulanır ve kaydedilir.
+
+  | Ayar (`settings.`) | Denetim | Varsayılan | Etkisi |
+  | --- | --- | --- | --- |
+  | `sensitivity` | kaydırıcı 0,001–0,006 (yüzde olarak gösterilir) | 0,0025 (%100) | Fare hareketinin bakışa çarpanı |
+  | `fov` | kaydırıcı 60–100 | 75 | Kamera görüş alanı; koşarken +10 |
+  | `viewDistance` | `short` / `normal` / `far` | `normal` | Sisin uzak sınırı 40 / 70 / 120 blok, yakın sınırı bunun 0,43 katı |
+  | `sound` | onay kutusu | açık | Ses açık/kapalı |
+  | `invertY` | onay kutusu | kapalı | Fareyi yukarı itince aşağı bakılır |
+
+- Ayarlar dünya kaydından ayrı, aynı IndexedDB deposunda `settings` anahtarıyla saklanır; "Yeni dünya" bunları silmez. Bilinmeyen alanlar yok sayılır, eksik alanlar varsayılanda kalır.
+
 ## Ses
 
 - Tek `AudioContext`, ilk "Oyna" tıklamasında açılır (`initAudio`). Bütün sesler kodla üretilir; dosya yok.
 - **Gürültü sesleri** (`playNoise`: beyaz gürültü → filtre → zarf): blok kırılınca (`break`), kazarken 0,25 sn'de bir (`dig`), koyunca (`place`), yürürken adım (`step`, 0,4 sn'de bir, koşarken 0,3; yalnızca yerde ve suyun dışında), hasar (`hurt`). Filtre frekansı bloğun malzemesine göre değişir (`blockMaterialFreq`): toprak 700 Hz, ahşap 1100, taş 2600, yaprak ve bitki 4200, cam 5200.
 - **Ton sesleri** (`playTone`: osilatör, frekans kayması, isteğe bağlı vibrato ve alçak geçiren filtre): eşya toplama (`pop`), canlılar (`MOB_SOUNDS`): inek alçak "mö", domuz kısa hırıltı, tavuk tiz "gıt", koyun titreşimli "mee", zombi inleme.
 - **Canlı sesleri:** her canlı 5–12 sn arayla; oyuncuya `SOUND_RANGE = 16` bloktan yakınsa çalar, ses seviyesi uzaklıkla doğrusal azalır.
-- **Aç/kapat:** Duraklatma panelindeki "Ses" düğmesi (`setSound`); ayar kayda yazılır (`soundOn`).
+- **Aç/kapat:** Ayarlardaki "Ses" kutusu (`setSound`).
 - `soundLog`: son 50 sesin adı ve şiddeti (ses kapalıyken de tutulur; testler için).
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -448,7 +463,6 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
   | `food` | Açlık (yoksa 20) |
-  | `soundOn` | Ses açık mı (yoksa açık) |
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
   | `furnaces` | Fırınların dizisi: `{ x, y, z, slots, burn, burnMax, progress }` |
   | `selected` | Seçili hotbar yuvası (0–8) |
@@ -457,7 +471,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
 
   Yeni özellikler kendi alanlarını bu nesneye ekler ve bu tabloya yazar. Alanların anlamı değişirse `SAVE_VERSION` artırılır; sürümü uymayan kayıt yok sayılır.
 - **Ne zaman kaydedilir:** her 30 sn'de bir (oyun oynanırken), duraklatınca (`pause()`), sayfa arka plana geçince (`visibilitychange`) ve kapanırken (`pagehide`).
-- **Açılış:** "Oyna" düğmesi kayıt okunana kadar pasiftir. Kayıt varsa dünya ondan yüklenir, bütün chunk'lar yeniden kurulur, oyuncu, can, hotbar ve saat geri gelir. IndexedDB açılamazsa (3 sn zaman aşımı dahil) oyun kayıtsız çalışır, panelde "Kayıt yapılamıyor" notu çıkar ve "Yeni dünya" düğmesi gizlenir.
+- **Açılış:** Kayıt, bütün betikler yüklendikten sonra `main.js`'in sonunda okunur (`loadGame()`); ardından ayarlar okunur. "Oyna" düğmesi bunlar bitene kadar pasiftir. Kayıt varsa dünya ondan yüklenir, bütün chunk'lar yeniden kurulur, oyuncu, can, hotbar ve saat geri gelir. IndexedDB açılamazsa (3 sn zaman aşımı dahil) oyun kayıtsız çalışır, panelde "Kayıt yapılamıyor" notu çıkar ve "Yeni dünya" düğmesi gizlenir.
 - **Yeni dünya:** İlk basışta düğme "Emin misin? Tekrar bas" olur, ikinci basışta kayıt silinir ve sayfa yeniden yüklenir. (`confirm()` Artifact içinde çalışmadığı için onay sayfanın kendisindedir.)
 
 ---
@@ -499,7 +513,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 27 | Mağaralar | Yapıldı |
 | 28 | Ses efektleri | Yapıldı |
 | 29 | Kırılma parçacıkları | Yapıldı |
-| 30 | Duraklat menüsü ve ayarlar | Yapılmadı |
+| 30 | Duraklat menüsü ve ayarlar | Yapıldı |
 | 31 | Bulutlar ve yıldızlar | Yapılmadı |
 | 32 | Hasar ve ölüm geri bildirimleri | Yapılmadı |
 | 33 | Obsidyen ve Nether portalı | Yapılmadı |

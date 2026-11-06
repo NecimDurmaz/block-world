@@ -29,13 +29,17 @@ window.addEventListener('keyup', e => {
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 function look(dx, dy) {
-  player.yaw -= dx * 0.0025;
-  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - dy * 0.0025));
+  player.yaw -= dx * settings.sensitivity;
+  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - dy * settings.sensitivity * (settings.invertY ? -1 : 1)));
 }
 
 function start() {
   initAudio();
   overlay.hidden = true;
+  // Oyun başladıktan sonra menü "Devam et" ve "Kaydet" gösterir.
+  document.getElementById('play').textContent = 'Devam et';
+  document.getElementById('save-now').hidden = false;
+  showSettings(false);
   playing = true;
   fallbackLook = false;
   let req;
@@ -45,6 +49,7 @@ function start() {
 function useFallback() {
   fallbackLook = true;
   overlay.hidden = true;
+  showSettings(false);
   playing = true;
 }
 function pause() {

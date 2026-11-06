@@ -106,7 +106,7 @@ function frame(now) {
     camera.position.copy(eye).addScaledVector(dir, dist);
     camera.lookAt(eye);
   }
-  const fov = (sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 85 : 75;
+  const fov = settings.fov + ((sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 10 : 0);
   if (Math.abs(camera.fov - fov) > 0.1) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); }
 
   // Model ve yürüme animasyonu
@@ -139,8 +139,9 @@ function frame(now) {
   // Kamera suyun içindeyse ekran mavi tonlanır, sis 8 bloğa iner.
   const cameraInWater = get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.water;
   underwaterEl.hidden = !cameraInWater;
-  scene.fog.near = cameraInWater ? 0 : 30;
-  scene.fog.far = cameraInWater ? 8 : 70;
+  const viewDistance = VIEW_DISTANCES[settings.viewDistance];
+  scene.fog.near = cameraInWater ? 0 : viewDistance * 0.43;
+  scene.fog.far = cameraInWater ? 8 : viewDistance;
   if (cameraInWater) scene.fog.color.setRGB(0.1, 0.25, 0.5).multiplyScalar(brightnessUniform.value);
   info.textContent = `${clockText()} · X ${Math.floor(p.x)} · Y ${Math.floor(p.y)} · Z ${Math.floor(p.z)}`;
   renderer.clear();
@@ -149,3 +150,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// Kayıt, bütün betikler yüklendikten sonra okunur (yükleme sırasında başka betiğin tanımı eksik kalmasın).
+loadGame();

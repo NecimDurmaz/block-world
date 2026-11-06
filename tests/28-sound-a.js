@@ -38,8 +38,10 @@ const moo = async distance => {
 };
 const near = await moo(2), far = await moo(12), out = await moo(20);
 const cowOk = !!near && !!far && !out && near.volume > far.volume;
-// Ses kapatılınca düğme yazısı değişir
-document.getElementById('sound-toggle').click();
-const toggled = !g.isSoundOn() && document.getElementById('sound-toggle').textContent === 'Ses: kapalı';
-await wait(500); // düğme kaydı tetikler
+// Ayarlardan ses kapatılır
+const box = document.getElementById('set-sound');
+box.checked = false;
+box.dispatchEvent(new Event('change'));
+const toggled = !g.isSoundOn();
+await wait(500); // ayar kaydı
 return { ok: steps && dig && hurt && cowOk && toggled, audioReady, steps, dig, hurt, cowOk, nearVol: near?.volume, farVol: far?.volume, toggled };

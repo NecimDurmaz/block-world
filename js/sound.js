@@ -119,11 +119,7 @@ function updateSteps(dt, moving, running) {
 }
 
 // Duraklatma panelindeki ses düğmesi
-const soundButton = document.getElementById('sound-toggle');
-function setSound(on) {
-  soundOn = on;
-  soundButton.textContent = on ? 'Ses: açık' : 'Ses: kapalı';
-}
-soundButton.addEventListener('click', () => { setSound(!soundOn); saveGame(); });
+// Aç/kapat ayarlardan gelir (settings.js)
+function setSound(on) { soundOn = on; }
 
 Object.assign(window.game, { soundLog, setSound, isSoundOn: () => soundOn, audioReady: () => !!audio });

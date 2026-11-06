@@ -63,6 +63,7 @@
   #food { display: flex; flex-direction: row-reverse; gap: 2px; margin-left: auto; }
   #food i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
   #hearts i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
+  #sleep { position: fixed; inset: 0; pointer-events: none; background: #05070d; opacity: 0; transition: opacity 0.6s; }
   #underwater { position: fixed; inset: 0; pointer-events: none; background: rgba(30, 80, 170, 0.35); }
   #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
   #blockname { position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
@@ -97,6 +98,7 @@
 <div id="hotbar"></div>
 <div id="status"><div id="hearts"></div><div id="food"></div></div>
 <div id="underwater" hidden></div>
+<div id="sleep"></div>
 <div id="hurt"></div>
 <div id="inventory" hidden>
   <div class="panel inv-panel">
@@ -157,10 +159,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 23;
+  const T = 16, N_TILES = 26;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25,
   };
 
   function mulberry32(a) {
@@ -253,6 +255,14 @@
   for (let y = 6; y < T; y++) for (let x = 7; x < 9; x++) {
     px(TILE.torch, x, y, y < 8 ? (x === 7 ? '#ffe36a' : '#ffb02a') : y === 8 ? '#ff8a1f' : (x === 7 ? '#8a6238' : '#6b4a2b'));
   }
+  // Yatak: üst dokuda yastık dokunun üst kenarına (baş tarafına) bakar.
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const red = shade([168, 40, 42], 0.9 + rnd() * 0.15);
+    px(TILE.bedHeadTop, x, y, y < 7 && x > 1 && x < 14 ? shade([236, 236, 232], 0.95 + rnd() * 0.05) : y === 7 ? shade([150, 150, 150], 1) : red);
+    px(TILE.bedFootTop, x, y, y > 12 ? shade([130, 30, 32], 1) : red);
+    // Yan: üstte kırmızı örtü, beyaz çarşaf şeridi, altta tahta
+    px(TILE.bedSide, x, y, y < 10 ? red : y < 12 ? shade([236, 236, 232], 1) : (x < 3 || x > 12 ? shade([120, 88, 52], 1) : shade([46, 32, 24], 1)));
+  }
   // Su: mavi dalgacıklar (saydamlık malzemeden gelir)
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const ripple = (x + y * 3) % 7 === 0 || (x * 2 + y) % 11 === 0;
@@ -279,6 +289,7 @@
 
   // ---------- Bloklar ----------
   const AIR = 0;
+  const BED_DIRS = [['east', [1, 0]], ['west', [-1, 0]], ['south', [0, 1]], ['north', [0, -1]]], BED_HEIGHT = 9 / 16;
   // breakTime: elle kırma süresi (sn). tool: bloğu hızlı kıran alet. needsTool: o alet olmadan kırılınca eşya düşmez.
   // drop: kırılınca kendisi yerine düşen eşya.
   const BLOCKS = [
@@ -308,9 +319,17 @@
       name: 'Meşale', top: TILE.torch, side: TILE.torch, bottom: TILE.torch, breakTime: 0.05,
       model: 'torch', lean, noCollide: true, transparent: true, hidden: true, drop: 'torch',
     })),
+    // Yatak: iki hücre (ayak ve baş), dir baş tarafının yönü. Yarım blok yüksekliğinde (height).
+    ...BED_DIRS.flatMap(([, dir]) => ['foot', 'head'].map(part => ({
+      name: 'Yatak', top: part === 'head' ? TILE.bedHeadTop : TILE.bedFootTop, side: TILE.bedSide, bottom: TILE.planks,
+      breakTime: 0.3, tool: 'axe', model: 'bed', part, dir, height: BED_HEIGHT, transparent: true, hidden: true, drop: 'bed',
+    }))),
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
     torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
+  // Yatak kimlikleri 23–30: her yön için ayak ve baş
+  BED_DIRS.forEach(([name], i) => { B['bed_foot_' + name] = 23 + i * 2; B['bed_head_' + name] = 24 + i * 2; });
+  const isBed = b => b >= 23 && b <= 30;
   const isTorch = b => b >= B.torch_floor && b <= B.torch_north;
   // Katı blok: çarpışır, görüşü ve okları keser.
   const isSolid = b => b !== AIR && !BLOCKS[b].fluid && !BLOCKS[b].noCollide;
@@ -478,6 +497,27 @@
     for (const [tx, ty, tz] of torches) light = Math.max(light, 1 - Math.hypot(tx - x, ty - y, tz - z) / TORCH_RANGE);
     return light;
   }
+  // Yatak hücresi: yarım blok yüksekliğinde kutu; iki yarı arasındaki yüz ve alt yüz çizilmez.
+  // Üst dokunun "yukarısı" (v = 1) her iki yarıda da baş tarafına döner.
+  function addBedModel(buf, x, y, z, def, torches) {
+    const [dx, dz] = def.dir, other = def.part === 'foot' ? [dx, dz] : [-dx, -dz];
+    const clamp = v => Math.min(1 - EPS, Math.max(EPS, v));
+    for (const f of FACES) {
+      if (f.dir[1] === -1 || (f.dir[1] === 0 && f.dir[0] === other[0] && f.dir[2] === other[1])) continue;
+      const top = f.dir[1] === 1, tile = top ? def.top : def.side;
+      const lit = torches.length ? torchLightAt(torches, x + 0.5 + f.dir[0] * 0.5, y + BED_HEIGHT, z + 0.5 + f.dir[2] * 0.5) : 0;
+      const base = buf.pos.length / 3;
+      for (const [p, t] of f.corners) {
+        buf.pos.push(x + p[0], y + p[1] * BED_HEIGHT, z + p[2]);
+        let u = t[0], v = t[1] * BED_HEIGHT;
+        if (top) { const rx = p[0] - 0.5, rz = p[2] - 0.5; v = rx * dx + rz * dz + 0.5; u = rz * dx - rx * dz + 0.5; }
+        buf.uv.push((tile + clamp(u)) / N_TILES, clamp(v));
+        buf.col.push(f.light, f.light, f.light);
+        buf.light.push(lit);
+      }
+      buf.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    }
+  }
   // Meşale çubuğu: 2x10 piksellik kutu; duvar meşalesi duvara yakın başlar ve dışa eğilir.
   function addTorchModel(buf, x, y, z, def) {
     const [lx, lz] = def.lean, wall = lx || lz;
@@ -515,6 +555,7 @@
       if (b === AIR) continue;
       const def = BLOCKS[b];
       if (def.model === 'torch') { addTorchModel(buffers[0], x, y, z, def); continue; }
+      if (def.model === 'bed') { addBedModel(buffers[0], x, y, z, def, torches); continue; }
       const buf = buffers[def.transparent ? 1 : 0];
       const { pos, uv, col, light, idx } = buf;
       for (const f of FACES) {
@@ -690,7 +731,13 @@
   // kx/kz: geri itilme hızı, her karede söner. fallPeak: havadayken ulaşılan en yüksek y.
   // w/h: çarpışma kutusunun yarı genişliği ve boyu (canlılarla ortak fizik bunları kullanır).
   const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, w: W, h: H, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, food: MAX_FOOD, fallPeak: null };
+  // Yatakla belirlenen doğma noktası; yoksa dünyanın ortası.
+  let spawnPoint = null;
   function spawn() {
+    if (spawnPoint) {
+      Object.assign(player, spawnPoint, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
+      return;
+    }
     const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
     let y = SY - 1;
     while (y > 0 && get(x, y - 1, z) === AIR) y--;
@@ -708,12 +755,27 @@
     return false;
   }
   // Oyuncu ve canlılar için ortak AABB fiziği: e = { x, y, z, w, h, vx, vy, vz, onGround }
+  // Alçak bloklar (yatak) yalnızca kendi yükseklikleri (height) kadar çarpışır.
   function collides(e, x, y, z) {
     for (let bx = Math.floor(x - e.w); bx <= Math.floor(x + e.w); bx++)
       for (let by = Math.floor(y); by <= Math.floor(y + e.h - 0.001); by++)
-        for (let bz = Math.floor(z - e.w); bz <= Math.floor(z + e.w); bz++)
-          if (solid(bx, by, bz)) return true;
+        for (let bz = Math.floor(z - e.w); bz <= Math.floor(z + e.w); bz++) {
+          if (bx < 0 || bz < 0 || bx >= SX || bz >= SZ) return true;
+          const b = get(bx, by, bz);
+          if (isSolid(b) && y < by + (BLOCKS[b]?.height || 1)) return true;
+        }
     return false;
+  }
+  // Varlığın ayak hizasındaki katmanda, altındaki katı blokların en yüksek üst yüzü
+  function groundTop(e) {
+    const by = Math.floor(e.y);
+    let top = by + 1, found = false;
+    for (let bx = Math.floor(e.x - e.w); bx <= Math.floor(e.x + e.w); bx++)
+      for (let bz = Math.floor(e.z - e.w); bz <= Math.floor(e.z + e.w); bz++) {
+        const b = get(bx, by, bz);
+        if (isSolid(b)) { const t = by + (BLOCKS[b]?.height || 1); top = found ? Math.max(top, t) : t; found = true; }
+      }
+    return top;
   }
   // Çarpışma olduysa true döner.
   function moveAxis(e, axis, d) {
@@ -721,7 +783,7 @@
     e[axis] += d;
     if (!collides(e, e.x, e.y, e.z)) return false;
     if (axis === 'y') {
-      if (d < 0) { e.y = Math.floor(e.y) + 1; e.onGround = true; }
+      if (d < 0) { e.y = groundTop(e); e.onGround = true; }
       else e.y = Math.floor(e.y + e.h) - e.h - 0.001;
       e.vy = 0;
     } else {
@@ -872,6 +934,12 @@
     const broken = get(hit.x, hit.y, hit.z);
     set(hit.x, hit.y, hit.z, AIR);
     // Bu bloğa dayanan meşaleler düşer
+    // Yatağın diğer yarısı da kalkar (eşya bir kez düşer)
+    if (isBed(broken)) {
+      const def = BLOCKS[broken], sign = def.part === 'foot' ? 1 : -1;
+      const ox = hit.x + def.dir[0] * sign, oz = hit.z + def.dir[1] * sign;
+      if (isBed(get(ox, hit.y, oz))) { set(ox, hit.y, oz, AIR); rebuildAround(ox, oz); }
+    }
     let torchChanged = isTorch(broken);
     for (const [dx, dy, dz, id] of [[0, 1, 0, B.torch_floor], [1, 0, 0, B.torch_east], [-1, 0, 0, B.torch_west], [0, 0, 1, B.torch_south], [0, 0, -1, B.torch_north]]) {
       if (get(hit.x + dx, hit.y + dy, hit.z + dz) === id) {
@@ -948,6 +1016,7 @@
     if (!hit) return;
     // Çalışma masasına sağ tık 3x3 üretim ızgarasını açar.
     if (get(hit.x, hit.y, hit.z) === B.crafting_table && !targetedMob(hit)) { openInventory(3); return; }
+    if (isBed(get(hit.x, hit.y, hit.z)) && !targetedMob(hit)) { useBed(hit.x, hit.y, hit.z); return; }
     if ((get(hit.x, hit.y, hit.z) === B.furnace || get(hit.x, hit.y, hit.z) === B.furnace_lit) && !targetedMob(hit)) {
       openFurnace(hit.x, hit.y, hit.z);
       return;
@@ -958,6 +1027,19 @@
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
     const slot = inventory[selected];
+    if (slot?.key === 'bed') {
+      // Ayak bakılan hücreye, baş oyuncunun baktığı eksende bir sonraki hücreye; ikisinin altı da dolu olmalı.
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const [name, [dx, dz]] = BED_DIRS.find(([, [ax, az]]) => Math.abs(fx) > Math.abs(fz) ? ax === Math.sign(fx) : az === Math.sign(fz));
+      const hx = x + dx, hz = z + dz;
+      if (!inBounds(hx, y, hz) || isTargetable(get(hx, y, hz)) || !isSolid(get(x, y - 1, z)) || !isSolid(get(hx, y - 1, hz))) return;
+      set(x, y, z, B['bed_foot_' + name]);
+      set(hx, y, hz, B['bed_head_' + name]);
+      rebuildAround(x, z);
+      rebuildAround(hx, hz);
+      takeFromSlot(selected, 1);
+      return;
+    }
     if (slot?.key === 'torch') {
       // Meşale: üste konunca dik, yan yüze konunca duvardan dışa eğik; tavana konmaz.
       const dx = x - hit.x, dy = y - hit.y, dz = z - hit.z;
@@ -1077,6 +1159,44 @@
     if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || player.food < REGEN_FOOD || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
     regenTimer += dt;
     if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
+  }
+
+  // ---------- Yatak ----------
+  // Yatağa sağ tık doğma noktasını yatağın yanına taşır. Gece ve yakında düşman yoksa 2 sn uyunur, saat 06:00 olur.
+  const SLEEP_TIME = 2;
+  const sleepEl = document.getElementById('sleep');
+  let sleepTimer = 0;
+  function setSpawnNearBed(x, y, z) {
+    const def = BLOCKS[get(x, y, z)], sign = def.part === 'foot' ? 1 : -1;
+    const cells = [[x, z], [x + def.dir[0] * sign, z + def.dir[1] * sign]];
+    for (const [cx, cz] of cells) for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const sx = cx + nx, sz = cz + nz;
+      if (get(sx, y, sz) === AIR && get(sx, y + 1, sz) === AIR && isSolid(get(sx, y - 1, sz))) {
+        spawnPoint = { x: sx + 0.5, y, z: sz + 0.5 };
+        return;
+      }
+    }
+    spawnPoint = { x: x + 0.5, y: y + BED_HEIGHT, z: z + 0.5 };
+  }
+  function useBed(x, y, z) {
+    setSpawnNearBed(x, y, z);
+    if (daylight(clock.time) >= 0.5) { toast('Sadece gece uyuyabilirsin'); return; }
+    if (mobs.some(m => m.type.hostile && m.dying <= 0 && Math.hypot(m.x - player.x, m.y - player.y, m.z - player.z) <= 8)) {
+      toast('Yakınlarda canavar var');
+      return;
+    }
+    sleepTimer = SLEEP_TIME;
+    sleepEl.style.opacity = 1;
+  }
+  function updateSleep(dt) {
+    if (sleepTimer <= 0) return;
+    sleepTimer -= dt;
+    if (sleepTimer > 0) return;
+    // Sabah 06:00: yeni gün
+    clock.time = 0;
+    clock.day++;
+    sleepEl.style.opacity = 0;
+    toast('Günaydın');
   }
 
   // ---------- Açlık ----------
@@ -1686,6 +1806,7 @@
     rotten_flesh: ['Çürük et', { g: '#6f8a3a', b: '#8a5a3a' }, ['..gggg..', '.ggbggg.', 'gggggbgg', 'ggbggggg', 'gggggbgg', '.ggbggg.', '..gggg..', '........']],
     bone: ['Kemik', { w: '#ecebe2' }, ['......ww', '.....www', '....ww..', '...ww...', '..ww....', 'www.....', 'ww......', '........']],
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
+    bed: ['Yatak', { w: '#ececec', r: '#a8282a', b: '#7a5a32' }, ['........', '........', 'wwrrrrrr', 'wwrrrrrr', 'bbbbbbbb', 'b......b', '........', '........']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
     torch: ['Meşale', { b: '#6b4a2b', y: '#ffd23a', o: '#ff8a1f' }, ['...yy...', '..yooy..', '...oo...', '...bb...', '...bb...', '...bb...', '...bb...', '........']],
     cooked_beef: ['Pişmiş biftek', { r: '#7a3e22', w: '#c08a5a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
@@ -1893,6 +2014,7 @@
     { pattern: ['C', 'S'], keys: { C: 'charcoal', S: 'stick' }, out: ['torch', 4] },
     { pattern: ['CCC', 'C.C', 'CCC'], keys: { C: 'cobble' }, out: ['furnace', 1] },
     { pattern: ['SS', 'SS'], keys: { S: 'sand' }, out: ['sandstone', 1] },
+    { pattern: ['WWW', 'PPP'], keys: { W: 'wool', P: 'planks' }, out: ['bed', 1] },
   ];
   for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) for (const [kindKey, kind] of Object.entries(TOOL_KINDS)) {
     RECIPES.push({ pattern: kind.pattern, keys: { M: tier.material, S: 'stick' }, out: [`${tierKey}_${kindKey}`, 1] });
@@ -2135,6 +2257,7 @@
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
+  Object.assign(window.game, { getSpawnPoint: () => spawnPoint, isSleeping: () => sleepTimer > 0 });
   Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance, raycast, torchNearby, torchLight: (x, y, z) => torchLightAt(torchesNear(x - 8, z - 8, x + 8, z + 8), x, y, z) });
 
   // ---------- Kayıt ----------
@@ -2174,6 +2297,7 @@
         health: player.health,
         food: player.food,
         furnaces: Object.values(furnaces).map(f => ({ ...f, slots: f.slots.map(st => st && { ...st }) })),
+        spawnPoint,
         selected,
         inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
         time: clock.time,
@@ -2193,6 +2317,7 @@
     player.health = save.health > 0 ? save.health : MAX_HEALTH;
     player.food = save.food ?? MAX_FOOD;
     for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
+    spawnPoint = save.spawnPoint || null;
     renderHearts();
     renderFood();
     // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
@@ -2263,7 +2388,8 @@
     const p = player;
 
     const inWater = overlapsBlock(p, B.water);
-    if (playing && !inventoryOpen) {
+    if (playing) updateSleep(dt);
+    if (playing && !inventoryOpen && sleepTimer <= 0) {
       const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
       const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
       let mx = 0, mz = 0;

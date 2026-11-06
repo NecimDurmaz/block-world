@@ -56,7 +56,7 @@ Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde v
    awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' block-world.html > /tmp/block-world.js && node --check /tmp/block-world.js
    ```
 
-4. **Tarayıcıda dene.** Klasörü yerel sunucuyla aç ve kabul ölçütünü tek tek doğrula (bkz. "Test"). Konsolda hata olmamalı.
+4. **Test yaz ve çalıştır.** Maddenin kabul ölçütünü `tests/NN-kisa-ad.js` dosyasında otomatik teste çevir ve görünmez Chrome'da çalıştır (bkz. "Test"). Test geçmeli, konsolda hata olmamalı. Görsel bir değişiklikse ekran görüntüsü alıp bak.
 5. **Belgeleri güncelle.**
    - SPEC.md'de değişen veya eklenen şeyleri yaz: yeni bloklar, sabitler, tuşlar, kayıt alanları, bölümler.
    - SPEC.md'deki "Özellik durumu" tablosunda maddeyi `Yapıldı` olarak işaretle.
@@ -79,6 +79,23 @@ Bir maddenin bir kısmını bilerek yapmadıysan (örneğin tarayıcı kısıtı
 ---
 
 ## Test
+
+### Otomatik test (önerilen)
+
+`tools/browser-test.mjs`, oyunu görünmez (headless) Chrome'da açar, bir test dosyasını sayfada çalıştırır ve sonucu JSON olarak yazar. Yerel sunucu ve tarayıcı paneli gerekmez.
+
+```bash
+node tools/browser-test.mjs tests/02-fall-damage.js
+node tools/browser-test.mjs tests/02-fall-damage.js /tmp/ekran.png   # ekran görüntüsüyle
+```
+
+- Test dosyası, async bir fonksiyonun gövdesidir. `wait(ms)` ve `window.game` (bkz. SPEC.md "Test kancası") kullanılabilir. Sonunda `{ ok: true | false, ...ayrıntılar }` döndürür.
+- Testin başında `document.getElementById('play').click()` ile oyunu başlat. Görünmez Chrome'da fare kilidi alınamaz, oyun sürükleyerek bakma moduna geçer.
+- Görünmez Chrome'da kare hızı düşük ve düzensizdir (yazılımla WebGL). Sabit sürelere değil, duruma göre bekle: örneğin oyuncu yere değene kadar `p.onGround` kontrol et.
+- Çıkış kodu: `0` geçti, `1` test başarısız ya da sayfada hata, `2` araç hatası.
+- Bütün testler: `for t in tests/*.js; do node tools/browser-test.mjs "$t" || echo "BAŞARISIZ: $t"; done`
+
+### Elle deneme
 
 Oyunu yerel bir sunucuyla aç:
 

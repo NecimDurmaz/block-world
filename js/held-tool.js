@@ -10,16 +10,22 @@ function useTool() {
   renderInventory();
 }
 // Seçili eşya gözden görünümde kolun ucunda, 3. şahıs modelde sağ elde görünür:
-// bloklar gerçek dokulu küçük bir küp, diğer eşyalar (alet, yemek, bitki) düz, çift yüzlü bir simge.
-const toolTextures = {};
-const heldToolMaterial = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-const fpTool = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), heldToolMaterial);
-fpTool.position.set(0, -0.42, -0.12);
-fpTool.rotation.set(-Math.PI / 2, Math.PI / 2, 0);
+// bloklar gerçek dokulu küçük bir küp, diğer eşyalar (alet, yemek, bitki) Minecraft'taki gibi kabartmalı 3B model (itemGeometry).
+// Model sapı (simgenin sol alt köşesi) elde kalacak biçimde ölçeklenir: 3. şahısta 0,8, gözden 0,65 blok.
+const HELD_SIZE_TP = 0.8, HELD_SIZE_FP = 0.65;
+// rotation: modelin kola göre duruşu; handle: sapın (simgenin sol alt köşesi) koldaki yeri. Model sap çevresinde ölçeklenir.
+const heldModel = (size, handle, rotation) => {
+  const m = new THREE.Mesh(itemGeometry('stick'), itemModelMaterial);
+  m.rotation.copy(rotation);
+  m.scale.setScalar(size);
+  const grip = new THREE.Vector3(-0.5, -0.5, 0).multiplyScalar(size).applyEuler(m.rotation);
+  m.position.set(handle[0] - grip.x, handle[1] - grip.y, handle[2] - grip.z);
+  return m;
+};
+const fpTool = heldModel(HELD_SIZE_FP, [0, -0.17, 0.13], new THREE.Euler(-Math.PI / 2, Math.PI / 2, 0));
 fpArm.add(fpTool);
-const tpTool = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), heldToolMaterial);
-tpTool.position.set(0, -0.6, -0.18);
-tpTool.rotation.set(-Math.PI / 2, Math.PI / 2, 0);
+// 3. şahıs: elde, yassı yüzü yana bakar, ucu öne ve biraz yukarı (Minecraft'taki tutuş)
+const tpTool = heldModel(HELD_SIZE_TP, [0, -0.6, -0.05], new THREE.Euler(0, Math.PI / 2, -Math.PI / 4 + 0.35, 'YZX'));
 armR.add(tpTool);
 // Blok küpü: yüz sırası +x, -x, +y, -y, +z, -z
 const blockMaterials = {};
@@ -41,21 +47,6 @@ const heldAsCube = s => {
   const id = ITEMS[s.key].block;
   return !!id && !BLOCKS[id].model && !isTorch(id);
 };
-function heldTexture(s) {
-  if (!toolTextures[s.key]) {
-    const def = ITEMS[s.key];
-    // Simgesi olmayan bloklar (bitki) kendi dokusuyla çizilir.
-    const source = def.canvas || (() => {
-      const c = document.createElement('canvas'); c.width = c.height = T;
-      c.getContext('2d').drawImage(atlas, BLOCKS[def.block].side * T, 0, T, T, 0, 0, T, T);
-      return c;
-    })();
-    const t = new THREE.CanvasTexture(source);
-    t.magFilter = t.minFilter = THREE.NearestFilter;
-    toolTextures[s.key] = t;
-  }
-  return toolTextures[s.key];
-}
 function updateHeldTool() {
   const s = inventory[selected];
   const cube = !!s && heldAsCube(s);
@@ -71,8 +62,7 @@ function updateHeldTool() {
     fpBlock.material = tpBlock.material = blockMaterials[s.key];
     return;
   }
-  const map = heldTexture(s);
-  if (heldToolMaterial.map !== map) { heldToolMaterial.map = map; heldToolMaterial.needsUpdate = true; }
+  fpTool.geometry = tpTool.geometry = itemGeometry(s.key);
 }
 
 renderInventory();

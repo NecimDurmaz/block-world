@@ -176,7 +176,9 @@ function frame(now) {
   model.rotation.y = p.yaw;
   head.rotation.x = p.pitch;
   legR.rotation.x = swing; legL.rotation.x = -swing;
-  armL.rotation.x = swing - crouch * 0.4; armR.rotation.x = -swing + pk * 1.4 - crouch * 0.4;
+  // Elinde eşya varken sağ kol biraz önde durur (Minecraft'taki gibi), eşya gövdenin önünde kaybolmaz
+  const holding = tpTool.visible || tpBlock.visible ? 0.35 : 0;
+  armL.rotation.x = swing - crouch * 0.4; armR.rotation.x = -swing + pk * 1.4 - crouch * 0.4 + holding;
   // Yay gerilirken iki kol öne uzanır
   if (bowCharge > 0) armL.rotation.x = armR.rotation.x = Math.PI / 2 + p.pitch;
 

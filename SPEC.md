@@ -286,7 +286,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ### Nether
 
-- **Dünyalar:** `worlds = { overworld, nether }` iki ayrı `Uint8Array`; `world` etkin olanı gösterir ve bütün `get`/`set`/chunk kodu onu kullanır. `switchDimension(to)` dünyayı değiştirir; canlılar, yerdeki eşyalar, oklar ve parçacıklar silinir, bütün chunk'lar, portal düzlemleri ve ekin sayaçları yeniden kurulur. Ana dünyaya dönüşte hayvanlar yeniden doğar.
+- **Dünyalar:** `worlds = { overworld, nether }` iki ayrı chunk haritası; `world` etkin olanı gösterir ve bütün `get`/`set`/chunk kodu onu kullanır. `switchDimension(to)` dünyayı değiştirir; canlılar, yerdeki eşyalar, oklar ve parçacıklar silinir, chunk mesh'leri kaldırılıp oyuncunun çevresi yeniden kurulur, portal düzlemleri ve ekin sayaçları yenilenir. Ana dünyaya dönüşte hayvanlar yeniden doğar.
 - **Üretim** (`generateNetherChunk(cx, cz)`, ana dünya gibi chunk chunk, gidilince): taban `3 + fbm·12`, tavan `35 + fbm·8` kızıl taş; arada 3B gürültüyle kızıl taş sütunlar; `y ≤ LAVA_LEVEL = 10` boşluklar lav; tavandan sarkan chunk başına 1–2 ışıltı taşı öbeği (chunk içinde kalır).
 - **Işık:** Lav ve ışıltı taşı üçüncü chunk tamponunda, parlaklıktan etkilenmeyen `glowMaterial` ile çizilir. Işıltı taşı meşale gibi çevresini aydınlatır; lav yalnızca kendisi parlar.
 - **Ortam:** Nether'de saat durur; gökyüzü ve sis `#3a0f0f`, sis 12–40 blok, parlaklık 0,6; güneş, ay, bulut ve yıldız gizlenir. Ana dünya canlıları Nether'de doğmaz.
@@ -454,7 +454,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Simgeler (Minecraft üslubu):** `itemIcon(key)` HUD için data URL üretir. Bloklar izometrik küp olarak çizilir (`blockIcon`: atlas dokularından üst, sol ve sağ yüz; yanlar gölgeli). Diğer eşyalar 16×16'dır ve `outlineIcon` ile koyu kenar alır; aletler `drawTool(kind, head, dark)` ile çapraz sap ve türüne göre baş olarak çizilir.
 - **Görünüm:** Hotbar, envanter, üretim ve fırın Minecraft gibidir (bkz. AGENTS.md "Görsel"): gri kabartmalı panel, çukur yuvalar, piksel yazı tipi (`--mc-font`). Yuvanın üzerine gelince eşya adı `#tooltip` ipucu kutusunda görünür (`dataset.name`).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok, zombi domuz adam 0–1 çürük et. Creeper patlayınca bir şey düşmez.
-- **Yerdeki eşya** (`drops`): `{ key, x, y, z, w: 0.125, h: 0.25, vx, vy, vz, age, mesh }`. Bloklar 0,25'lik küp (atlas dokusuyla, gece kararır), diğerleri 0,4'lük çift yüzlü düz simge. Hafif bir sıçrayışla düşer, yerde sürtünmeyle durur, döner ve hafifçe inip kalkar. `ITEM_LIFETIME = 300` sn sonra kaybolur. Kaydedilmez.
+- **Yerdeki eşya** (`drops`): `{ key, x, y, z, w: 0.125, h: 0.25, vx, vy, vz, age, mesh }`. Bloklar 0,25'lik küp (atlas dokusuyla, gece kararır), diğerleri yarım blok boyunda 3B eşya modeli (`itemGeometry`, elde tutulanla aynı; geometri eşya başına önbelleklidir, atılmaz). Hafif bir sıçrayışla düşer, yerde sürtünmeyle durur, döner ve hafifçe inip kalkar. `ITEM_LIFETIME = 300` sn sonra kaybolur. Kaydedilmez.
 - **Toplama:** Oyuncunun gövde merkezine `PICKUP_RANGE = 1.5` bloktan yakınsa ona doğru 6 blok/sn çekilir, 0,6 bloktan yakında envantere eklenir (`addItem`) ve "+1 Ad" bildirimi çıkar. Envantere sığmazsa yerde kalır. `pickupDelay` dolmadan toplanmaz (Q ile atılan ya da envanter kapanınca sığmayan eşyalar için 1,5 sn).
 
 ## Envanter
@@ -520,7 +520,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Yay ve ok
 
-- Yay seçiliyken sağ tuş basılı tutulunca gerilir (`bowCharge`, 1 sn'de 0 → 1; blok konmaz). Gerilirken görüş alanı 10°'ye kadar daralır, gözden görünümde kol geri çekilir, 3. şahısta iki kol bakış yönünde öne uzanır.
+- Yay seçiliyken sağ tuşa basıp basılı tutunca gerilir (her yeni basış en çok bir ok atar: `bowArmed`) (`bowCharge`, 1 sn'de 0 → 1; blok konmaz). Gerilirken görüş alanı 10°'ye kadar daralır, gözden görünümde kol geri çekilir, 3. şahısta iki kol bakış yönünde öne uzanır.
 - Bırakınca (gerilme > 0,1) envanterde ok varsa bir ok atılır, yay 1 aşınır; ok yoksa "Okun yok". Hız `10 + 20 × gerilme` blok/sn, yerçekimi 20; gözden bakış yönünde çıkar.
 - Oyuncu oku (`fromPlayer`) canlıya değerse hıza göre 2–9 hasar ve geri itme verir (`arrowDamage`), oyuncuya değmez. Bloğa saplanınca 60 sn kalır; oyuncu 1,3 blok yakınına gelince envantere geri alınır ("+1 Ok").
 - İskelet okları aynı kodla uçar (yerçekimi 6, 3 hasar, 3 sn saplı, toplanamaz).
@@ -565,7 +565,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 - Elle vuruş `FIST_DAMAGE = 1`; seçili yuvada alet varsa onun `damage` değeri kullanılır.
 - **Dayanıklılık:** Alet yığını `{ key, count: 1, durability }` taşır. Her blok kırışta ve her canlıya vuruşta 1 azalır; 0 olunca alet kaybolur ve "… kırıldı" bildirimi çıkar. Aşınmış aletin yuvasında altta yeşilden kırmızıya giden bir çubuk görünür. Yığınlar taşınırken, atılırken (`drop.extra`) ve kaydedilirken `durability` korunur (`extraOf`).
-- **Elde görünüm:** Seçili yuvadaki her eşya elde görünür: gözden görünümde kolun ucunda, 3. şahıs modelde sağ elde. Küp bloklar gerçek dokularıyla küçük bir küp (`fpBlock` 0,3, `tpBlock` 0,25 blok); alet, yemek, meşale, bitki gibi diğerleri simgesiyle düz, çift yüzlü bir düzlem (`fpTool`, `tpTool`; simgesi olmayan bitkiler kendi dokusuyla).
+- **Elde görünüm:** Seçili yuvadaki her eşya elde görünür: gözden görünümde kolun ucunda, 3. şahıs modelde sağ elde. Küp bloklar gerçek dokularıyla küçük bir küp (`fpBlock` 0,3, `tpBlock` 0,25 blok); alet, yemek, meşale, bitki gibi diğerleri Minecraft'taki gibi kabartmalı 3B model (`itemGeometry`: simgenin her dolu pikseli 1 piksel kalınlığında küp, yanlar gölgeli; simgesi olmayan bitkiler kendi dokusuyla). Boyut: gözden 0,65, 3. şahısta 0,8 blok; model sapı (simgenin sol alt köşesi) elde kalacak biçimde konur. 3. şahısta eşya yassı yüzü yana bakacak, ucu öne ve biraz yukarı dönük tutulur; elinde eşya varken sağ kol 0,35 rad önde durur.
 
 ## Üretim
 

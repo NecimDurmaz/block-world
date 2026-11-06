@@ -60,5 +60,12 @@ await wait(100);
 for (let i = 0; i < 10; i++) { const s = g.spawnMob('spider', 30.5 + i, 40, 25.5); s.health = 0; s.dying = 0.01; }
 await wait(800);
 const string = g.drops.some(d => d.key === 'string');
-return { ok: recipes && fullCharge && noBlockPlaced && usedArrow && cowDies && arcs && pickedUp && string,
-  recipes, fullCharge, noBlockPlaced, usedArrow, hits, cowHealth: cow.health, cowDies, arcs, peak, pickedUp, string };
+// Uzun gerilip bırakılan yay tek ok atar (8 oktan 7 kalır)
+g.inventory[1] = { key: 'arrow', count: 8 };
+window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));
+p.pitch = 0;
+await draw(2500);
+await wait(300);
+const oneArrow = g.inventory[1]?.count === 7;
+return { ok: oneArrow && recipes && fullCharge && noBlockPlaced && usedArrow && cowDies && arcs && pickedUp && string,
+  oneArrow, recipes, fullCharge, noBlockPlaced, usedArrow, hits, cowHealth: cow.health, cowDies, arcs, peak, pickedUp, string };

@@ -11,16 +11,19 @@ RECIPES.push(
 );
 MOB_DROPS.spider = [['string', 0, 2]];
 
-let bowCharge = 0; // 0–1 arası gerilme
+// bowCharge: 0–1 arası gerilme. bowArmed: yay elde iken sağ tuşa yeni basıldı (her basış en çok bir ok atar).
+let bowCharge = 0, bowArmed = false;
+function startBowDraw() { if (heldBow()) bowArmed = true; }
 const heldBow = () => inventory[selected]?.key === 'bow' ? inventory[selected] : null;
 // Sağ tuş basılıyken gerilir; bırakılınca ok varsa atılır.
 function updateBow(dt) {
   const bow = heldBow();
-  if (using && bow && !inventoryOpen && !chatOpen && !controlOpen) {
+  if (using && bowArmed && bow && !inventoryOpen && !chatOpen && !controlOpen) {
     bowCharge = Math.min(1, bowCharge + dt / BOW_DRAW_TIME);
     return;
   }
-  if (bowCharge > 0.1 && bow) shootPlayerArrow(bowCharge);
+  if (bowArmed && bowCharge > 0.1 && bow) shootPlayerArrow(bowCharge);
+  bowArmed = false;
   bowCharge = 0;
 }
 function shootPlayerArrow(charge) {

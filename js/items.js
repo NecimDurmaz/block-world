@@ -162,11 +162,53 @@ function dropLoot(m) {
   }
 }
 
-// Yerdeki eşyalar: 0,25'lik küp (blok) ya da düz simge; döner, hafifçe inip kalkar, 5 dk sonra kaybolur.
+// Yerdeki eşyalar: 0,25'lik küp (blok) ya da yarım blokluk 3B eşya modeli; döner, hafifçe inip kalkar, 5 dk sonra kaybolur.
 const ITEM_LIFETIME = 300, PICKUP_RANGE = 1.5;
 const drops = [];
 const dropBlockMaterial = new THREE.MeshBasicMaterial({ map: texture });
-const dropFlatMaterials = {};
+// Eşyanın 3B modeli (Minecraft'taki gibi kabartmalı): simgenin her dolu pikseli 1 piksel kalınlığında küçük bir küp.
+// Model 1 blok boyunda, XY düzleminde ve ortalıdır; renkler köşe rengidir (önde tam, arkada ve yanlarda gölgeli).
+const itemModelMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const itemGeometries = {};
+// Simgesi olmayan bloklar (bitkiler) kendi dokusuyla
+function itemCanvas(key) {
+  const item = ITEMS[key];
+  if (item.canvas) return item.canvas;
+  const c = document.createElement('canvas'); c.width = c.height = T;
+  c.getContext('2d').drawImage(atlas, BLOCKS[item.block].side * T, 0, T, T, 0, 0, T, T);
+  return c;
+}
+function itemGeometry(key) {
+  if (itemGeometries[key]) return itemGeometries[key];
+  const d = itemCanvas(key).getContext('2d').getImageData(0, 0, 16, 16).data;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < 16 && y < 16 && d[(y * 16 + x) * 4 + 3] > 127;
+  const pos = [], col = [], idx = [], s = 1 / 16, h = s / 2;
+  const quad = (pts, shade, r, g, b) => {
+    const base = pos.length / 3;
+    for (const p of pts) { pos.push(...p); col.push(r * shade, g * shade, b * shade); }
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (!solid(x, y)) continue;
+    const i = (y * 16 + x) * 4, [r, g, b] = [d[i] / 255, d[i + 1] / 255, d[i + 2] / 255];
+    const x0 = x * s - 0.5, x1 = x0 + s, y1 = 0.5 - y * s, y0 = y1 - s;
+    quad([[x0, y0, h], [x1, y0, h], [x1, y1, h], [x0, y1, h]], 1, r, g, b);
+    quad([[x1, y0, -h], [x0, y0, -h], [x0, y1, -h], [x1, y1, -h]], 0.75, r, g, b);
+    // Yan yüzler yalnızca boş komşuya bakan kenarlarda
+    if (!solid(x, y - 1)) quad([[x0, y1, h], [x1, y1, h], [x1, y1, -h], [x0, y1, -h]], 0.9, r, g, b);
+    if (!solid(x, y + 1)) quad([[x0, y0, -h], [x1, y0, -h], [x1, y0, h], [x0, y0, h]], 0.6, r, g, b);
+    if (!solid(x - 1, y)) quad([[x0, y0, -h], [x0, y0, h], [x0, y1, h], [x0, y1, -h]], 0.7, r, g, b);
+    if (!solid(x + 1, y)) quad([[x1, y0, h], [x1, y0, -h], [x1, y1, -h], [x1, y1, h]], 0.7, r, g, b);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.userData.shared = true;
+  return itemGeometries[key] = geo;
+}
+// Yerdeki eşya: blok 0,25'lik küp, diğerleri yarım blok boyunda 3B model
+const DROP_ITEM_SIZE = 0.5;
 function dropMesh(key) {
   const item = ITEMS[key];
   if (item.block) {
@@ -179,12 +221,9 @@ function dropMesh(key) {
     }
     return new THREE.Mesh(geo, dropBlockMaterial);
   }
-  if (!dropFlatMaterials[key]) {
-    const t = new THREE.CanvasTexture(item.canvas);
-    t.magFilter = t.minFilter = THREE.NearestFilter;
-    dropFlatMaterials[key] = new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-  }
-  return new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), dropFlatMaterials[key]);
+  const mesh = new THREE.Mesh(itemGeometry(key), itemModelMaterial);
+  mesh.scale.setScalar(DROP_ITEM_SIZE);
+  return mesh;
 }
 function dropItem(key, x, y, z) {
   const mesh = dropMesh(key);
@@ -195,7 +234,8 @@ function dropItem(key, x, y, z) {
 }
 function removeDrop(d) {
   scene.remove(d.mesh);
-  d.mesh.geometry.dispose();
+  // Eşya modelinin geometrisi ortaktır (önbellekte), yalnızca blok küpü atılır
+  if (ITEMS[d.key].block && !d.mesh.geometry.userData.shared) d.mesh.geometry.dispose();
   drops.splice(drops.indexOf(d), 1);
 }
 // Envantere sığarsa toplanır; sığmazsa yerde kalır.

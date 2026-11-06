@@ -50,6 +50,13 @@
   .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
   .keys kbd { font-family: var(--ew-font); font-weight: 500; color: var(--ew-text-strong); background: #eceef4; border-radius: var(--ew-radius-btn); padding: 1px 6px; white-space: nowrap; justify-self: start; }
   .note { font-size: 12px; color: var(--ew-text-muted); }
+  #saved { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 12px; padding: 4px 8px; background: var(--hud-bg); border-radius: var(--ew-radius-btn); }
+  .actions { display: flex; gap: 8px; }
+  .actions .primary { flex: 1; }
+  .primary:disabled { opacity: 0.6; cursor: progress; }
+  .secondary { font: 500 14px var(--ew-font); color: var(--ew-secondary); background: transparent; border: 1px solid var(--ew-border); border-radius: var(--ew-radius-btn); padding: 10px 16px; cursor: pointer; }
+  .secondary:hover { background: #f6e6e6; }
+  .secondary:focus-visible { outline: 2px solid var(--ew-secondary); outline-offset: 2px; }
   .primary { font: 500 15px var(--ew-font); color: #fff; background: var(--ew-primary); border: 0; border-radius: var(--ew-radius-btn); padding: 10px 16px; cursor: pointer; }
   .primary:hover { background: var(--ew-primary-dark); }
   .primary:focus-visible { outline: 2px solid var(--ew-secondary); outline-offset: 2px; }
@@ -62,6 +69,7 @@
 <div id="crosshair"></div>
 <div id="info">X 0 · Y 0 · Z 0</div>
 <div id="blockname"></div>
+<div id="saved" hidden>Kaydedildi</div>
 <div id="hotbar"></div>
 <div id="status"><div id="hearts"></div></div>
 <div id="hurt"></div>
@@ -86,8 +94,12 @@
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
-    <button id="play" class="primary" type="button">Oyna</button>
+    <div class="actions">
+      <button id="play" class="primary" type="button" disabled>Oyna</button>
+      <button id="reset" class="secondary" type="button">Yeni dünya</button>
+    </div>
     <p class="note">Klavye ve fare gerektirir. Fare kilitlenemezse sürükleyerek bakabilirsin.</p>
+    <p class="note" id="save-note">Kayıt yükleniyor…</p>
   </div>
 </div>
 
@@ -518,6 +530,7 @@
     playing = false;
     overlay.hidden = dead;
     for (const k in keys) keys[k] = false;
+    saveGame();
   }
   document.getElementById('play').addEventListener('click', start);
   document.addEventListener('pointerlockerror', useFallback);
@@ -690,6 +703,95 @@
     regenTimer += dt;
     if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
   }
+
+  // ---------- Kayıt ----------
+  // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
+  const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 1, AUTOSAVE_MS = 30000;
+  const playButton = document.getElementById('play');
+  const resetButton = document.getElementById('reset');
+  const saveNote = document.getElementById('save-note');
+  const savedEl = document.getElementById('saved');
+  let db = null, resetting = false, confirmReset = false, savedTimer;
+
+  function openDb() {
+    const open = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    // Bazı ortamlarda istek hiç yanıt vermez; oyunu bekletme.
+    return Promise.race([open, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
+  }
+  function readSave() {
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(DB_STORE).objectStore(DB_STORE).get(SAVE_KEY);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function saveGame() {
+    if (!db || resetting) return;
+    try {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      tx.objectStore(DB_STORE).put({
+        version: SAVE_VERSION,
+        world,
+        player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
+        health: player.health,
+        selected,
+        time: clock.time,
+        day: clock.day,
+      }, SAVE_KEY);
+      tx.oncomplete = () => {
+        savedEl.hidden = false;
+        clearTimeout(savedTimer);
+        savedTimer = setTimeout(() => { savedEl.hidden = true; }, 1000);
+      };
+    } catch (err) { /* kayıt yapılamazsa oyun sürer */ }
+  }
+  function applySave(save) {
+    world.set(save.world);
+    for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
+    Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
+    player.health = save.health > 0 ? save.health : MAX_HEALTH;
+    renderHearts();
+    selectSlot(save.selected);
+    clock.time = save.time;
+    clock.day = save.day;
+  }
+  async function loadGame() {
+    try {
+      db = await openDb();
+      const save = await readSave();
+      const valid = save && save.version === SAVE_VERSION && save.world?.length === world.length;
+      if (valid) applySave(save);
+      saveNote.textContent = valid ? 'Kayıt yüklendi. Oyun otomatik kaydedilir.' : 'Oyun otomatik kaydedilir.';
+    } catch (err) {
+      db = null;
+      saveNote.textContent = 'Kayıt yapılamıyor: bu tarayıcı veri saklamaya izin vermiyor.';
+      resetButton.hidden = true;
+    }
+    playButton.disabled = false;
+    window.game.ready = true;
+  }
+
+  resetButton.addEventListener('click', () => {
+    if (!confirmReset) {
+      confirmReset = true;
+      resetButton.textContent = 'Emin misin? Tekrar bas';
+      return;
+    }
+    resetting = true;
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).delete(SAVE_KEY);
+    tx.oncomplete = tx.onerror = () => location.reload();
+  });
+  setInterval(() => { if (playing) saveGame(); }, AUTOSAVE_MS);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+  window.addEventListener('pagehide', saveGame);
+  Object.assign(window.game, { getBlock: get, setBlock: set, saveGame });
+  loadGame();
 
   // ---------- Oyun döngüsü ----------
   let last = performance.now(), walkPhase = 0, walkAmp = 0;

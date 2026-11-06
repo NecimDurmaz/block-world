@@ -1,7 +1,9 @@
 // Oyunu görünmez (headless) Chrome'da açar, verilen test dosyasını sayfada çalıştırır ve sonucu yazdırır.
-// Kullanım: node tools/browser-test.mjs tests/02-fall-damage.js [ekran.png]
+// Kullanım: node tools/browser-test.mjs tests/02-fall-damage.js [ikinci-asama.js ...] [ekran.png]
 // Test dosyası, async bir fonksiyonun gövdesidir: `wait(ms)` ve `window.game` kullanılabilir,
-// sonunda `{ ok: true/false, ... }` döndürür.
+// sonunda `{ ok: true/false, ... }` döndürür. Birden çok dosya verilirse her biri sayfa yeniden
+// yüklendikten sonra sırayla çalışır; tarayıcı profili (IndexedDB) aşamalar arasında korunur.
+// Bir aşama sayfayı kendisi yeniden yüklerse (ör. "Yeni dünya") sonucu `{ ok: true, reloaded: true }` sayılır.
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -9,7 +11,9 @@ import { join, extname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const root = resolve(import.meta.dirname, '..');
-const [testFile, shotFile] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const testFiles = args.filter(a => a.endsWith('.js'));
+const shotFile = args.find(a => a.endsWith('.png'));
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.md': 'text/plain; charset=utf-8' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -69,30 +73,43 @@ try {
     ws.send(JSON.stringify({ id, method, params }));
   });
   const evaluate = async expression => {
-    const { result } = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    const { result, error } = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    if (error) throw new Error(error.message);
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
 
   await send('Runtime.enable');
   await send('Page.enable');
-  await send('Page.navigate', { url: `http://127.0.0.1:${port}/block-world.html` });
-  for (let i = 0; i < 100; i++) {
-    if (await evaluate('document.readyState === "complete" && !!window.game').catch(() => false)) break;
-    await sleep(100);
-  }
+  const openGame = async () => {
+    await send('Page.navigate', { url: `http://127.0.0.1:${port}/block-world.html` });
+    for (let i = 0; i < 100; i++) {
+      if (await evaluate('document.readyState === "complete" && !!window.game?.ready').catch(() => false)) return;
+      await sleep(100);
+    }
+    throw new Error('Oyun 10 sn içinde hazır olmadı');
+  };
 
-  let value = { ok: true };
-  if (testFile) {
-    const code = await readFile(testFile, 'utf8');
-    value = await evaluate(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms));\n${code}\n})()`);
+  const results = [];
+  for (const file of testFiles.length ? testFiles : [null]) {
+    await openGame();
+    if (!file) { results.push({ ok: true }); continue; }
+    const code = await readFile(file, 'utf8');
+    try {
+      results.push(await evaluate(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms));\n${code}\n})()`));
+    } catch (err) {
+      if (!/context was destroyed|navigated|Cannot find context/i.test(err.message)) throw err;
+      results.push({ ok: true, reloaded: true });
+      await sleep(1000);
+    }
   }
   if (shotFile) {
     const { result } = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(shotFile, Buffer.from(result.data, 'base64'));
   }
-  console.log(JSON.stringify({ ...value, errors }, null, 2));
-  await cleanup(value?.ok === false || errors.length ? 1 : 0);
+  const ok = results.every(r => r?.ok !== false) && !errors.length;
+  console.log(JSON.stringify(results.length === 1 ? { ...results[0], errors } : { ok, results, errors }, null, 2));
+  await cleanup(ok ? 0 : 1);
 } catch (err) {
   console.error(err);
   await cleanup(2);

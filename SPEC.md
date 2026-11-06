@@ -33,7 +33,8 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
-   | `overlay` | Başlangıç / duraklatma paneli, tuş listesi (`.keys`) ve "Oyna" düğmesi (`#play`) |
+   | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), kayıt durumu (`#save-note`) |
+   | `saved` | Kayıttan sonra sağ üstte 1 sn görünen "Kaydedildi" yazısı |
 
 3. Three.js r128 betiği.
 4. Oyunun betiği: tek bir kendini çağıran fonksiyon `(() => { ... })()`. Bölümleri:
@@ -51,6 +52,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()`, `placeBlock()` |
    | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -179,11 +181,26 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game = { player, damagePlayer, clock }` açıktır. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
-Henüz yok. Sayfa yenilenince dünya baştan üretilir.
+- Tarayıcının IndexedDB'si: veritabanı `block-world`, depo `saves`, tek kayıt anahtarı `world1`. Veri yalnızca o tarayıcıda ve o adreste durur (Artifact ile yerel dosyanın kayıtları ayrıdır).
+- **Kayıt nesnesi** (`SAVE_VERSION = 1`):
+
+  | Alan | İçerik |
+  | --- | --- |
+  | `version` | `1` |
+  | `world` | Tüm dünya dizisi (`Uint8Array`, 442.368 bayt) |
+  | `player` | `{ x, y, z, yaw, pitch }` |
+  | `health` | Can (0 kaydedildiyse 20 yüklenir) |
+  | `selected` | Seçili hotbar yuvası (0–8) |
+  | `time`, `day` | `clock.time`, `clock.day` |
+
+  Yeni özellikler kendi alanlarını bu nesneye ekler ve bu tabloya yazar. Alanların anlamı değişirse `SAVE_VERSION` artırılır; sürümü uymayan kayıt yok sayılır.
+- **Ne zaman kaydedilir:** her 30 sn'de bir (oyun oynanırken), duraklatınca (`pause()`), sayfa arka plana geçince (`visibilitychange`) ve kapanırken (`pagehide`).
+- **Açılış:** "Oyna" düğmesi kayıt okunana kadar pasiftir. Kayıt varsa dünya ondan yüklenir, bütün chunk'lar yeniden kurulur, oyuncu, can, hotbar ve saat geri gelir. IndexedDB açılamazsa (3 sn zaman aşımı dahil) oyun kayıtsız çalışır, panelde "Kayıt yapılamıyor" notu çıkar ve "Yeni dünya" düğmesi gizlenir.
+- **Yeni dünya:** İlk basışta düğme "Emin misin? Tekrar bas" olur, ikinci basışta kayıt silinir ve sayfa yeniden yüklenir. (`confirm()` Artifact içinde çalışmadığı için onay sayfanın kendisindedir.)
 
 ---
 
@@ -198,7 +215,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 1 | Can barı | Yapıldı |
 | 2 | Düşme hasarı, ölüm ve yeniden doğma | Yapıldı |
 | 3 | Sabah / akşam döngüsü | Yapıldı |
-| 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapılmadı |
+| 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapıldı |
 | 5 | Canlı altyapısı ve inek | Yapılmadı |
 | 6 | Domuz, tavuk ve koyun | Yapılmadı |
 | 7 | Canlılara vurma | Yapılmadı |

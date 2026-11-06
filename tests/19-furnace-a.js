@@ -1,6 +1,9 @@
 // Madde 19, aşama 1: kum + kömür -> cam; çiğ et -> pişmiş et; panel kapalıyken de pişer; kaydet
 const g = window.game, p = g.player;
 document.getElementById('play').click();
+// Gözden görünüm: nişan tam oyuncunun önüne (arkadan kamerada omuz kayması var)
+window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyV' }));
+window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyV' }));
 for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
 g.clock.time = 0.25;
 for (let x = 30; x < 50; x++) for (let z = 30; z < 50; z++) g.setBlock(x, 39, z, 3);

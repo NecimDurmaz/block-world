@@ -210,9 +210,9 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 ### Kamera
 
-- **Arkadan (varsayılan):** Gözden 4 blok geride, bakış doğrultusunda. Arada blok varsa yaklaşır (en az 0,3 blok). Nişan ışını kameradan başlar, blok menzili `6 + uzaklık`; `aim.start = uzaklık` canlı menziline eklenir.
+- **Arkadan (varsayılan), omuz üstü:** Kamera, gözün `SHOULDER_OFFSET = 0.6` blok sağında ve `SHOULDER_RISE = 0.25` blok üstündeki omuz noktasından bakış yönünün tersine `CAMERA_DISTANCE = 3.5` blok geride durur; karakter ekranın solunda kalır, nişangâh boştur. Omuz noktası ya da kamera bir bloğa 0,25'ten fazla yaklaşacaksa öne alınır (`cameraClearance`): engel gelince hemen yaklaşır, açılınca yumuşakça (≈0,2 sn) geri çekilir (`cameraDistance`). Kamera 0,8 bloktan yakına gelirse karakter modeli gizlenir. Nişan ışını kameradan başlar; blok menzili `6 + cameraDistance`, canlı menzili `cameraDistance + MOB_REACH`.
 - **Gözden:** Göz hizasında, sağ altta oyuncunun kolu. Nişan ışını gözden başlar, menzil 6.
-- **Önden:** Oyuncunun önünde, oyuncuya bakar. Artı işareti gizlenir; nişan ışını gözden başlar.
+- **Önden:** Gözün 3,5 blok önünde (engelde yaklaşır), oyuncuya bakar. Artı işareti gizlenir; nişan ışını gözden başlar.
 
 ### Model
 
@@ -348,7 +348,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `furnaces`, `openFurnace`, `clickFurnace` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 

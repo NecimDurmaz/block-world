@@ -1,6 +1,9 @@
 // Madde 16: kütükten tahta, tahtadan çalışma masası; masaya sağ tıkla 3x3 ızgara
 const g = window.game, p = g.player;
 document.getElementById('play').click();
+// Gözden görünüm: nişan tam oyuncunun önüne (arkadan kamerada omuz kayması var)
+window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyV' }));
+window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyV' }));
 for (let i = 0; i < 100 && !p.onGround; i++) await wait(50);
 g.clock.time = 0.25;
 const slotOf = key => g.inventory.findIndex(s => s && s.key === key);

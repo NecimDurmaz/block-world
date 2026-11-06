@@ -1959,7 +1959,7 @@
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
-  Object.assign(window.game, { furnaces, openFurnace, clickFurnace });
+  Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -2063,6 +2063,20 @@
 
   // ---------- Oyun döngüsü ----------
   let last = performance.now(), walkPhase = 0, walkAmp = 0;
+  // Arkadan kamera: omuz kayması, uzaklık ve engellere göre yumuşatılmış anlık uzaklık
+  const CAMERA_DISTANCE = 3.5, SHOULDER_OFFSET = 0.6, SHOULDER_RISE = 0.25;
+  let cameraDistance = CAMERA_DISTANCE;
+  // from noktasından dir yönünde, bloğa 0,25'ten fazla yaklaşmadan gidilebilecek en uzak mesafe (en çok max).
+  function cameraClearance(from, dir, max) {
+    const q = new THREE.Vector3();
+    for (let d = 0.05; d <= max; d += 0.05) {
+      q.copy(from).addScaledVector(dir, d);
+      const blocked = [[0, 0, 0], [0.25, 0, 0], [-0.25, 0, 0], [0, 0.25, 0], [0, -0.25, 0], [0, 0, 0.25], [0, 0, -0.25]]
+        .some(([ox, oy, oz]) => get(Math.floor(q.x + ox), Math.floor(q.y + oy), Math.floor(q.z + oz)) !== AIR);
+      if (blocked) return Math.max(0, d - 0.05);
+    }
+    return max;
+  }
   function frame(now) {
     // rAF zaman damgası, betiğin başladığı andan önce olabilir; negatif dt fiziği ters çevirir.
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
@@ -2122,20 +2136,24 @@
     if (view === 1) {
       camera.position.copy(eye);
       camera.rotation.set(p.pitch, p.yaw, 0);
+    } else if (view === 0) {
+      // Omuz üstü: kamera sağ omzun üstündeki noktadan geriye çekilir; karakter ekranın solunda kalır, nişangâh boş kalır.
+      const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
+      const shoulderDir = right.multiplyScalar(SHOULDER_OFFSET).add(new THREE.Vector3(0, SHOULDER_RISE, 0));
+      const shoulderLen = shoulderDir.length();
+      shoulderDir.normalize();
+      const shoulder = eye.clone().addScaledVector(shoulderDir, cameraClearance(eye, shoulderDir, shoulderLen));
+      const back = dir.clone().negate();
+      const target = cameraClearance(shoulder, back, CAMERA_DISTANCE);
+      // Engel yaklaşınca hemen öne gelir, açılınca yumuşakça geri çekilir.
+      cameraDistance = target < cameraDistance ? target : cameraDistance + (target - cameraDistance) * Math.min(1, dt * 5);
+      camera.position.copy(shoulder).addScaledVector(back, cameraDistance);
+      camera.rotation.set(p.pitch, p.yaw, 0);
+      aim.o.copy(camera.position); aim.max = 6 + cameraDistance; aim.start = cameraDistance;
     } else {
-      const side = view === 0 ? -1 : 1;
-      let dist = 4;
-      for (let d = 0.1; d <= 4; d += 0.1) {
-        const q = eye.clone().addScaledVector(dir, side * d);
-        const near = [[0, 0, 0], [0.25, 0, 0], [-0.25, 0, 0], [0, 0.25, 0], [0, -0.25, 0], [0, 0, 0.25], [0, 0, -0.25]]
-          .some(([ox, oy, oz]) => get(Math.floor(q.x + ox), Math.floor(q.y + oy), Math.floor(q.z + oz)) !== AIR);
-        if (near) { dist = Math.max(0.3, d - 0.1); break; }
-      }
-      camera.position.copy(eye).addScaledVector(dir, side * dist);
-      if (view === 0) {
-        camera.rotation.set(p.pitch, p.yaw, 0);
-        aim.o.copy(camera.position); aim.max = 6 + dist; aim.start = dist;
-      } else camera.lookAt(eye);
+      const dist = cameraClearance(eye, dir, CAMERA_DISTANCE);
+      camera.position.copy(eye).addScaledVector(dir, dist);
+      camera.lookAt(eye);
     }
     const fov = (sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 85 : 75;
     if (Math.abs(camera.fov - fov) > 0.1) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); }
@@ -2147,7 +2165,8 @@
     const swing = Math.sin(walkPhase) * 0.8 * walkAmp;
     punch = Math.max(0, punch - dt);
     const pk = Math.sin(punch / 0.25 * Math.PI);
-    model.visible = view !== 1;
+    // Kamera karakterin içine girecek kadar yaklaşınca model gizlenir.
+    model.visible = view === 2 || (view === 0 && cameraDistance > 0.8);
     model.position.set(p.x, p.y, p.z);
     model.rotation.y = p.yaw;
     head.rotation.x = p.pitch;

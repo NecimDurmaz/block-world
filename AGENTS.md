@@ -93,6 +93,7 @@ node tools/browser-test.mjs tests/02-fall-damage.js /tmp/ekran.png   # ekran gö
 
 - Test dosyası, async bir fonksiyonun gövdesidir. `wait(ms)` ve `window.game` (bkz. SPEC.md "Test kancası") kullanılabilir. Sonunda `{ ok: true | false, ...ayrıntılar }` döndürür.
 - Testin başında `document.getElementById('play').click()` ile oyunu başlat. Görünmez Chrome'da fare kilidi alınamaz, oyun sürükleyerek bakma moduna geçer.
+- Nişan alan testler (kazma, vurma, sağ tık) başta V ile gözden görünüme geçer: arkadan kamerada omuz kayması olduğu için nişangâh oyuncunun tam önünden geçmez.
 - Görünmez Chrome'da kare hızı düşük ve düzensizdir (yazılımla WebGL). Sabit sürelere değil, duruma göre bekle: örneğin oyuncu yere değene kadar `p.onGround` kontrol et.
 - Araç, testten önce `window.game.ready` olmasını (kaydın okunmasını) bekler.
 - Sayfa yenilemeyi gerektiren testler aşamalara bölünür ve birlikte verilir: `node tools/browser-test.mjs tests/04-save-a-write.js tests/04-save-b-load.js ...`. Her aşamadan önce sayfa yeniden açılır, IndexedDB korunur. Yeni dosya adlarında aşamalar `-a-`, `-b-` ile sıralanır; tek tek çalıştırılmamaları gerekir.

@@ -43,7 +43,7 @@ tests/              otomatik testler
    | `portal-fx` | Portalda beklerken mora dönüp kararan katman |
    | `portal-hud` | Portal geri sayımı: "Portal: 2…" |
    | `low-health` | Can 4 ve altındayken ekran kenarını koyu kırmızıya karartan katman |
-   | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), eşya seçici (`#picker-ui`), sandık ızgarası (`#chest-ui`, 27 yuva), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
+   | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`) ve "Tarifler" düğmesi (`#book-toggle`), solunda tarif kitabı (`#recipe-book`), eşya seçici (`#picker-ui`), sandık ızgarası (`#chest-ui`, 27 yuva), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `chat` | Sohbet: `#chat-log` satırları ve `#chat-input` (yalnızca sohbet açıkken görünür) |
    | `tooltip` | Yuvanın üzerine gelince eşya adını gösteren Minecraft ipucu kutusu |
@@ -97,6 +97,7 @@ tests/              otomatik testler
    | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
    | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), sohbet dışı eylemler `game-actions.js`'te |
    | `game-actions.js` | Panel ve komutların ortak eylemleri: `godMode`, `safeMode`, `flyAllowed`, `flying`, `TIMES_OF_DAY`, `setGodMode()`, `setSafeMode()`, `setFlyAllowed()`, `healPlayer()`, `feedPlayer()`, `setTimeOfDay()`, `teleport()`, `clearInventory()`, `summonMob()`, `setSpawnHere()` |
+   | `recipe-book.js` | Tarif kitabı: `setBookOpen()`, `selectRecipe()`, `fillRecipe()`, `renderBookList()`, `renderBookDetail()`. `renderInventory` yüklenirken onu çağırdığı için `held-tool.js`'ten önce yüklenir |
    | `guide.js` | Adım adım rehber: `GUIDE_STEPS`, `guideFlags`, `updateGuide()`, `renderGuide()`, `setGuideShown()` |
    | `control-panel.js` | Kontrol paneli: `controlOpen`, `openControl()`, `closeControl()`, `renderControl()` |
    | `item-picker.js` | Eşya seçici: `openPicker()`, `filterPicker()`, `clickPicker()` |
@@ -666,6 +667,13 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 - Sohbet komutları aynı eylemleri çağırır; eylemler sonucu metin olarak döndürür (panelde bildirim, sohbette sarı satır). Yeni açılıp kapanabilen her özellik bu panele anahtar olarak eklenir.
 
+## Tarif kitabı
+
+- Envanter ve çalışma masası panelinin başlığındaki "Tarifler" düğmesi (açıkken yeşil) panelin solunda kitabı açar (`#recipe-book`, `recipe-book.js`); açık kalma durumu panel kapanıp açılınca hatırlanır. Sandık, fırın, eşya seçici ve ticaret ekranlarında düğme ve kitap gizlidir.
+- Sekmeler: "Üretim" (tariflerin bütün çıktıları, tekrarsız, `RECIPES` sırasıyla) ve "Fırın" (`SMELTING` ürünleri). Arama kutusu Türkçe ada göre süzer (`normalize`); kutudaki tuşlar oyuna gitmez, Esc paneli kapatır. Eşyalar 6 sütunlu, kayan yuva ızgarasında, üzerine gelince ad ipucu.
+- Bir eşyaya tıklayınca altta tarifi: 3×3 ızgarada malzeme simgeleri (üzerine gelince adları), ok, çıkan eşya ve adedi. Not satırı "Envanterin 2×2 ızgarasına sığar" ya da "Çalışma masası (3×3) gerekir" der, eksik malzemeleri sayar ("Eksik: 1 × Demir külçe"). Aynı eşyanın birden çok tarifi varsa (tahta: kütük ya da ladin kütüğü) "Diğer tarif" düğmesi. Fırın sekmesinde ortada girdi ve yakıt notu.
+- "Izgaraya yerleştir" (malzeme yetmiyorsa soluk): üretim ızgarasındakiler envantere döner, tarifin malzemeleri envanterden birer birer alınıp ızgaranın sol üstüne desen biçiminde dizilir (`fillRecipe`). 3×3 tarif envanterin 2×2 ızgarasına dizilmez, nedeni bildirimle söylenir.
+
 ## Rehber
 
 - Hiç Minecraft oynamamış biri için adım adım görevler (`guide.js`, `GUIDE_STEPS`). Sağ üstte Minecraft'taki ilerleme bildirimi gibi koyu bir kart (`#guide`): "Rehber · n/16", sarı başlık, nasıl yapılacağı (tuşlar, ne nereye), mavi ipucu satırı. Yalnızca oynarken görünür.
@@ -675,7 +683,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `villagePlan(rx, rz)`, `villageNear(x, z)`, `trades`, `openTrade(m)`, `trade(k)`, `tryOpenTrade()`, `villagerTarget(m)`, `fortressPlan(rx, rz)`, `fortressNear(x, z)`, `shootSmallFireball(m)`, `spawnerModels()`, `guideSteps`, `guideFlags`, `guideStep()`, `setGuideStep(n)`, `setGuideShown(on)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `villagePlan(rx, rz)`, `villageNear(x, z)`, `trades`, `openTrade(m)`, `trade(k)`, `tryOpenTrade()`, `villagerTarget(m)`, `fortressPlan(rx, rz)`, `fortressNear(x, z)`, `shootSmallFireball(m)`, `spawnerModels()`, `guideSteps`, `guideFlags`, `guideStep()`, `setGuideStep(n)`, `setGuideShown(on)`, `setBookOpen(on)`, `selectRecipe(key)`, `fillRecipe()`, `bookItems()`, `setBookTab(tab)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -763,7 +771,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 44 | Nether kalesi ve blaze | Yapıldı |
 | 45 | Sohbet ve komutlar | Yapıldı |
 | 46 | Adım adım rehber | Yapıldı |
-| 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |
+| 47 | Üretim rehberi (tarif kitabı) | Yapıldı |
 | 48 | Eşya seçici (`/give` paneli) | Yapıldı |
 | 49 | Eldeki eşya her zaman görünür | Yapıldı |
 | 50 | Güvenli mod (`/safe`) | Yapıldı |

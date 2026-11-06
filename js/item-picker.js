@@ -24,6 +24,8 @@ function openPicker() {
   document.getElementById('inv-title').textContent = 'Eşyalar';
   document.getElementById('craft-ui').hidden = true;
   document.getElementById('picker-ui').hidden = false;
+  document.getElementById('book-toggle').hidden = true;
+  bookEl.hidden = true;
   pickerSearch.value = '';
   filterPicker();
   pickerSearch.focus();

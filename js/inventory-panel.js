@@ -22,6 +22,7 @@ function renderInventory() {
   renderChest();
   renderArmor();
   renderTrade();
+  if (bookOpen && !bookEl.hidden) renderBookDetail();
   updateHeldTool();
   paintSlot(heldEl, held);
   heldEl.hidden = !held;
@@ -57,6 +58,9 @@ function openInventory(size = 2) {
   document.getElementById('chest-ui').hidden = true;
   document.getElementById('picker-ui').hidden = true;
   document.getElementById('trade-ui').hidden = true;
+  // Tarif kitabı yalnızca üretim ekranında (envanter ve çalışma masası); açık kalma durumu hatırlanır
+  document.getElementById('book-toggle').hidden = false;
+  bookEl.hidden = !bookOpen;
   tradingWith = null;
   document.getElementById('craft-ui').hidden = false;
   document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';

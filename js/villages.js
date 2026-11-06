@@ -99,6 +99,8 @@ function openTrade(m) {
   document.getElementById('inv-title').textContent = 'Köylü';
   document.getElementById('craft-ui').hidden = true;
   document.getElementById('trade-ui').hidden = false;
+  document.getElementById('book-toggle').hidden = true;
+  bookEl.hidden = true;
   tradeList.innerHTML = '';
   m.offers.forEach(k => {
     const { cost, out } = TRADES[k];

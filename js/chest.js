@@ -14,6 +14,8 @@ function openChest(x, y, z) {
   document.getElementById('chest-ui').hidden = false;
   document.getElementById('craft-ui').hidden = true;
   renderChest();
+  document.getElementById('book-toggle').hidden = true;
+  bookEl.hidden = true;
 }
 function removeChest(x, y, z) {
   const c = chests[furnaceKey(x, y, z)];

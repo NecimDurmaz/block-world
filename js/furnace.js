@@ -19,6 +19,8 @@ function openFurnace(x, y, z) {
   document.getElementById('furnace-ui').hidden = false;
   document.getElementById('craft-ui').hidden = true;
   renderFurnace();
+  document.getElementById('book-toggle').hidden = true;
+  bookEl.hidden = true;
 }
 function removeFurnace(x, y, z) {
   const f = furnaces[furnaceKey(x, y, z)];

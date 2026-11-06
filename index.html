@@ -22,8 +22,26 @@
 <div id="portal-hud" hidden></div>
 <div id="hurt"></div>
 <div id="inventory" hidden>
+  <div class="mc-panel recipe-book" id="recipe-book" hidden>
+    <div class="book-tabs"><button class="mc-btn on" type="button" data-tab="craft">Üretim</button><button class="mc-btn" type="button" data-tab="smelt">Fırın</button></div>
+    <input id="book-search" type="text" placeholder="Tarif ara…" autocomplete="off" spellcheck="false">
+    <div class="book-grid" id="book-grid"></div>
+    <div class="book-detail" id="book-detail" hidden>
+      <h3 id="book-name"></h3>
+      <div class="book-recipe">
+        <div class="craft-grid" id="book-pattern"></div>
+        <span class="craft-arrow">→</span>
+        <div class="inv-slot" id="book-out"><span class="count"></span><span class="dur"></span></div>
+      </div>
+      <p id="book-note"></p>
+      <div class="control-buttons">
+        <button class="mc-btn" id="book-fill" type="button">Izgaraya yerleştir</button>
+        <button class="mc-btn" id="book-next" type="button">Diğer tarif</button>
+      </div>
+    </div>
+  </div>
   <div class="panel inv-panel">
-    <h2 id="inv-title">Envanter</h2>
+    <div class="inv-head"><h2 id="inv-title">Envanter</h2><button class="mc-btn" id="book-toggle" type="button">Tarifler</button></div>
     <div class="picker" id="picker-ui" hidden>
       <input id="picker-search" type="text" placeholder="Eşya ara…" autocomplete="off" spellcheck="false">
       <div class="inv-grid" id="picker-grid"></div>
@@ -212,6 +230,7 @@
 <script src="js/bow.js"></script>
 <script src="js/bucket.js"></script>
 <script src="js/villages.js"></script>
+<script src="js/recipe-book.js"></script>
 <script src="js/held-tool.js"></script>
 <script src="js/save.js"></script>
 <script src="js/sound.js"></script>

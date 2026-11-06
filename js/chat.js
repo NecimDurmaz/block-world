@@ -33,9 +33,7 @@ function closeChat() {
   chatEl.classList.remove('open');
   chatInput.hidden = true;
   chatInput.blur();
-  if (!fallbackLook && playing && !inventoryOpen) {
-    try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
-  }
+  if (!inventoryOpen) relockPointer();
 }
 chatInput.addEventListener('keydown', e => {
   e.stopPropagation(); // oyun tuşları sohbet yazarken çalışmasın

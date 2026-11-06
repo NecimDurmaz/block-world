@@ -102,9 +102,7 @@ function openControl() {
 function closeControl() {
   controlOpen = false;
   controlEl.hidden = true;
-  if (!fallbackLook && playing && !inventoryOpen) {
-    try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
-  }
+  if (!inventoryOpen) relockPointer();
 }
 // Ana menüden: oyunu başlatıp paneli açar.
 document.getElementById('open-control').addEventListener('click', () => { start(); openControl(); });

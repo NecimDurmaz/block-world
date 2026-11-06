@@ -343,7 +343,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | V | Kamera: arkadan → gözden → önden |
 | T | Sohbeti aç |
 | / | Sohbeti "/" yazılı açar (komut) |
-| Esc | Duraklat (fare kilidi bırakılınca panel açılır); sohbet ya da envanter açıksa onu kapatır |
+| Esc | Duraklat (fare kilidi bırakılınca panel açılır); sohbet, envanter (masa, fırın, sandık…) ya da kontrol paneli açıksa onu kapatır. Esc ile kapanan panelden sonra fare hemen kilitlenmez (tarayıcı aynı Esc basışıyla yeni kilidi bırakıp oyunu duraklatırdı): "Devam etmek için tıkla" bildirimi çıkar, ilk tık yalnızca fareyi kilitler (`relockPointer`, `resumeOnClick`). Bu sırada Esc oyunu duraklatır. E, K ya da düğmeyle kapatınca fare hemen kilitlenir. |
 
 ### Kamera
 

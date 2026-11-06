@@ -89,9 +89,7 @@ function closeInventory() {
   invEl.hidden = true;
   tooltipEl.hidden = true;
   renderInventory();
-  if (!fallbackLook) {
-    try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
-  }
+  relockPointer();
 }
 
 // Minecraft gibi: fare dolu bir yuvanın üstündeyken eşyanın adı imlecin yanında görünür (elde eşya yokken).

@@ -33,7 +33,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyQ' && !e.repeat && playing && !inventoryOpen && !controlOpen) throwSelected();
   if (e.code === 'Escape' && controlOpen) closeControl();
   else if (e.code === 'Escape' && inventoryOpen) closeInventory();
-  else if (e.code === 'Escape' && fallbackLook) pause();
+  else if (e.code === 'Escape' && (fallbackLook || resumeOnClick)) pause();
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
@@ -55,6 +55,7 @@ function start() {
   showSettings(false);
   playing = true;
   fallbackLook = false;
+  resumeOnClick = false;
   let req;
   try { req = canvas.requestPointerLock(); } catch (err) { useFallback(); return; }
   if (req && req.catch) req.catch(useFallback);
@@ -92,8 +93,23 @@ document.addEventListener('mousemove', e => {
 });
 // Sol tuş basılı tutuldukça kazılır (mining). Yedek modda sürükleme bakıştır, kazmayı keser.
 let mining = false, using = false; // using: sağ tuş basılı (yemek yeme)
+// Panel (envanter, sohbet, kontrol paneli) kapanınca fare yeniden kilitlenir. Esc ile kapandıysa hemen kilitlenmez:
+// tarayıcı aynı Esc basışını yeni kilidi bırakmak için de kullanır ve oyun duraklardı. O zaman kilit ilk tıklamada alınır.
+let lastEscape = -Infinity, resumeOnClick = false;
+window.addEventListener('keydown', e => { if (e.key === 'Escape') lastEscape = performance.now(); }, true);
+function relockPointer() {
+  if (fallbackLook || !playing) return;
+  if (performance.now() - lastEscape < 500) { resumeOnClick = true; toast('Devam etmek için tıkla'); return; }
+  try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
+}
 canvas.addEventListener('mousedown', e => {
   if (!playing || inventoryOpen || chatOpen || controlOpen) return;
+  // Esc ile panel kapandıktan sonraki ilk tık yalnızca fareyi kilitler
+  if (resumeOnClick) {
+    resumeOnClick = false;
+    try { canvas.requestPointerLock()?.catch?.(useFallback); } catch (err) { useFallback(); }
+    return;
+  }
   if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
   if (e.button === 0) { mining = true; attackMob(); }
   else if (e.button === 2) { using = true; if (tryOpenTrade()) return; startBowDraw(); if (!heldFood() && !heldBow()) placeBlock(); }

@@ -14,7 +14,7 @@ Bu liste, `index.html` oyununa bir yapay zekâ asistanına **tek tek** yaptırı
 > - Dil kuralı: dosya adları ve koddaki tüm adlar (değişken, fonksiyon, sabit, sınıf, CSS sınıfı ve id, IndexedDB veritabanı, depo ve anahtar adları) İngilizce olacak. Yalnızca oyuncunun gördüğü arayüz yazıları Türkçe olacak.
 > - Arayüzdeki tüm yazılar Türkçe olacak.
 > - Oyun içi arayüz (hotbar, envanter, paneller, ipuçları, sohbet) ve eşya simgeleri Minecraft'taki gibi görünür: gri kabartmalı paneller, çukur yuvalar, piksel yazı tipi, üzerine gelince ad ipucu; bloklar izometrik küp, eşyalar koyu kenarlı 16×16 piksel. Ayrıntılar AGENTS.md "Görsel" bölümünde. Başlangıç/ayarlar menüleri marka renklerinde kalır.
-> - Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W / Shift), çarpışma, blok kırma/koyma, 1–9 hotbar, tekerlek, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
+> - Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W), eğilme (Shift, madde 52), çarpışma, blok kırma/koyma, 1–9 hotbar, tekerlek, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
 > - Kodu mevcut düzene uy: her betik `// ---------- Başlık ----------` satırıyla başlar, sabitler ilgili dosyanın başında.
 > - Yeni bir tuş eklersen başlangıç panelindeki tuş listesine de ekle.
 > - Bitince neyi değiştirdiğini ve nasıl test edeceğimi 3–5 satırda yaz.
@@ -556,7 +556,7 @@ Bu maddeler 37'den hemen sonra yapılır.
 - **Bu oyunda:**
   - Shift basılıyken eğilir: hız %30, kamera 0,3 blok alçalır, modelde gövde öne eğilir ve baş alçalır.
   - Eğilirken yerdeyse ayağın altındaki blok kenarından düşülmez: bir adım oyuncuyu desteksiz bırakacaksa o eksendeki hareket durur (Minecraft gibi kenarda durur, sarkarak blok konabilir).
-  - Koşma Minecraft'taki gibi Ctrl ya da W-W olur (Shift artık eğilme).
+  - Koşma yalnızca W-W olur (Shift artık eğilme). Ctrl kullanılmaz: tarayıcıda Ctrl+W sekmeyi kapatır.
 - **Kabul ölçütü:** Shift basılıyken bir platformun kenarına yürüyünce düşmüyor; kenardan aşağıya bakıp yan yüze blok konabiliyor; Shift bırakınca düşülüyor.
 - **Bağımlılık:** 3
 
@@ -564,7 +564,7 @@ Bu maddeler 37'den hemen sonra yapılır.
 - **Minecraft'ta:** Yaratıcı modda boşluğa iki kez hızlıca basınca uçulur; boşluk yükseltir, Shift alçaltır; yine iki kez basınca iniş.
 - **Bu oyunda:**
   - Kontrol panelinde (madde 51) "Uçma" anahtarı; kayda yazılır. Yalnızca açıkken uçulabilir.
-  - Boşluğa 0,3 sn içinde iki kez basınca uçuş açılır/kapanır. Uçarken yerçekimi yok; boşluk yukarı, Shift aşağı (saniyede 7,5 blok), yatay hız yürümenin 2,5 katı, Ctrl ile daha hızlı. Yere değince uçuş biter. Uçarken ve uçuştan sonra düşme hasarı yok.
+  - Boşluğa 0,3 sn içinde iki kez basınca uçuş açılır/kapanır. Uçarken yerçekimi yok; boşluk yukarı, Shift aşağı (saniyede 7,5 blok), yatay hız yürümenin 2,5 katı, W-W ile daha hızlı. Yere değince uçuş biter. Uçarken ve uçuştan sonra düşme hasarı yok.
   - Anahtar kapatılınca uçuş hemen biter.
 - **Kabul ölçütü:** Panelden uçma açılınca iki kez boşlukla havalanılıyor, boşluk/Shift ile yükselip alçalınıyor; yere inince düşme hasarı yok; anahtar kapalıyken iki kez boşluk sadece zıplatıyor.
 - **Bağımlılık:** 3, 51

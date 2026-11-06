@@ -2,6 +2,11 @@
 // Oyun döngüsü: her karede hareket, fizik, kamera, animasyon ve çizim.
 
 let last = performance.now(), walkPhase = 0, walkAmp = 0;
+// Eğilme (Shift): hız çarpanı, kameranın alçalması; crouch 0–1 arası yumuşak geçiş
+const CROUCH_SPEED = 0.3, CROUCH_DROP = 0.3;
+let crouching = false, crouch = 0;
+// Eğilirken ayağın altında (x, z) konumunda destek var mı
+const supported = (p, x, z) => collides({ w: W, h: 0.05 }, x, p.y - 0.06, z);
 // Su: yukarı yüzme hızı ve en yüksek batma hızı (blok/sn)
 const SWIM_UP_SPEED = 3, SINK_SPEED = 3;
 const underwaterEl = document.getElementById('underwater');
@@ -39,21 +44,29 @@ function frame(now) {
     const len = Math.hypot(mx, mz);
     if (!keys.KeyW) sprinting = false;
     if (p.food <= SPRINT_FOOD) sprinting = false;
-    const sprintNow = (sprinting || keys.ShiftLeft || keys.ShiftRight) && p.food > SPRINT_FOOD;
-    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1);
+    crouching = !!(keys.ShiftLeft || keys.ShiftRight);
+    if (crouching) sprinting = false;
+    const sprintNow = sprinting && p.food > SPRINT_FOOD;
+    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1) * (crouching ? CROUCH_SPEED : 1);
     updateHunger(dt, sprintNow && len > 0);
     updateSteps(dt, len > 0 && !inWater, sprintNow);
     p.vx = (len ? mx / len * speed : 0) + p.kx;
     p.vz = (len ? mz / len * speed : 0) + p.kz;
     if (keys.Space && (inWater || inLava)) p.vy = SWIM_UP_SPEED;
     else if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
-  } else { p.vx = p.vz = 0; }
+  } else { p.vx = p.vz = 0; crouching = false; }
+  crouch += ((crouching ? 1 : 0) - crouch) * Math.min(1, dt * 12);
   const knockDecay = Math.exp(-dt * 6);
   p.kx *= knockDecay; p.kz *= knockDecay;
   updateHealth(dt);
 
   // Suda yerçekimi 1/4, batma hızı sınırlı
   p.vy = inWater || inLava ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
+  // Eğilirken blok kenarından düşülmez: adım desteksiz bırakacaksa o eksendeki hareket durur.
+  if (crouching && p.onGround) {
+    if (!supported(p, p.x + p.vx * dt, p.z)) p.vx = 0;
+    if (!supported(p, p.x + p.vx * dt, p.z + p.vz * dt)) p.vz = 0;
+  }
   stepEntity(p, dt);
   if (playing) {
     for (const m of mobs) updateMob(m, dt);
@@ -86,7 +99,7 @@ function frame(now) {
   }
 
   // Kamera: 0 arkadan, 1 gözden, 2 önden. Arkada/önde duvar varsa kamera yaklaşır.
-  const eye = new THREE.Vector3(p.x, p.y + EYE, p.z);
+  const eye = new THREE.Vector3(p.x, p.y + EYE - crouch * CROUCH_DROP, p.z);
   const dir = new THREE.Vector3(-Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), -Math.cos(p.yaw) * Math.cos(p.pitch));
   aim.o.copy(eye); aim.d.copy(dir); aim.max = 6; aim.start = 0;
   if (view === 1) {
@@ -123,11 +136,12 @@ function frame(now) {
   const pk = Math.sin(punch / 0.25 * Math.PI);
   // Kamera karakterin içine girecek kadar yaklaşınca model gizlenir.
   model.visible = view === 2 || (view === 0 && cameraDistance > 0.8);
-  model.position.set(p.x, p.y, p.z);
+  // Eğilince model alçalır, kollar öne gelir
+  model.position.set(p.x, p.y - crouch * 0.15, p.z);
   model.rotation.y = p.yaw;
   head.rotation.x = p.pitch;
   legR.rotation.x = swing; legL.rotation.x = -swing;
-  armL.rotation.x = swing; armR.rotation.x = -swing + pk * 1.4;
+  armL.rotation.x = swing - crouch * 0.4; armR.rotation.x = -swing + pk * 1.4 - crouch * 0.4;
 
   fpArm.position.set(0.45 + Math.sin(walkPhase) * 0.03 * walkAmp, -0.42 + Math.abs(Math.cos(walkPhase)) * 0.03 * walkAmp + pk * 0.12, -0.75 - pk * 0.25);
   fpArm.rotation.set(1.75 + pk * 0.4, 0.35, 0);

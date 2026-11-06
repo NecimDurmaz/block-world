@@ -307,7 +307,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 | W A S D | Yürü |
 | Fare | Bak (fare kilidiyle). Kilit reddedilirse sol tuşla sürükleyerek bak. |
 | Boşluk | Zıpla |
-| W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
+| W-W (300 ms içinde iki kez) | Koş. W bırakılınca ya da eğilince koşma biter. Koşarken görüş alanı 75° → 85°. Ctrl kullanılmaz (tarayıcıda Ctrl+W sekmeyi kapatır). |
+| Shift (basılı) | Eğil: hız ×0,3 (`CROUCH_SPEED`), göz 0,3 blok alçalır (`CROUCH_DROP`, yumuşak geçiş), model 0,15 alçalır ve kollar öne gelir. Yerdeyken bir adım ayağın altını desteksiz bırakacaksa o eksendeki hareket durur (`supported`): blok kenarından düşülmez, kenarda sarkarak blok konabilir. |
 | Sol tık (basılı tut) | Basınca bakılan canlıya vurur; basılı tutuldukça bakılan bloğu kazar (yedek modda 6 pikselden fazla sürüklemek bakıştır, kazmayı keser) |
 | Sağ tık | Seçili yuvadaki bloğu koy; meşale bir bloğun üstüne dik, yan yüzüne eğik konur (tavana konmaz) (canlıların ya da oyuncunun içine konmaz); çalışma masasına bakılıyorsa 3×3 üretimi açar; elde yemek varsa basılı tutunca yer |
 | 1–9 / tekerlek | Hotbar yuvası seç |
@@ -687,5 +688,5 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 49 | Eldeki eşya her zaman görünür | Yapıldı |
 | 50 | Güvenli mod (`/safe`) | Yapıldı |
 | 51 | Kontrol paneli | Yapıldı |
-| 52 | Eğilme | Yapılmadı |
+| 52 | Eğilme | Yapıldı |
 | 53 | Uçma | Yapılmadı |

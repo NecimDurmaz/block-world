@@ -62,7 +62,7 @@ Bu depo, tarayıcıda çalışan Minecraft tarzı bir blok oyunudur: **Blok Dün
 Her madde ayrı bir iş ve ayrı bir commit'tir. Bir istekte birden çok madde verilse de her biri için bu adımları ayrı ayrı uygula.
 
 1. **Oku.** Maddeyi, bağımlılıklarını ve SPEC.md'nin ilgili bölümünü oku. Bağımlılıklar yapılmamışsa önce onları yap ya da kullanıcıya sor.
-2. **Yap.** Yalnızca o maddenin istediğini ekle. Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W ve Shift), çarpışma, blok kırma/koyma, 1–9 ve tekerlekle blok seçme, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
+2. **Yap.** Yalnızca o maddenin istediğini ekle. Mevcut özellikler bozulmayacak: yürüme, zıplama, koşma (W-W), eğilme (Shift), çarpışma, blok kırma/koyma, 1–9 ve tekerlekle blok seçme, V ile üç kamera, Esc ile duraklatma, fare kilitlenemeyince sürükleyerek bakma.
 3. **Sözdizimini denetle.** Her betiği Node ile kontrol et:
 
    ```bash

@@ -13,12 +13,13 @@ for (let x = 20; x < 70; x++) for (let z = 20; z < 70; z++) g.setBlock(x, 39, z,
 Object.assign(p, { x: 45.5, y: 40, z: 60.5, yaw: 0, pitch: 0 });
 await wait(300);
 g.hunger.timer = 0;
-window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' }));
+// W-W ile koş
+window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
 window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
 await wait(1000);
 const sprintTimer = g.hunger.timer;
 window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
-window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft' }));
 const sprintsFaster = sprintTimer > 1.5;
 // Yemek: çiğ biftek +3
 p.food = 10; g.renderFood();

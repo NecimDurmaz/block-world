@@ -51,7 +51,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Oyuncu modeli | `paint()`, `buildHumanoid()` (oyuncu, zombi, iskelet ortak), oyuncu modeli ve gözden görünümdeki kol |
    | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
-   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()` (canlıya vurma dahil), `placeBlock()` |
+   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
    | HUD | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
    | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
@@ -91,6 +91,15 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 9 | `cobble` | Kırık taş | `cobble` |
 
 Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
+
+**Kırma:** Her blokta `breakTime` (elle kırma süresi), `tool` (hızlı kıran alet türü) ve gerekiyorsa `needsTool` vardır.
+
+| Grup | Bloklar | Elle süre | `tool` | Elle kırınca düşer mi |
+| --- | --- | --- | --- | --- |
+| Yaprak | Yaprak | 0,3 sn | — | %10 |
+| Toprak | Çimen, Toprak, Kum | 0,75 sn | `shovel` | Evet |
+| Ahşap | Kütük, Tahta | 3 sn | `axe` | Evet |
+| Taş | Taş, Kırık taş, Tuğla | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
 
 ### Dokular
 
@@ -163,7 +172,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 | Fare | Bak (fare kilidiyle). Kilit reddedilirse sol tuşla sürükleyerek bak. |
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
-| Sol tık | Bloğu kır ya da canlıya vur (yedek modda: sürüklemeden kısa tık) |
+| Sol tık (basılı tut) | Basınca bakılan canlıya vurur; basılı tutuldukça bakılan bloğu kazar (yedek modda 6 pikselden fazla sürüklemek bakıştır, kazmayı keser) |
 | Sağ tık | Seçili yuvadaki bloğu koy (canlıların ya da oyuncunun içine konmaz) |
 | 1–9 / tekerlek | Hotbar yuvası seç |
 | E | Envanteri aç / kapat (Esc de kapatır) |
@@ -193,7 +202,8 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 - Hayvan sınırı `MAX_ANIMALS = 16` (`ANIMAL_KINDS` türlerinin toplamı).
 - **Doğma:** Açılışta her türden 4'lük bir sürü (`spawnHerd`): ilk hayvan rastgele bir çimen sütununda, diğerleri onun 8 blok çevresindeki çimenlerde. Gündüz (`daylight ≥ 0,5`) ve sınırın altındaysa her 30 sn'de oyuncudan en az 24 blok uzaktaki bir çimene rastgele türden 1 hayvan doğar.
 - **`slowFall`:** düşerken (`vy < 0`) yerçekimi 1/4'e iner.
-- **Vurma:** Sol tıkta `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
+- **Kazma:** Sol tuş basılıyken (`mining`) her karede bakılan bloğun ilerlemesi `dt / breakTime` kadar artar (`miningState`). Hedef blok değişir, bir canlıya bakılır ya da tuş bırakılırsa ilerleme sıfırlanır. İlerleme 1'e ulaşınca `breakBlockAt()`. Bu sırada bloğun üstünde 0,002 büyük bir kutu, 10 aşamalı koyu çatlak dokusunu gösterir (dokular kodla, ortadan dışa yürüyen rastgele piksellerle çizilir) ve kol sürekli vurur.
+- **Vurma:** Sol tuşa basıldığı anda `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
 - **`hurtMob(m, amount, dirX, dirZ)`:** elle vuruş `FIST_DAMAGE = 1`. 0,5 sn hasarsızlık, 0,3 sn kırmızı (`emissive`), vuruş yönünde 5 blok/sn geri itilme (yerdeyse 4 blok/sn hoplama), 4 sn boyunca oyuncudan 2 kat hızla kaçma (`flee`).
 - **Ölüm:** Can 0 olunca `dying = 0.5`: canlı 0,5 sn'de yana 90° devrilir, kırmızı kalır, sonra `removeMob()` ile sahneden ve diziden silinir (geometri ve malzemeler serbest bırakılır).
 - **Düşmanlar (`hostile`):** Gece (`daylight < 0,5`) her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta bir sütunun en üstüne (açık hava; yaprak üstü olmaz) doğar. `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür. Görüş kesilse de `CHASE_MEMORY = 5` sn kovalamayı sürdürür (`memory`); sonra dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
@@ -256,7 +266,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `mining` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -302,7 +312,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 12 | Düşmanların gün ışığında yanması | Yapıldı |
 | 13 | Eşya düşmesi ve toplama | Yapıldı |
 | 14 | Sınırlı hotbar ve envanter ekranı | Yapıldı |
-| 15 | Blok kırma süresi ve çatlama | Yapılmadı |
+| 15 | Blok kırma süresi ve çatlama | Yapıldı |
 | 16 | Üretim ve çalışma masası | Yapılmadı |
 | 17 | Aletler | Yapılmadı |
 | 18 | Açlık barı ve yemek | Yapılmadı |

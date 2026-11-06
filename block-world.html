@@ -192,17 +192,18 @@
 
   // ---------- Bloklar ----------
   const AIR = 0;
+  // breakTime: elle kırma süresi (sn). tool: bloğu hızlı kıran alet. needsTool: o alet olmadan kırılınca eşya düşmez.
   const BLOCKS = [
     null,
-    { name: 'Çimen', top: TILE.grassTop, side: TILE.grassSide, bottom: TILE.dirt },
-    { name: 'Toprak', top: TILE.dirt, side: TILE.dirt, bottom: TILE.dirt },
-    { name: 'Taş', top: TILE.stone, side: TILE.stone, bottom: TILE.stone },
-    { name: 'Kütük', top: TILE.logTop, side: TILE.logSide, bottom: TILE.logTop },
-    { name: 'Yaprak', top: TILE.leaves, side: TILE.leaves, bottom: TILE.leaves },
-    { name: 'Kum', top: TILE.sand, side: TILE.sand, bottom: TILE.sand },
-    { name: 'Tahta', top: TILE.planks, side: TILE.planks, bottom: TILE.planks },
-    { name: 'Tuğla', top: TILE.brick, side: TILE.brick, bottom: TILE.brick },
-    { name: 'Kırık taş', top: TILE.cobble, side: TILE.cobble, bottom: TILE.cobble },
+    { name: 'Çimen', top: TILE.grassTop, side: TILE.grassSide, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
+    { name: 'Toprak', top: TILE.dirt, side: TILE.dirt, bottom: TILE.dirt, breakTime: 0.75, tool: 'shovel' },
+    { name: 'Taş', top: TILE.stone, side: TILE.stone, bottom: TILE.stone, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
+    { name: 'Kütük', top: TILE.logTop, side: TILE.logSide, bottom: TILE.logTop, breakTime: 3, tool: 'axe' },
+    { name: 'Yaprak', top: TILE.leaves, side: TILE.leaves, bottom: TILE.leaves, breakTime: 0.3 },
+    { name: 'Kum', top: TILE.sand, side: TILE.sand, bottom: TILE.sand, breakTime: 0.75, tool: 'shovel' },
+    { name: 'Tahta', top: TILE.planks, side: TILE.planks, bottom: TILE.planks, breakTime: 3, tool: 'axe' },
+    { name: 'Tuğla', top: TILE.brick, side: TILE.brick, bottom: TILE.brick, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
+    { name: 'Kırık taş', top: TILE.cobble, side: TILE.cobble, bottom: TILE.cobble, breakTime: 7.5, tool: 'pickaxe', needsTool: true },
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9 };
 
@@ -584,15 +585,22 @@
   document.addEventListener('mousemove', e => {
     if (!playing) return;
     if (document.pointerLockElement === canvas) look(e.movementX, e.movementY);
-    else if (fallbackLook && drag) { look(e.movementX, e.movementY); drag.moved += Math.abs(e.movementX) + Math.abs(e.movementY); }
+    else if (fallbackLook && drag) {
+      look(e.movementX, e.movementY);
+      drag.moved += Math.abs(e.movementX) + Math.abs(e.movementY);
+      if (drag.moved >= 6) mining = false;
+    }
   });
+  // Sol tuş basılı tutuldukça kazılır (mining). Yedek modda sürükleme bakıştır, kazmayı keser.
+  let mining = false;
   canvas.addEventListener('mousedown', e => {
     if (!playing || inventoryOpen) return;
-    if (document.pointerLockElement === canvas) { e.button === 0 ? breakBlock() : e.button === 2 && placeBlock(); }
-    else { fallbackLook = true; if (e.button === 2) placeBlock(); else drag = { moved: 0 }; }
+    if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
+    if (e.button === 0) { mining = true; attackMob(); }
+    else if (e.button === 2) placeBlock();
   });
   window.addEventListener('mouseup', e => {
-    if (drag && e.button === 0 && drag.moved < 6) breakBlock();
+    if (e.button === 0) mining = false;
     drag = null;
   });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -625,21 +633,73 @@
     }
     return null;
   }
-  // Sol tık: ışın önce canlılara bakar; bloktan daha yakın bir canlı varsa ona vurur.
-  function breakBlock() {
-    punch = 0.25;
-    const hit = raycast();
+  // Bakılan şey bloktan daha yakın bir canlıysa döner (vuruş ve kazma bunu kullanır).
+  function targetedMob(hit) {
     const mobHit = rayMob();
-    if (mobHit && (!hit || mobHit.t < hit.t)) {
-      hurtMob(mobHit.mob, FIST_DAMAGE, aim.d.x, aim.d.z);
-      return;
-    }
-    if (!hit || hit.y === 0) return;
+    return mobHit && (!hit || mobHit.t < hit.t) ? mobHit.mob : null;
+  }
+  // Sol tuşa basınca: canlıya bakılıyorsa vurur.
+  function attackMob() {
+    punch = 0.25;
+    const mob = targetedMob(raycast());
+    if (mob) hurtMob(mob, FIST_DAMAGE, aim.d.x, aim.d.z);
+  }
+  function breakBlockAt(hit) {
     const broken = get(hit.x, hit.y, hit.z);
     set(hit.x, hit.y, hit.z, AIR);
     rebuildAround(hit.x, hit.z);
-    // Yaprak %10 olasılıkla düşer, diğer bloklar her zaman kendisini düşürür.
+    // Yaprak %10 olasılıkla düşer; alet isteyen bloklar elle kırılınca düşmez.
+    const def = BLOCKS[broken];
+    if (def.needsTool) return;
     if (broken !== B.leaves || Math.random() < 0.1) dropItem(BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+  }
+
+  // Kazma ilerlemesi: aynı bloğa basılı tutuldukça dolar; hedef değişir ya da tuş bırakılırsa sıfırlanır.
+  const CRACK_STAGES = 10;
+  const crackTextures = (() => {
+    // Ortadan dışa yürüyen rastgele çatlak pikselleri; her aşama öncekilere yenilerini ekler.
+    const cr = mulberry32(77), pixels = [];
+    for (let walk = 0; walk < 6; walk++) {
+      let x = 7 + Math.floor(cr() * 3), y = 7 + Math.floor(cr() * 3);
+      for (let i = 0; i < 22; i++) {
+        pixels.push([x, y]);
+        x = Math.max(0, Math.min(15, x + Math.floor(cr() * 3) - 1));
+        y = Math.max(0, Math.min(15, y + Math.floor(cr() * 3) - 1));
+      }
+    }
+    return Array.from({ length: CRACK_STAGES }, (_, stage) => {
+      const c = document.createElement('canvas'); c.width = c.height = T;
+      const cg = c.getContext('2d');
+      cg.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      for (const [x, y] of pixels.slice(0, Math.round(pixels.length * (stage + 1) / CRACK_STAGES))) cg.fillRect(x, y, 1, 1);
+      const t = new THREE.CanvasTexture(c);
+      t.magFilter = t.minFilter = THREE.NearestFilter;
+      return t;
+    });
+  })();
+  const crackMaterial = new THREE.MeshBasicMaterial({ map: crackTextures[0], transparent: true, depthWrite: false });
+  const crackBox = new THREE.Mesh(new THREE.BoxGeometry(1.002, 1.002, 1.002), crackMaterial);
+  crackBox.visible = false;
+  scene.add(crackBox);
+  const miningState = { key: '', progress: 0 };
+  function breakTimeOf(block) { return BLOCKS[block].breakTime; }
+  function updateMining(dt, hit) {
+    const target = mining && hit && hit.y > 0 && !targetedMob(hit) ? hit : null;
+    if (!target) { miningState.key = ''; miningState.progress = 0; crackBox.visible = false; return; }
+    const key = target.x + ',' + target.y + ',' + target.z;
+    if (key !== miningState.key) { miningState.key = key; miningState.progress = 0; }
+    miningState.progress += dt / breakTimeOf(get(target.x, target.y, target.z));
+    if (punch <= 0) punch = 0.25; // kol vurmaya devam eder
+    if (miningState.progress >= 1) {
+      breakBlockAt(target);
+      miningState.key = '';
+      miningState.progress = 0;
+      crackBox.visible = false;
+      return;
+    }
+    crackMaterial.map = crackTextures[Math.min(CRACK_STAGES - 1, Math.floor(miningState.progress * CRACK_STAGES))];
+    crackBox.position.set(target.x + 0.5, target.y + 0.5, target.z + 0.5);
+    crackBox.visible = true;
   }
   function placeBlock() {
     punch = 0.25;
@@ -1506,6 +1566,7 @@
   renderInventory();
   selectSlot(0);
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot });
+  Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -1697,6 +1758,7 @@
     document.getElementById('crosshair').hidden = view === 2;
     const hit = playing ? raycast() : null;
     const mobHit = playing ? rayMob() : null;
+    updateMining(playing && !inventoryOpen ? dt : 0, playing && !inventoryOpen ? hit : null);
     // İmleç bir canlının üstündeyse blok çerçevesi gizlenir.
     highlight.visible = !!hit && !(mobHit && mobHit.t < hit.t);
     if (hit) highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);

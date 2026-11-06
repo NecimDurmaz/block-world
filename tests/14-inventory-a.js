@@ -15,7 +15,9 @@ Object.assign(p, { x: 40.5, y: 40, z: 44.5, yaw: 0, pitch: -0.45, vx: 0, vz: 0 }
 for (let i = 0; i < 5; i++) {
   g.setBlock(40, 40, 42, 2);
   await wait(250);
-  mouse(0);
+  canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+  for (let k = 0; k < 40 && g.getBlock(40, 40, 42) !== 0; k++) await wait(100);
+  window.dispatchEvent(new MouseEvent('mouseup', { button: 0 }));
   for (let k = 0; k < 30 && g.drops.length; k++) { Object.assign(p, { x: 40.5, z: 43.2 }); await wait(100); }
   Object.assign(p, { x: 40.5, z: 44.5 });
 }

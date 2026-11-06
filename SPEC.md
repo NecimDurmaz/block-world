@@ -104,8 +104,11 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 15 | `coal_ore` | Kömür cevheri | `coalOre` (taş + siyah benekler) |
 | 16 | `iron_ore` | Demir cevheri | `ironOre` (taş + bej benekler) |
 | 17 | `water` | Su | `water`; `fluid`, `transparent`, `hidden` (eşya olarak alınamaz, kırılamaz) |
+| 18–22 | `torch_floor`, `torch_east`, `torch_west`, `torch_south`, `torch_north` | Meşale | `torch`; `model: 'torch'`, `lean` (eğilme yönü), `noCollide`, `transparent`, kırılınca `torch` eşyası |
 
-Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid` bloklar dışındakiler; çarpışma, nişan ışını, görüş (`canSeePlayer`), gün ışığı (`skyAbove`), oklar ve kamera mesafesi bunu kullanır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
+Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` ve `noCollide` bloklar dışındakiler; çarpışma, görüş (`canSeePlayer`), gün ışığı (`skyAbove`), oklar ve kamera mesafesi bunu kullanır. `isTargetable(b)`: hava ve `fluid` dışındakiler; nişan ışını bunlarda durur (meşale kırılabilir). `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
+
+**Meşalenin dayanağı:** Bir blok kırılınca üstündeki yer meşalesi ve yan yüzlerine yaslanan duvar meşaleleri düşer.
 
 **Kırma:** Her blokta `breakTime` (elle kırma süresi), `tool` (hızlı kıran alet türü), gerekiyorsa `needsTool` (yalnızca o alet türüyle kırılınca düşer) ve `drop` (kendisi yerine düşen eşya) vardır. Seçili alet bloğun `tool` türündeyse süre aletin `speed` çarpanına bölünür (bkz. Aletler).
 
@@ -121,8 +124,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 22` doku, atlas `352 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 23` doku, atlas `368 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -132,7 +135,9 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
 
 - **Chunk:** `16 × SY × 16` blokluk dilimler (`CH = 16`); her chunk iki mesh'tir: opak bloklar (`material`) ve saydam bloklar (`waterMaterial`: %60 opak, derinliğe yazmaz, opaklardan sonra çizilir). Bir yüz, komşusu hava ise ya da komşusu kendisinden farklı saydam bir blok ise çizilir (`faceVisible`); böylece su altındaki zemin görünür, su–su yüzleri çizilmez.
 - **Yüz gölgesi:** Işık hesabı yok, köşe rengiyle sabit gölge: üst 1,0, doğu/batı 0,8, kuzey/güney 0,65, alt 0,5.
-- **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri.
+- **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri. `withTorchLight()` shader'a bir ek yapar: her köşede `torchLight` niteliği (0–1) vardır ve son renk `doku × köşe rengi × max(uBrightness, torchLight × (1, 0,85, 0,6))` olur. `uBrightness` (`brightnessUniform`) gün döngüsünün parlaklığıdır; böylece meşale ışığı gece karartmasından etkilenmez.
+- **Meşale ışığı:** Chunk kurulurken çevresindeki (±8 blok) meşaleler toplanır (`torchesNear`); her yüzün merkezinin en yakın meşaleye uzaklığına göre `torchLight = max(0, 1 − d / TORCH_RANGE)`, `TORCH_RANGE = 7.5`. Duvarlar ışığı kesmez. Meşale konunca ya da kaldırılınca ışığın ulaştığı bütün chunk'lar yeniden kurulur (`rebuildArea`).
+- **Meşale modeli:** Tam blok değil; 2×10 piksellik çubuk (`addTorchModel`), dokunun ortadaki iki sütunu (alt kısım tahta, üst 3 satır alev). Yerdeki meşale dik durur; duvar meşalesi duvara yakın başlar ve dışa eğilir. Meşalenin kendi yüzleri her zaman tam aydınlıktır.
 - **Yeniden kurma:** Blok değişince `rebuildAround(x, z)` o chunk'ı ve gerekiyorsa komşusunu yeniden kurar.
 - **Gökyüzü:** Rengi gün döngüsüne göre değişir (aşağıda); sis aynı renktedir (30–70 blok).
 - **İki geçişli çizim:** `renderer.autoClear = false`. Önce dünya sahnesi, sonra gözden görünümde derinlik temizlenip kol sahnesi (`fpScene`, `fpCam`) çizilir; böylece kol duvarın içine girmez.
@@ -209,7 +214,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
 | Sol tık (basılı tut) | Basınca bakılan canlıya vurur; basılı tutuldukça bakılan bloğu kazar (yedek modda 6 pikselden fazla sürüklemek bakıştır, kazmayı keser) |
-| Sağ tık | Seçili yuvadaki bloğu koy (canlıların ya da oyuncunun içine konmaz); çalışma masasına bakılıyorsa 3×3 üretimi açar; elde yemek varsa basılı tutunca yer |
+| Sağ tık | Seçili yuvadaki bloğu koy; meşale bir bloğun üstüne dik, yan yüzüne eğik konur (tavana konmaz) (canlıların ya da oyuncunun içine konmaz); çalışma masasına bakılıyorsa 3×3 üretimi açar; elde yemek varsa basılı tutunca yer |
 | 1–9 / tekerlek | Hotbar yuvası seç |
 | E | Envanteri aç / kapat (Esc de kapatır) |
 | Q | Seçili yığından 1 tanesini bakılan yöne at |
@@ -242,7 +247,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
 - **Vurma:** Sol tuşa basıldığı anda `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
 - **`hurtMob(m, amount, dirX, dirZ)`:** elle vuruş `FIST_DAMAGE = 1`. 0,5 sn hasarsızlık, 0,3 sn kırmızı (`emissive`), vuruş yönünde 5 blok/sn geri itilme (yerdeyse 4 blok/sn hoplama), 4 sn boyunca oyuncudan 2 kat hızla kaçma (`flee`).
 - **Ölüm:** Can 0 olunca `dying = 0.5`: canlı 0,5 sn'de yana 90° devrilir, kırmızı kalır, sonra `removeMob()` ile sahneden ve diziden silinir (geometri ve malzemeler serbest bırakılır).
-- **Düşmanlar (`hostile`):** Gece (`daylight < 0,5`) her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta bir sütunun en üstüne (açık hava; yaprak üstü olmaz) doğar. `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür. Görüş kesilse de `CHASE_MEMORY = 5` sn kovalamayı sürdürür (`memory`); sonra dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
+- **Düşmanlar (`hostile`):** Gece (`daylight < 0,5`) her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta bir sütunun en üstüne (açık hava; yaprak ya da su üstü olmaz) doğar; bir meşaleye `TORCH_SAFE = 8` bloktan yakın yerde doğmaz (`torchNearby`). `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür. Görüş kesilse de `CHASE_MEMORY = 5` sn kovalamayı sürdürür (`memory`); sonra dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
 - **Bacak animasyonu:** çapraz bacaklar (0 ile 3, 1 ile 2) birlikte sallanır; iki bacaklılarda 0 ileri, 1 geri.
 
 | Tür (`kind`) | Ad | Can | Kutu (`w` × `h`) | Hız | Model | Doğma |
@@ -286,7 +291,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
   | `bone` | Kemik |
   | `arrow` | Ok |
   | `stick` | Çubuk |
-  | `torch` | Meşale (şimdilik konulamaz, madde 22) |
+  | `torch` | Meşale (konulabilir, bkz. Bloklar) |
   | `coal` | Kömür (kömür cevherinden) |
   | `apple` | Elma |
   | `cooked_beef` | Pişmiş biftek |
@@ -359,7 +364,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava ve `fluid`
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -414,7 +419,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 19 | Fırın ve pişirme | Yapıldı |
 | 20 | Maden cevherleri | Yapıldı |
 | 21 | Su | Yapıldı |
-| 22 | Meşale ve basit ışık | Yapılmadı |
+| 22 | Meşale ve basit ışık | Yapıldı |
 | 23 | Yatak | Yapılmadı |
 | 24 | Kapı ve cam | Yapılmadı |
 | 25 | Çiçek, uzun ot ve süs bitkileri | Yapılmadı |

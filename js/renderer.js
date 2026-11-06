@@ -68,6 +68,8 @@ const FACES = [
 const EPS = 0.001;
 
 // Saydam bloklar (su) ayrı, yarı saydam bir malzemeyle ve ayrı mesh'te çizilir.
+// Kendi ışığı olan bloklar (lav, ışıltı taşı): karanlıktan etkilenmez
+const glowMaterial = new THREE.MeshBasicMaterial({ map: texture, vertexColors: true });
 const waterMaterial = withTorchLight(new THREE.MeshBasicMaterial({ map: texture, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false }));
 // Meşale ışığı: 7,5 blokta sıfıra iner.
 const TORCH_RANGE = 7.5;
@@ -75,7 +77,7 @@ function torchesNear(x0, z0, x1, z1) {
   const list = [];
   [x0, z0, x1, z1] = [x0, z0, x1, z1].map(Math.floor);
   for (let y = 0; y < SY; y++) for (let z = Math.max(0, z0); z <= Math.min(SZ - 1, z1); z++) for (let x = Math.max(0, x0); x <= Math.min(SX - 1, x1); x++) {
-    if (isTorch(world[index(x, y, z)])) list.push([x + 0.5, y + 0.6, z + 0.5]);
+    if (isLightSource(world[index(x, y, z)])) list.push([x + 0.5, y + 0.6, z + 0.5]);
   }
   return list;
 }
@@ -174,7 +176,7 @@ const chunkMeshes = new Map();
 // Yüz, komşu hava ise ya da komşu kendisinden farklı saydam bir bloksa çizilir.
 const faceVisible = (b, n) => n === AIR || (n !== b && BLOCKS[n].transparent);
 function buildChunk(cx, cz) {
-  const buffers = [0, 1].map(() => ({ pos: [], uv: [], col: [], light: [], idx: [] })); // 0 opak, 1 saydam
+  const buffers = [0, 1, 2].map(() => ({ pos: [], uv: [], col: [], light: [], idx: [] })); // 0 opak, 1 saydam, 2 kendi ışıklı
   const range = Math.ceil(TORCH_RANGE);
   const torches = torchesNear(cx * CH - range, cz * CH - range, cx * CH + CH - 1 + range, cz * CH + CH - 1 + range);
   for (let y = 0; y < SY; y++) for (let z = cz * CH; z < cz * CH + CH; z++) for (let x = cx * CH; x < cx * CH + CH; x++) {
@@ -186,7 +188,7 @@ function buildChunk(cx, cz) {
     if (def.model === 'box') { addBoxModel(buffers[0], x, y, z, def, torches); continue; }
     if (def.model === 'cross') { addCrossModel(buffers[0], x, y, z, def, torches); continue; }
     if (def.model === 'portal') continue; // portal.js ayrı çizer
-    const buf = buffers[def.transparent && !def.cutout ? 1 : 0];
+    const buf = buffers[def.selfLit ? 2 : def.transparent && !def.cutout ? 1 : 0];
     const { pos, uv, col, light, idx } = buf;
     for (const f of FACES) {
       if (!faceVisible(b, get(x + f.dir[0], y + f.dir[1], z + f.dir[2]))) continue;
@@ -218,7 +220,7 @@ function buildChunk(cx, cz) {
   if (old) {
     old.forEach((m, i) => { m.geometry.dispose(); m.geometry = geos[i]; });
   } else {
-    const meshes = [new THREE.Mesh(geos[0], material), new THREE.Mesh(geos[1], waterMaterial)];
+    const meshes = [new THREE.Mesh(geos[0], material), new THREE.Mesh(geos[1], waterMaterial), new THREE.Mesh(geos[2], glowMaterial)];
     meshes[1].renderOrder = 1;
     scene.add(...meshes);
     chunkMeshes.set(key, meshes);

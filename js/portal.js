@@ -1,6 +1,6 @@
 // ---------- Portal ----------
 // Obsidyen çerçeve çakmakla yakılınca içi mor portal olur. Portal blokları chunk mesh'inde değil, buradaki
-// kayan dokulu düzlemlerle çizilir. İçinde 3 sn duran oyuncu diğer dünyaya geçer (travelThroughPortal).
+// kayan dokulu düzlemlerle çizilir. İçinde 3 sn duran oyuncu diğer dünyaya geçer (travelThroughPortal, nether.js).
 
 const PORTAL_TIME = 3;
 const portalTexture = (() => {
@@ -102,9 +102,4 @@ function updatePortal(dt) {
     travelThroughPortal();
   }
 }
-// Madde 34'te diğer dünyaya geçişle değiştirilecek: şimdilik ekran kararır.
-function travelThroughPortal() {
-  toast('Portal etkinleşti');
-}
-
 Object.assign(window.game, { tryLightPortal, rebuildPortalMeshes, portalTimer: () => portalTimer });

@@ -29,6 +29,16 @@ function clockText() {
   return `Gün ${clock.day} · ${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 }
 function updateDayCycle(dt) {
+  // Nether: zaman durur, gökyüzü ve sis koyu kırmızı, parlaklık sabit; güneş ve ay görünmez
+  sunDisc.visible = moonDisc.visible = dimension === 'overworld';
+  if (dimension === 'nether') {
+    sky.set(NETHER_SKY);
+    scene.fog.color.copy(sky);
+    brightnessUniform.value = NETHER_BRIGHTNESS;
+    dropBlockMaterial.color.setScalar(NETHER_BRIGHTNESS);
+    for (const rig of lightRigs) { rig.hemi.intensity = HEMI_INTENSITY * NETHER_BRIGHTNESS; rig.sun.intensity = SUN_INTENSITY * 0.3; }
+    return;
+  }
   if (playing) {
     clock.time += dt / DAY_LENGTH;
     if (clock.time >= 1) { clock.time -= 1; clock.day++; }

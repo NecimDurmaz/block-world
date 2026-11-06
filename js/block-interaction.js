@@ -87,6 +87,11 @@ function breakBlockAt(hit) {
     return;
   }
   if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool || ITEMS[tool.key].tier < (def.minTier || 1))) return;
+  if (def.dropCount) {
+    const [min, max] = def.dropCount, n = min + Math.floor(Math.random() * (max - min + 1));
+    for (let i = 0; i < n; i++) dropItem(def.drop, hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+    return;
+  }
   if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
   if (broken === B.leaves && Math.random() < 0.05) dropItem('apple', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
 }

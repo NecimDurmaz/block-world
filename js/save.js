@@ -2,7 +2,7 @@
 // IndexedDB kaydı: kaydetme, yükleme, yeni dünya.
 
 // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
-const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 1, AUTOSAVE_MS = 30000;
+const DB_NAME = 'block-world', DB_STORE = 'saves', SAVE_KEY = 'world1', SAVE_VERSION = 2, AUTOSAVE_MS = 30000;
 const playButton = document.getElementById('play');
 const resetButton = document.getElementById('reset');
 const saveNote = document.getElementById('save-note');
@@ -32,7 +32,10 @@ function saveGame() {
     const tx = db.transaction(DB_STORE, 'readwrite');
     tx.objectStore(DB_STORE).put({
       version: SAVE_VERSION,
-      world,
+      world: worlds.overworld,
+      nether: worlds.nether,
+      dimension,
+      portalLinks,
       player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
       health: player.health,
       food: player.food,
@@ -51,12 +54,17 @@ function saveGame() {
   } catch (err) { /* kayıt yapılamazsa oyun sürer */ }
 }
 function applySave(save) {
-  world.set(save.world);
+  worlds.overworld.set(save.world);
+  // Sürüm 1 kayıtlarında Nether yok: yeni üretilen Nether kalır
+  if (save.nether?.length === worlds.nether.length) worlds.nether.set(save.nether);
+  dimension = save.dimension === 'nether' ? 'nether' : 'overworld';
+  world = worlds[dimension];
+  Object.assign(portalLinks, save.portalLinks || {});
   for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
   Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
   player.health = save.health > 0 ? save.health : MAX_HEALTH;
   player.food = save.food ?? MAX_FOOD;
-  for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
+  for (const f of save.furnaces || []) furnaces[(f.dim || 'overworld') + ':' + f.x + ',' + f.y + ',' + f.z] = { dim: 'overworld', ...f };
   spawnPoint = save.spawnPoint || null;
   scanCrops();
   rebuildPortalMeshes();
@@ -73,7 +81,7 @@ async function loadGame() {
   try {
     db = await openDb();
     const save = await readSave();
-    const valid = save && save.version === SAVE_VERSION && save.world?.length === world.length;
+    const valid = save && (save.version === 1 || save.version === SAVE_VERSION) && save.world?.length === world.length;
     if (valid) applySave(save);
     saveNote.textContent = valid ? 'Kayıt yüklendi. Oyun otomatik kaydedilir.' : 'Oyun otomatik kaydedilir.';
   } catch (err) {
@@ -82,7 +90,7 @@ async function loadGame() {
     resetButton.hidden = true;
   }
   // Canlılar kaydedilmez; dünya yüklendikten sonra yeniden doğar.
-  spawnInitialAnimals();
+  if (dimension === 'overworld') spawnInitialAnimals();
   if (db) await loadSettings();
   applySettings();
   playButton.disabled = false;

@@ -18,6 +18,8 @@ function setSpawnNearBed(x, y, z) {
   spawnPoint = { x: x + 0.5, y: y + BED_HEIGHT, z: z + 0.5 };
 }
 function useBed(x, y, z) {
+  // Nether'de yatak kullanılamaz (Minecraft'ta patlar; burada 6 hasar)
+  if (dimension === 'nether') { toast('Burada uyuyamazsın'); damagePlayer(6); return; }
   setSpawnNearBed(x, y, z);
   if (daylight(clock.time) >= 0.5) { toast('Sadece gece uyuyabilirsin'); return; }
   if (mobs.some(m => m.type.hostile && m.dying <= 0 && Math.hypot(m.x - player.x, m.y - player.y, m.z - player.z) <= 8)) {

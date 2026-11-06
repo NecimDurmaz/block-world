@@ -67,7 +67,7 @@ tests/              otomatik testler
    | `block-interaction.js` | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
    | `hud.js` | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | `health.js` | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
-   | `portal.js` | Portal dokusu ve düzlemleri (`rebuildPortalMeshes()`), çerçeve denetimi (`portalInterior()`), `tryLightPortal()`, `extinguishPortalNear()`, portalda bekleme (`updatePortal()`), `travelThroughPortal()` |
+   | `portal.js` | Portal dokusu ve düzlemleri (`rebuildPortalMeshes()`), çerçeve denetimi (`portalInterior()`), `tryLightPortal()`, `extinguishPortalNear()`, portalda bekleme (`updatePortal()`) |
    | `crops.js` | `crops`, `plantCrop()`, `scanCrops()`, `updateCrops()` |
    | `doors.js` | `toggleDoor()` |
    | `bed.js` | `setSpawnNearBed()`, `useBed()`, `updateSleep()` |
@@ -86,6 +86,7 @@ tests/              otomatik testler
    | `sound.js` | `initAudio()`, `playNoise()`, `playTone()`, `blockSound()`, `hurtSound()`, `popSound()`, `MOB_SOUNDS`, `updateMobSounds()`, `updateSteps()`, `setSound()` |
    | `settings.js` | `settings`, `VIEW_DISTANCES`, `applySettings()`, `loadSettings()`, `saveSettings()`, `showSettings()` |
    | `chat.js` | Sohbet (`chatLine()`, `openChat()`, `closeChat()`), komutlar (`COMMANDS`, `submitChat()`), `godMode` |
+   | `nether.js` | `dimension`, `generateNether()`, `switchDimension()`, `portalLinks`, `createPortalNear()`, `travelThroughPortal()`, `updateLava()`. Yüklenirken `useBed` ve `RECIPES`'e eriştiği için `main.js`'ten hemen önce yüklenir |
    | `main.js` | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
 ---
@@ -136,6 +137,9 @@ tests/              otomatik testler
 | 51–54 | `wheat_0` … `wheat_3` | Buğday | `wheat0` … `wheat3`; `model: 'cross'`, `crop` (aşama 0–3) |
 | 55 | `obsidian` | Obsidyen | `obsidian`; `breakTime: 36`, `pickaxe`, `minTier: 3` (yalnızca demir kazma, 6 sn) |
 | 56–57 | `portal_x`, `portal_z` | Portal | `model: 'portal'` (chunk mesh'inde değil, `portal.js`), `axis`, `fluid` (çarpışmasız, nişan geçer), `noDrop` |
+| 58 | `netherrack` | Kızıl taş | `netherrack`; `breakTime: 2`, `pickaxe`, `needsTool` |
+| 59 | `lava` | Lav | `lava`; `fluid`, `selfLit` (kendi ışıklı malzeme), `hidden`, `noDrop` |
+| 60 | `glowstone` | Işıltı taşı | `glowstone`; `selfLit`, ışık kaynağı (`isLightSource`), kırılınca 2–4 `glowstone_dust` (`dropCount`) |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
 | 23–30 | `bed_foot_<yön>`, `bed_head_<yön>` (yön: `east`, `west`, `south`, `north`) | Yatak | `bedHeadTop` / `bedFootTop` / `bedSide`; `model: 'bed'`, `part`, `dir` (baş tarafı), `height: 9/16`, kırılınca `bed` eşyası (bir kez) |
 | 18–22 | `torch_floor`, `torch_east`, `torch_west`, `torch_south`, `torch_north` | Meşale | `torch`; `model: 'torch'`, `lean` (eğilme yönü), `noCollide`, `transparent`, kırılınca `torch` eşyası |
@@ -245,7 +249,18 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Yakma:** Elde çakmak varken çerçevenin iç tabanındaki bir obsidyenin üstüne sağ tık: iç boşluk tamamen boşsa 6 portal bloğuyla dolar, çakmak 1 aşınır.
 - **Görünüm:** Portal blokları kendi dokusuyla (32×32, mor dalgalar), yarı saydam ve çift yüzlü düzlemler olarak çizilir; doku her karede yukarı kayar. Gece karartmasından etkilenmez.
 - **Sönme:** Çerçeveden bir obsidyen kırılınca bitişik portal blokları ve onlara bağlı bütün portal söner.
-- **Geçiş:** Oyuncu portal bloğunun içinde `PORTAL_TIME = 3` sn kesintisiz kalırsa ekran mora dönüp kararır (`#portal-fx`), HUD'da geri sayım çıkar (`#portal-hud`) ve `travelThroughPortal()` çağrılır. Oyuncu portaldan çıkmadan tekrar tetiklenmez. (Diğer dünyaya geçiş madde 34'te.)
+- **Geçiş:** Oyuncu portal bloğunun içinde `PORTAL_TIME = 3` sn kesintisiz kalırsa ekran mora dönüp kararır (`#portal-fx`), HUD'da geri sayım çıkar (`#portal-hud`) ve `travelThroughPortal()` (`nether.js`) çağrılır. Oyuncu portaldan çıkmadan tekrar tetiklenmez.
+
+### Nether
+
+- **Dünyalar:** `worlds = { overworld, nether }` iki ayrı `Uint8Array`; `world` etkin olanı gösterir ve bütün `get`/`set`/chunk kodu onu kullanır. `switchDimension(to)` dünyayı değiştirir; canlılar, yerdeki eşyalar, oklar ve parçacıklar silinir, bütün chunk'lar, portal düzlemleri ve ekin sayaçları yeniden kurulur. Ana dünyaya dönüşte hayvanlar yeniden doğar.
+- **Üretim** (`generateNether()`, yüklenirken bir kez): taban `3 + fbm·12`, tavan `35 + fbm·8` kızıl taş; arada 3B gürültüyle kızıl taş sütunlar; `y ≤ LAVA_LEVEL = 10` boşluklar lav; tavandan sarkan 45 ışıltı taşı öbeği.
+- **Işık:** Lav ve ışıltı taşı üçüncü chunk tamponunda, parlaklıktan etkilenmeyen `glowMaterial` ile çizilir. Işıltı taşı meşale gibi çevresini aydınlatır; lav yalnızca kendisi parlar.
+- **Ortam:** Nether'de saat durur; gökyüzü ve sis `#3a0f0f`, sis 12–40 blok, parlaklık 0,6; güneş, ay, bulut ve yıldız gizlenir. Ana dünya canlıları Nether'de doğmaz.
+- **Geçiş:** Girilen portalın iç tabanının sol hücresi `portalLinks[from]`'a yazılır. Hedef dünyada bağlı portal hâlâ duruyorsa oraya, yoksa aynı X/Z yakınında (16 blok içinde) 4×5 çerçevenin ve önünün sığdığı katı zeminli bir yere yeni yanık portal kurulur (`createPortalNear`); yer bulunamazsa yer açılır. Oyuncu portalın önüne konur, "Nether'e geçtin" / "Dünyaya döndün" yazısı çıkar ve oyun kaydedilir.
+- **Lav:** Su gibi yüzülür (yavaş: hız 0,35 katı); içindeyken saniyede 4 hasar, çıkınca 3 sn daha saniyede 1 hasar (yanma). Lava düşen düşme hasarı almaz.
+- **Yatak:** Nether'de kullanılırsa "Burada uyuyamazsın" yazar ve 6 hasar verir. Nether'de ölen ana dünyada doğar.
+- **Fırınlar:** Anahtarı dünyaya göre ayrılır (`"overworld:x,y,z"`); her dünyada yalnızca o dünyanın fırınları çalışır.
 
 ### Kapı
 
@@ -375,6 +390,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `iron_pickaxe` | Demir kazma (`tier: 3`, `speed: 6`, dayanıklılık 250, hasar 4) |
   | `flint_and_steel` | Çakmak (dayanıklılık 64, yığılmaz) |
   | `obsidian` | Obsidyen |
+  | `netherrack`, `glowstone` | Kızıl taş, ışıltı taşı (konulabilir) |
+  | `glowstone_dust` | Işıltı tozu; 2×2 toz → 1 ışıltı taşı |
   | `wheat_seeds` | Buğday tohumu (uzun ottan) |
   | `wheat` | Buğday |
   | `bread` | Ekmek |
@@ -502,22 +519,25 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `openChat`, `closeChat`, `submitChat`, `isGod()`, `chatLines()`, `itemIcon`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `isGod()`, `chatLines()`, `itemIcon`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
 - Tarayıcının IndexedDB'si: veritabanı `block-world`, depo `saves`, tek kayıt anahtarı `world1`. Veri yalnızca o tarayıcıda ve o adreste durur (Artifact ile yerel dosyanın kayıtları ayrıdır).
-- **Kayıt nesnesi** (`SAVE_VERSION = 1`):
+- **Kayıt nesnesi** (`SAVE_VERSION = 2`; sürüm 1 kayıtları da yüklenir, Nether yeni üretilir):
 
   | Alan | İçerik |
   | --- | --- |
-  | `version` | `1` |
-  | `world` | Tüm dünya dizisi (`Uint8Array`, 442.368 bayt) |
+  | `version` | `2` |
+  | `world` | Ana dünya dizisi (`Uint8Array`, 442.368 bayt) |
+  | `nether` | Nether dizisi (aynı boyut) |
+  | `dimension` | Oyuncunun bulunduğu dünya: `'overworld'` ya da `'nether'` |
+  | `portalLinks` | `{ overworld, nether }`: her dünyadaki bağlı portal `{ x, y, z, axis }` ya da `null` |
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
   | `food` | Açlık (yoksa 20) |
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
-  | `furnaces` | Fırınların dizisi: `{ x, y, z, slots, burn, burnMax, progress }` |
+  | `furnaces` | Fırınların dizisi: `{ dim, x, y, z, slots, burn, burnMax, progress }` (`dim` yoksa ana dünya) |
   | `selected` | Seçili hotbar yuvası (0–8) |
   | `inventory` | 36 yuva: `{ key, count }` (aletlerde `durability` da) ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
   | `time`, `day` | `clock.time`, `clock.day` |
@@ -570,7 +590,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 31 | Bulutlar ve yıldızlar | Yapıldı |
 | 32 | Hasar ve ölüm geri bildirimleri | Yapıldı |
 | 33 | Obsidyen ve Nether portalı | Yapıldı |
-| 34 | Nether boyutu | Yapılmadı |
+| 34 | Nether boyutu | Yapıldı |
 | 35 | Nether yaratıkları | Yapılmadı |
 | 36 | Sandık | Yapılmadı |
 | 37 | Elmas, demir ve elmas aletler | Yapılmadı |

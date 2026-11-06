@@ -22,7 +22,7 @@ g.clickSlot(slotOf('coal')); g.clickFurnace(1);
 await wait(300);
 const lit = g.getBlock(40, 40, 42) === 13;
 await wait(5300);
-const f = g.furnaces['40,40,42'];
+const f = g.furnaces['overworld:40,40,42'];
 const glass = f.slots[2]?.key === 'glass';
 g.clickFurnace(2); g.clickSlot(30);
 const tookGlass = g.inventory[30]?.key === 'glass';

@@ -4,10 +4,10 @@
 // Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
 window.game = {};
 
-const T = 16, N_TILES = 37;
+const T = 16, N_TILES = 40;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36,
+  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39,
 };
 
 function mulberry32(a) {
@@ -144,6 +144,13 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) px(TILE.farmland, x, y, 
 // Obsidyen: çok koyu mor-siyah, açık mor benekler
 for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
   px(TILE.obsidian, x, y, rnd() < 0.08 ? shade([84, 56, 120], 0.9 + rnd() * 0.3) : shade([22, 16, 34], 0.8 + rnd() * 0.4));
+}
+// Nether: kızıl taş (koyu kırmızı benekli), lav (turuncu-sarı), ışıltı taşı (sarı, kahverengi çatlaklı)
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  px(TILE.netherrack, x, y, rnd() < 0.15 ? shade([70, 18, 18], 1) : shade([112, 36, 34], 0.8 + rnd() * 0.4));
+  const swirl = Math.sin((x + y * 0.7) / 2.2) * 0.5 + 0.5;
+  px(TILE.lava, x, y, shade(swirl > 0.75 ? [255, 214, 70] : swirl > 0.35 ? [244, 128, 24] : [206, 72, 14], 0.92 + rnd() * 0.16));
+  px(TILE.glowstone, x, y, rnd() < 0.18 ? shade([150, 104, 40], 1) : shade([252, 214, 120], 0.88 + rnd() * 0.24));
 }
 // Kapı: koyu çerçeveli tahta; üst yarıda iki küçük pencere
 for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {

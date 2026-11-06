@@ -73,6 +73,8 @@ document.getElementById('respawn').addEventListener('click', () => {
   player.food = MAX_FOOD;
   renderHearts();
   renderFood();
+  // Nether'de ölen ana dünyada doğar
+  if (dimension !== 'overworld') switchDimension('overworld');
   spawn();
   start();
 });

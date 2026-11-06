@@ -8,8 +8,9 @@ const SMELTING = { raw_beef: 'cooked_beef', raw_pork: 'cooked_pork', raw_chicken
 const FUEL = { coal: 8, charcoal: 8, log: 1.5, planks: 1.5 };
 const furnaces = {};
 let openFurnaceKey = null;
-const furnaceKey = (x, y, z) => x + ',' + y + ',' + z;
-const getFurnace = (x, y, z) => furnaces[furnaceKey(x, y, z)] ??= { x, y, z, slots: [null, null, null], burn: 0, burnMax: 0, progress: 0 };
+// Fırınlar dünyaya göre ayrılır (ana dünya ve Nether aynı koordinatları kullanır)
+const furnaceKey = (x, y, z) => dimension + ':' + x + ',' + y + ',' + z;
+const getFurnace = (x, y, z) => furnaces[furnaceKey(x, y, z)] ??= { dim: dimension, x, y, z, slots: [null, null, null], burn: 0, burnMax: 0, progress: 0 };
 function openFurnace(x, y, z) {
   openInventory(2);
   openFurnaceKey = furnaceKey(x, y, z);
@@ -38,6 +39,7 @@ function clickFurnace(i, right) {
 }
 function updateFurnaces(dt) {
   for (const f of Object.values(furnaces)) {
+    if ((f.dim || 'overworld') !== dimension) continue;
     const [input, fuel, output] = f.slots;
     const result = input && SMELTING[input.key];
     const canSmelt = result && (!output || (output.key === result && output.count < maxStack(result)));

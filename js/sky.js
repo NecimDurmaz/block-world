@@ -41,6 +41,8 @@ const stars = (() => {
 })();
 
 function updateSky(dt) {
+  // Nether'de bulut ve yıldız yok
+  clouds.visible = stars.visible = dimension === 'overworld';
   if (playing) cloudDrift += CLOUD_SPEED * dt;
   // Katman oyuncunun üstünde durur; doku dünyaya sabit kalacak şekilde kaydırılır.
   clouds.position.set(camera.position.x, CLOUD_HEIGHT, camera.position.z);

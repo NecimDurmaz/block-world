@@ -2,7 +2,9 @@
 // Dünya dizisi, gürültü fonksiyonları ve dünya üretimi (arazi, mağara, göl, cevher, ağaç, bitki).
 
 const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
-const world = new Uint8Array(SX * SY * SZ);
+// Etkin dünya (world) ana dünya ya da Nether dizisini gösterir; portaldan geçince değişir (nether.js).
+let world = new Uint8Array(SX * SY * SZ);
+const worlds = { overworld: world, nether: new Uint8Array(SX * SY * SZ) };
 const inBounds = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < SX && y < SY && z < SZ;
 const index = (x, y, z) => (y * SZ + z) * SX + x;
 function get(x, y, z) {

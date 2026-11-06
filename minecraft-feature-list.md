@@ -359,7 +359,7 @@ Bu üç madde, ana dünya ve kayıt sistemi oturduktan sonra yapılmalı. Nether
 ### 34. Nether boyutu
 - **Minecraft'ta:** Kızıl taştan (netherrack) oluşan, lav denizleri ve parlayan taşlar barındıran, gökyüzü olmayan sıcak bir boyuttur.
 - **Bu oyunda:**
-  - İkinci dünya dizisi `nether`, ayrı bir tohumla üretilir: tavan (y 40–47) ve taban (y 0–10) netherrack; arası 3B gürültüyle oyulmuş büyük boşluklar; y ≤ 6'daki boşluklar lav.
+  - İkinci dünya dizisi `nether`, ayrı bir tohumla üretilir: tavan (y 40–47) ve taban (y 0–10) netherrack; arası 3B gürültüyle oyulmuş büyük boşluklar; y ≤ 10'daki boşluklar lav.
   - Yeni bloklar: netherrack (koyu kırmızı benekli), lav (turuncu-sarı, kendi ışığı olan, ışıktan etkilenmeyen malzeme; çarpışmasız, içine girince saniyede 4 hasar ve oyuncu yanar), ışıltı taşı (glowstone; tavanda öbekler, sarı, kendi ışığı olan; kırılınca 2–4 ışıltı tozu düşer, 4 toz → 1 ışıltı taşı).
   - Ortam: gökyüzü ve sis koyu kırmızı (#3a0f0f), sis 12–40 blok; gece/gündüz döngüsü Nether'de durur, bulut ve yıldız gizlenir. Yatak Nether'de kullanılırsa patlar (madde 23'e not; basit hali: "Burada uyuyamazsın" yazısı ve 6 hasar).
   - Geçiş: ana dünyadaki portaldan girince Nether'de aynı X/Z'ye en yakın uygun boşluğa yeni bir obsidyen çerçeveli yanık portal kurulur ve oyuncu onun önüne konur. Nether'deki portal da ana dünyaya, girilen portala döndürür. (Minecraft'taki 8:1 ölçek yok.)

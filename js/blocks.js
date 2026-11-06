@@ -62,6 +62,11 @@ const BLOCKS = [
   // Portal: çarpışmasız, nişan ışını geçer (fluid), chunk mesh'inde değil portal.js'teki ayrı düzlemlerle çizilir.
   // axis: düzlemin uzandığı yatay eksen
   ...['x', 'z'].map(axis => ({ name: 'Portal', top: TILE.obsidian, side: TILE.obsidian, bottom: TILE.obsidian, breakTime: Infinity, model: 'portal', axis, fluid: true, transparent: true, hidden: true, noDrop: true })),
+  // Nether. selfLit: kendi ışığı var, gece/Nether karanlığından etkilenmez (ayrı malzeme).
+  { name: 'Kızıl taş', top: TILE.netherrack, side: TILE.netherrack, bottom: TILE.netherrack, breakTime: 2, tool: 'pickaxe', needsTool: true },
+  { name: 'Lav', top: TILE.lava, side: TILE.lava, bottom: TILE.lava, breakTime: Infinity, fluid: true, selfLit: true, hidden: true, noDrop: true },
+  // dropCount: düşen eşya adedi aralığı
+  { name: 'Işıltı taşı', top: TILE.glowstone, side: TILE.glowstone, bottom: TILE.glowstone, breakTime: 1.5, selfLit: true, drop: 'glowstone_dust', dropCount: [2, 4] },
 ];
 const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
   torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -72,8 +77,10 @@ const isBed = b => b >= 23 && b <= 30;
 const DOOR_FIRST = 31;
 const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
 const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
-Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54, obsidian: 55, portal_x: 56, portal_z: 57 });
+Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54, obsidian: 55, portal_x: 56, portal_z: 57, netherrack: 58, lava: 59, glowstone: 60 });
 const isPortal = b => b === B.portal_x || b === B.portal_z;
+// Işık kaynağı: meşaleler ve ışıltı taşı (lav çok sayıda olduğundan ışık kaynağı sayılmaz, yalnızca kendisi parlar)
+const isLightSource = b => isTorch(b) || b === B.glowstone;
 const isCrop = b => b >= B.wheat_0 && b <= B.wheat_3;
 const isPlant = b => BLOCKS[b]?.model === 'cross';
 // Üstünden geçilebilen, zemin sayılmayan hücre (hava ya da bitki/meşale)

@@ -22,6 +22,7 @@ RECIPES.push(
   { pattern: ['III', '.S.', '.S.'], keys: { I: 'iron_ingot', S: 'stick' }, out: ['iron_pickaxe', 1] },
   // Çakmak (basitleştirilmiş): demir külçe ve kömür yan yana ya da üst üste
   { pattern: ['IC'], keys: { I: 'iron_ingot', C: 'coal' }, out: ['flint_and_steel', 1] },
+  { pattern: ['DD', 'DD'], keys: { D: 'glowstone_dust' }, out: ['glowstone', 1] },
   { pattern: ['I', 'C'], keys: { I: 'iron_ingot', C: 'coal' }, out: ['flint_and_steel', 1] },
 );
 for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) for (const [kindKey, kind] of Object.entries(TOOL_KINDS)) {

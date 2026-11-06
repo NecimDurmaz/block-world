@@ -26,6 +26,7 @@ function frame(now) {
   const p = player;
 
   const inWater = overlapsBlock(p, B.water);
+  const inLava = overlapsBlock(p, B.lava);
   if (playing) updateSleep(dt);
   if (playing && !inventoryOpen && !chatOpen && sleepTimer <= 0) {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
@@ -39,12 +40,12 @@ function frame(now) {
     if (!keys.KeyW) sprinting = false;
     if (p.food <= SPRINT_FOOD) sprinting = false;
     const sprintNow = (sprinting || keys.ShiftLeft || keys.ShiftRight) && p.food > SPRINT_FOOD;
-    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : 1);
+    const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : inLava ? 0.35 : 1);
     updateHunger(dt, sprintNow && len > 0);
     updateSteps(dt, len > 0 && !inWater, sprintNow);
     p.vx = (len ? mx / len * speed : 0) + p.kx;
     p.vz = (len ? mz / len * speed : 0) + p.kz;
-    if (keys.Space && inWater) p.vy = SWIM_UP_SPEED;
+    if (keys.Space && (inWater || inLava)) p.vy = SWIM_UP_SPEED;
     else if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
   } else { p.vx = p.vz = 0; }
   const knockDecay = Math.exp(-dt * 6);
@@ -52,12 +53,14 @@ function frame(now) {
   updateHealth(dt);
 
   // Suda yerçekimi 1/4, batma hızı sınırlı
-  p.vy = inWater ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
+  p.vy = inWater || inLava ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
   stepEntity(p, dt);
   if (playing) {
     for (const m of mobs) updateMob(m, dt);
-    updateAnimalSpawning(dt);
-    updateHostileSpawning(dt);
+    if (dimension === 'overworld') {
+      updateAnimalSpawning(dt);
+      updateHostileSpawning(dt);
+    }
     updateProjectiles(dt);
     updateParticles(dt);
     updateDrops(dt);
@@ -66,12 +69,13 @@ function frame(now) {
     updateMobSounds(dt);
     updateDebris(dt);
     updatePortal(dt);
+    updateLava(dt, inLava);
   }
   for (const m of mobs) renderMob(m);
   renderDrops();
   // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
   if (playing) {
-    if (inWater) p.fallPeak = null; // suya düşen hasar almaz
+    if (inWater || inLava) p.fallPeak = null; // suya düşen hasar almaz
     else if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);
     else if (p.fallPeak !== null) {
       const fall = p.fallPeak - p.y;
@@ -142,8 +146,8 @@ function frame(now) {
   const cameraInWater = get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.water;
   underwaterEl.hidden = !cameraInWater;
   const viewDistance = VIEW_DISTANCES[settings.viewDistance];
-  scene.fog.near = cameraInWater ? 0 : viewDistance * 0.43;
-  scene.fog.far = cameraInWater ? 8 : viewDistance;
+  scene.fog.near = cameraInWater ? 0 : dimension === 'nether' ? NETHER_FOG_NEAR : viewDistance * 0.43;
+  scene.fog.far = cameraInWater ? 8 : dimension === 'nether' ? NETHER_FOG_FAR : viewDistance;
   if (cameraInWater) scene.fog.color.setRGB(0.1, 0.25, 0.5).multiplyScalar(brightnessUniform.value);
   info.textContent = `${clockText()} · X ${Math.floor(p.x)} · Y ${Math.floor(p.y)} · Z ${Math.floor(p.z)}`;
   renderer.clear();

@@ -25,6 +25,7 @@ const ITEM_ART = {
   cooked_beef: ['Pişmiş biftek', { r: '#7a3e22', w: '#c08a5a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
   cooked_pork: ['Pişmiş domuz eti', { r: '#b8704a', w: '#e8b88a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
   cooked_chicken: ['Pişmiş tavuk', { p: '#c8823e', w: '#f4f4f0' }, ['....pppp', '...ppppp', '..pppppp', '.ppppp..', '.pppp...', 'wpp.....', 'ww......', 'w.......']],
+  glowstone_dust: ['Işıltı tozu', { y: '#ffd860', o: '#d8a030' }, ['........', '.y..o...', '...y..y.', '.o..y...', '..y...o.', '.y..y...', '...o..y.', '........']],
   flint_and_steel: ['Çakmak', { i: '#c8c8c8', d: '#8a8a8a', k: '#2a2a2a', o: '#ff8a1f' }, ['......o.', '.....o..', '..iii...', '.i...i..', '.i...i..', '..iii...', '...kk...', '...kk...']],
   iron_ingot: ['Demir külçe', { w: '#e6e6e6', g: '#b8b8b8', d: '#8a8a8a' }, ['........', '........', '..wwwww.', '.wwwwwgd', 'wggggggd', 'dddddddd', '........', '........']],
   charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],

@@ -71,7 +71,9 @@ await wait(800);
 const countdown = !document.getElementById('portal-hud').hidden && /^Portal: \d…$/.test(document.getElementById('portal-hud').textContent);
 const darkening = Number(document.getElementById('portal-fx').style.opacity) > 0.1;
 let traveled = false;
-for (let i = 0; i < 50 && !traveled; i++) { await wait(100); traveled = window.game.portalTraveled?.() || document.getElementById('blockname').textContent === 'Portal etkinleşti'; }
+for (let i = 0; i < 50 && !traveled; i++) { await wait(100); traveled = g.getDimension() === 'nether'; }
+// Ana dünyaya dön (çerçeve testi orada sürer)
+g.switchDimension('overworld');
 // Çerçeveden obsidyen kırılınca portal söner
 Object.assign(p, { x: 40.5, y: 40, z: 39.5, yaw: 0, pitch: 0.69 });
 window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));

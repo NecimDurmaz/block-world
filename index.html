@@ -159,10 +159,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 28;
+  const T = 16, N_TILES = 31;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30,
   };
 
   function mulberry32(a) {
@@ -274,6 +274,17 @@
     const glint = (x === y + 3 || x === y + 4) && x > 4 && x < 9;
     if (edge || glint) px(TILE.glass, x, y, edge ? '#d8dee6' : '#ffffff');
   }
+  // Bitkiler: saydam arka plan üstünde ot ve çiçek
+  for (let x = 1; x < 15; x += 1 + Math.floor(rnd() * 2)) {
+    const h = 6 + Math.floor(rnd() * 8);
+    for (let y = 16 - h; y < 16; y++) px(TILE.tallGrass, x, y, shade([88, 150, 52], 0.8 + rnd() * 0.35));
+  }
+  for (const [tile, petal, center] of [[TILE.poppy, [204, 34, 30], [30, 20, 20]], [TILE.dandelion, [244, 214, 40], [250, 236, 120]]]) {
+    for (let y = 8; y < 16; y++) px(tile, 7, y, shade([70, 130, 40], 1));
+    px(tile, 6, 12, shade([80, 150, 50], 1)); px(tile, 8, 11, shade([80, 150, 50], 1));
+    for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) px(tile, 7 + dx, 6 + dy, shade(petal, 0.9 + rnd() * 0.15));
+    px(tile, 7, 6, shade(center, 1));
+  }
   // Kapı: koyu çerçeveli tahta; üst yarıda iki küçük pencere
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const frame = x < 2 || x > 13 || y === 0 || y === 15;
@@ -340,6 +351,11 @@
       const tile = part === 'lower' ? TILE.doorLower : TILE.doorUpper;
       return { name: 'Kapı', top: tile, side: tile, bottom: tile, breakTime: 3, tool: 'axe', model: 'box', box, part, dir, open, transparent: true, hidden: true, drop: 'door' };
     }))),
+    // Bitkiler: çapraz iki düzlem (model: 'cross'), çarpışmasız, anında kırılır, yerine blok konabilir (replaceable).
+    ...[['Uzun ot', TILE.tallGrass], ['Gelincik', TILE.poppy], ['Karahindiba', TILE.dandelion]].map(([name, tile]) => ({
+      name, top: tile, side: tile, bottom: tile, breakTime: 0.05, model: 'cross', noCollide: true, transparent: true, cutout: true,
+      replaceable: true, hidden: true, noDrop: true,
+    })),
   ];
   const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
     torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -350,6 +366,10 @@
   const DOOR_FIRST = 31;
   const isDoor = b => b >= DOOR_FIRST && b < DOOR_FIRST + 16;
   const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === 'upper' ? 2 : 0) + (open ? 1 : 0);
+  Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49 });
+  const isPlant = b => BLOCKS[b]?.model === 'cross';
+  // Üstünden geçilebilen, zemin sayılmayan hücre (hava ya da bitki/meşale)
+  const passable = b => b === AIR || !!BLOCKS[b].noCollide;
   BED_DIRS.forEach(([name], i) => ['lower', 'upper'].forEach(part => [false, true].forEach(open => {
     B[`door_${name}_${part}_${open ? 'open' : 'closed'}`] = doorId(i, part, open);
   })));
@@ -436,6 +456,16 @@
     }
     set(x, top + 2, z, B.leaves);
   }
+  // Çimenlerin %12'sine uzun ot, %2'sine çiçek (gelincik ya da karahindiba)
+  const plantRnd = mulberry32(SEED + 11);
+  for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
+    let y = SY - 1;
+    while (y > 0 && get(x, y - 1, z) === AIR) y--;
+    if (get(x, y - 1, z) !== B.grass || get(x, y, z) !== AIR) continue;
+    const r = plantRnd();
+    if (r < 0.12) set(x, y, z, B.tall_grass);
+    else if (r < 0.14) set(x, y, z, plantRnd() < 0.5 ? B.poppy : B.dandelion);
+  }
 
   // ---------- Three.js sahnesi ----------
   const container = document.getElementById('game');
@@ -521,6 +551,23 @@
     for (const [tx, ty, tz] of torches) light = Math.max(light, 1 - Math.hypot(tx - x, ty - y, tz - z) / TORCH_RANGE);
     return light;
   }
+  // Çapraz bitki: hücrenin köşegenlerinde iki düzlem, her biri iki yüzlü (arka yüz ayrı üçgenlerle).
+  function addCrossModel(buf, x, y, z, def, torches) {
+    const lit = torches.length ? torchLightAt(torches, x + 0.5, y + 0.5, z + 0.5) : 0;
+    const u0 = (def.side + EPS) / N_TILES, u1 = (def.side + 1 - EPS) / N_TILES;
+    const planes = [[[0.15, 0.15], [0.85, 0.85]], [[0.15, 0.85], [0.85, 0.15]]];
+    for (const [[ax, az], [bx, bz]] of planes) for (const flip of [false, true]) {
+      const [p0, p1] = flip ? [[bx, bz], [ax, az]] : [[ax, az], [bx, bz]];
+      const base = buf.pos.length / 3;
+      for (const [[px2, pz2], uu, vv] of [[p0, u0, 0], [p1, u1, 0], [p0, u0, 1], [p1, u1, 1]]) {
+        buf.pos.push(x + px2, y + vv * 0.9, z + pz2);
+        buf.uv.push(flip ? u0 + u1 - uu : uu, vv ? 1 - EPS : EPS);
+        buf.col.push(0.9, 0.9, 0.9);
+        buf.light.push(lit);
+      }
+      buf.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    }
+  }
   // Hücre içindeki bir kutu (kapı levhası); hücre kenarındaki yüz komşu opak blokla çakışıyorsa çizilmez.
   function addBoxModel(buf, x, y, z, def, torches) {
     const [x0, y0, z0, x1, y1, z1] = def.box;
@@ -604,6 +651,7 @@
       if (def.model === 'torch') { addTorchModel(buffers[0], x, y, z, def); continue; }
       if (def.model === 'bed') { addBedModel(buffers[0], x, y, z, def, torches); continue; }
       if (def.model === 'box') { addBoxModel(buffers[0], x, y, z, def, torches); continue; }
+      if (def.model === 'cross') { addCrossModel(buffers[0], x, y, z, def, torches); continue; }
       const buf = buffers[def.transparent && !def.cutout ? 1 : 0];
       const { pos, uv, col, light, idx } = buf;
       for (const f of FACES) {
@@ -788,7 +836,7 @@
     }
     const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
     let y = SY - 1;
-    while (y > 0 && get(x, y - 1, z) === AIR) y--;
+    while (y > 0 && passable(get(x, y - 1, z))) y--;
     Object.assign(player, { x: x + 0.5, y: y, z: z + 0.5, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
   }
   spawn();
@@ -992,6 +1040,8 @@
       if (isBed(get(ox, hit.y, oz))) { set(ox, hit.y, oz, AIR); rebuildAround(ox, oz); }
     }
     let torchChanged = isTorch(broken);
+    // Üstündeki bitki de kalkar
+    if (isPlant(get(hit.x, hit.y + 1, hit.z))) set(hit.x, hit.y + 1, hit.z, AIR);
     for (const [dx, dy, dz, id] of [[0, 1, 0, B.torch_floor], [1, 0, 0, B.torch_east], [-1, 0, 0, B.torch_west], [0, 0, 1, B.torch_south], [0, 0, -1, B.torch_north]]) {
       if (get(hit.x + dx, hit.y + dy, hit.z + dz) === id) {
         set(hit.x + dx, hit.y + dy, hit.z + dz, AIR);
@@ -1005,6 +1055,11 @@
     const def = BLOCKS[broken], tool = selectedTool();
     if (tool) useTool();
     if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
+    // Bitkiler eşya düşürmez; uzun ot %12 olasılıkla buğday tohumu verir.
+    if (def.noDrop) {
+      if (broken === B.tall_grass && Math.random() < 0.12) dropItem('wheat_seeds', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+      return;
+    }
     if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool || ITEMS[tool.key].tier < (def.minTier || 1))) return;
     if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
     if (broken === B.leaves && Math.random() < 0.05) dropItem('apple', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
@@ -1074,7 +1129,7 @@
       return;
     }
     const { px: x, py: y, pz: z } = hit;
-    if (!inBounds(x, y, z) || isTargetable(get(x, y, z))) return;
+    if (!inBounds(x, y, z) || (isTargetable(get(x, y, z)) && !BLOCKS[get(x, y, z)].replaceable)) return;
     const p = player;
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
@@ -1546,7 +1601,7 @@
   }
   function surfaceY(x, z) {
     let y = SY - 1;
-    while (y > 0 && get(x, y - 1, z) === AIR) y--;
+    while (y > 0 && passable(get(x, y - 1, z))) y--;
     return y;
   }
   // Uygun bir çimen sütunu arar: accept(x, z) koşulunu sağlayan ilk yer; bulamazsa null.
@@ -1880,6 +1935,7 @@
     bone: ['Kemik', { w: '#ecebe2' }, ['......ww', '.....www', '....ww..', '...ww...', '..ww....', 'www.....', 'ww......', '........']],
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
     door: ['Kapı', { b: '#96693c', d: '#5c4024', g: '#a9cbe0' }, ['..dddd..', '..dggd..', '..dggd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dbbd..', '..dddd..']],
+    wheat_seeds: ['Buğday tohumu', { g: '#5f9a3a', d: '#3f6a22' }, ['........', '..g..d..', '....g...', '.d....g.', '...g....', '.g...d..', '....g...', '........']],
     bed: ['Yatak', { w: '#ececec', r: '#a8282a', b: '#7a5a32' }, ['........', '........', 'wwrrrrrr', 'wwrrrrrr', 'bbbbbbbb', 'b......b', '........', '........']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
     torch: ['Meşale', { b: '#6b4a2b', y: '#ffd23a', o: '#ff8a1f' }, ['...yy...', '..yooy..', '...oo...', '...bb...', '...bb...', '...bb...', '...bb...', '........']],

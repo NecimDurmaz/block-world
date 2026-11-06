@@ -81,6 +81,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
   - `h ≤ 14`: üstte 3 blok kum, altı taş.
   - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
 - **Göller:** Arazi kurulduktan sonra `y ≤ WATER_LEVEL = 12` olan bütün boşluklar suyla dolar (alçak kumlu bölgeler göl olur). Akan su yok.
+- **Bitkiler:** Ağaçlardan sonra, üstü boş her çimen sütununun %12'sine uzun ot, %2'sine çiçek (yarı yarıya gelincik ve karahindiba) konur (`mulberry32(SEED + 11)`).
 - **Cevherler:** Arazi kurulduktan sonra chunk başına ~8 kömür damarı (y 1–30) ve ~4 demir damarı (y 1–20), her biri 3–8 blokluk rastgele yürüyüş; yalnızca taşın yerini alır (`mulberry32(SEED + 7)`). Yalnızca yeni üretilen dünyada; kayıttan yüklenen dünya değişmez.
 - **Ağaçlar:** 160 deneme; yalnızca çimen üstüne. 4–5 blok kütük, üstünde yaprak kümesi.
 - **Doğma noktası:** Dünyanın ortası, sütunun en üstü. (Bilinen sorun: ortada bir çukura denk gelebiliyor.)
@@ -107,13 +108,16 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 15 | `coal_ore` | Kömür cevheri | `coalOre` (taş + siyah benekler) |
 | 16 | `iron_ore` | Demir cevheri | `ironOre` (taş + bej benekler) |
 | 17 | `water` | Su | `water`; `fluid`, `transparent`, `hidden` (eşya olarak alınamaz, kırılamaz) |
+| 47 | `tall_grass` | Uzun ot | `tallGrass`; `model: 'cross'`, `noCollide`, `cutout`, `replaceable`, `noDrop` (%12 buğday tohumu) |
+| 48 | `poppy` | Gelincik | `poppy`; uzun ot gibi, eşya düşürmez |
+| 49 | `dandelion` | Karahindiba | `dandelion`; uzun ot gibi, eşya düşürmez |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
 | 23–30 | `bed_foot_<yön>`, `bed_head_<yön>` (yön: `east`, `west`, `south`, `north`) | Yatak | `bedHeadTop` / `bedFootTop` / `bedSide`; `model: 'bed'`, `part`, `dir` (baş tarafı), `height: 9/16`, kırılınca `bed` eşyası (bir kez) |
 | 18–22 | `torch_floor`, `torch_east`, `torch_west`, `torch_south`, `torch_north` | Meşale | `torch`; `model: 'torch'`, `lean` (eğilme yönü), `noCollide`, `transparent`, kırılınca `torch` eşyası |
 
 Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` ve `noCollide` bloklar dışındakiler; çarpışma, görüş (`canSeePlayer`), gün ışığı (`skyAbove`), oklar ve kamera mesafesi bunu kullanır. `isTargetable(b)`: hava ve `fluid` dışındakiler; nişan ışını bunlarda durur (meşale kırılabilir). `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
 
-**Meşalenin dayanağı:** Bir blok kırılınca üstündeki yer meşalesi ve yan yüzlerine yaslanan duvar meşaleleri düşer.
+**Dayanak:** Bir blok kırılınca üstündeki bitki kalkar, üstündeki yer meşalesi ve yan yüzlerine yaslanan duvar meşaleleri düşer. `passable(b)` (hava ya da `noCollide`): doğma noktası ve canlı doğurma için zemin aranırken bu hücreler atlanır. `replaceable` bloğun (bitki) yerine blok konabilir.
 
 **Kırma:** Her blokta `breakTime` (elle kırma süresi), `tool` (hızlı kıran alet türü), gerekiyorsa `needsTool` (yalnızca o alet türüyle kırılınca düşer) ve `drop` (kendisi yerine düşen eşya) vardır. Seçili alet bloğun `tool` türündeyse süre aletin `speed` çarpanına bölünür (bkz. Aletler).
 
@@ -129,8 +133,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 28` doku, atlas `448 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 31` doku, atlas `496 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -142,6 +146,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Yüz gölgesi:** Işık hesabı yok, köşe rengiyle sabit gölge: üst 1,0, doğu/batı 0,8, kuzey/güney 0,65, alt 0,5.
 - **Malzeme:** `MeshBasicMaterial`, atlas dokusu + köşe renkleri. `withTorchLight()` shader'a bir ek yapar: her köşede `torchLight` niteliği (0–1) vardır ve son renk `doku × köşe rengi × max(uBrightness, torchLight × (1, 0,85, 0,6))` olur. `uBrightness` (`brightnessUniform`) gün döngüsünün parlaklığıdır; böylece meşale ışığı gece karartmasından etkilenmez.
 - **Meşale ışığı:** Chunk kurulurken çevresindeki (±8 blok) meşaleler toplanır (`torchesNear`); her yüzün merkezinin en yakın meşaleye uzaklığına göre `torchLight = max(0, 1 − d / TORCH_RANGE)`, `TORCH_RANGE = 7.5`. Duvarlar ışığı kesmez. Meşale konunca ya da kaldırılınca ışığın ulaştığı bütün chunk'lar yeniden kurulur (`rebuildArea`).
+- **Çapraz model:** `addCrossModel` bitkileri hücrenin köşegenlerinde iki düzlem olarak çizer; arka yüzler ayrı üçgenlerle. Doku saydam arka planlıdır (alphaTest ile kesilir).
 - **Kutu modeli:** `addBoxModel` hücre içindeki bir kutuyu (kapı levhası) çizer; doku yüzün ekseninde hücre koordinatından okunur. Hücre kenarındaki bir yüz, komşusu opak katı bir bloksa çizilmez.
 - **Cam:** Atlas dokusunda camın içi saydamdır; dünya malzemesindeki `alphaTest: 0.5` bu pikselleri keser. Cam `cutout` olduğu için opak mesh'te çizilir ama `transparent` sayıldığından arkasındaki yüzler çizilir; cam–cam yüzleri çizilmez.
 - **Yatak modeli:** `addBedModel` yarım blok yüksekliğinde bir kutu çizer; iki yarı arasındaki yüz ve alt yüz çizilmez. Üst dokuların "yukarısı" her iki yarıda da baş tarafına döner (yastık baş hücresinin uzak kenarında).
@@ -315,6 +320,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `apple` | Elma |
   | `bed` | Yatak (konulabilir) |
   | `door` | Kapı (konulabilir) |
+  | `wheat_seeds` | Buğday tohumu (uzun ottan) |
   | `cooked_beef` | Pişmiş biftek |
   | `cooked_pork` | Pişmiş domuz eti |
   | `cooked_chicken` | Pişmiş tavuk |
@@ -446,7 +452,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 22 | Meşale ve basit ışık | Yapıldı |
 | 23 | Yatak | Yapıldı |
 | 24 | Kapı ve cam | Yapıldı |
-| 25 | Çiçek, uzun ot ve süs bitkileri | Yapılmadı |
+| 25 | Çiçek, uzun ot ve süs bitkileri | Yapıldı |
 | 26 | Buğday tarımı ve ekmek | Yapılmadı |
 | 27 | Mağaralar | Yapılmadı |
 | 28 | Ses efektleri | Yapılmadı |

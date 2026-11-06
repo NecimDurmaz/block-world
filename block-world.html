@@ -412,37 +412,41 @@
     t.generateMipmaps = false;
     return new THREE.MeshLambertMaterial({ map: t });
   }
-  const C = { skin: '#c99a76', hair: '#4a3222', shirt: '#40598e', pants: '#393f4f', shoe: '#212121', eye: '#ffffff', iris: '#2a3e71', mouth: '#8a5a44' };
-  const headFront = paint(8, 8, [[C.skin, 0, 0, 8, 8], [C.hair, 0, 0, 8, 2], [C.hair, 0, 2, 1, 1], [C.hair, 7, 2, 1, 1],
-    [C.eye, 1, 4, 1, 1], [C.iris, 2, 4, 1, 1], [C.iris, 5, 4, 1, 1], [C.eye, 6, 4, 1, 1], [C.mouth, 3, 6, 2, 1]]);
-  const headSide = paint(8, 8, [[C.skin, 0, 0, 8, 8], [C.hair, 0, 0, 8, 3], [C.hair, 0, 3, 2, 2]]);
-  const headBack = paint(8, 8, [[C.hair, 0, 0, 8, 6], [C.skin, 0, 6, 8, 2]]);
-  const hairTop = paint(4, 4, [[C.hair, 0, 0, 4, 4]]);
-  const skin = paint(4, 4, [[C.skin, 0, 0, 4, 4]]);
-  const shirt = paint(4, 4, [[C.shirt, 0, 0, 4, 4]]);
-  const shoe = paint(4, 4, [[C.shoe, 0, 0, 4, 4]]);
-  const pants = paint(4, 4, [[C.pants, 0, 0, 4, 4]]);
-  const armSide = paint(4, 12, [[C.skin, 0, 0, 4, 12], [C.shirt, 0, 0, 4, 4]]);
-  const legSide = paint(4, 12, [[C.pants, 0, 0, 4, 12], [C.shoe, 0, 10, 4, 2]]);
-  // BoxGeometry yüz sırası: +x, -x, +y, -y, +z (arka), -z (ön)
-  const headMats = [headSide, headSide, hairTop, skin, headBack, headFront];
-  const armMats = [armSide, armSide, shirt, skin, armSide, armSide];
-  const legMats = [legSide, legSide, pants, shoe, legSide, legSide];
+  // İnsan biçimli model: oyuncu, zombi ve iskelet bunu kullanır. limb: kol/bacak kalınlığı (piksel).
+  function buildHumanoid(c, limb = 4) {
+    const headFront = paint(8, 8, [[c.skin, 0, 0, 8, 8], [c.hair, 0, 0, 8, 2], [c.hair, 0, 2, 1, 1], [c.hair, 7, 2, 1, 1],
+      [c.eye, 1, 4, 1, 1], [c.iris, 2, 4, 1, 1], [c.iris, 5, 4, 1, 1], [c.eye, 6, 4, 1, 1], [c.mouth, 3, 6, 2, 1]]);
+    const headSide = paint(8, 8, [[c.skin, 0, 0, 8, 8], [c.hair, 0, 0, 8, 3], [c.hair, 0, 3, 2, 2]]);
+    const headBack = paint(8, 8, [[c.hair, 0, 0, 8, 6], [c.skin, 0, 6, 8, 2]]);
+    const hairTop = paint(4, 4, [[c.hair, 0, 0, 4, 4]]);
+    const skin = paint(4, 4, [[c.skin, 0, 0, 4, 4]]);
+    const shirt = paint(4, 4, [[c.shirt, 0, 0, 4, 4]]);
+    const shoe = paint(4, 4, [[c.shoe, 0, 0, 4, 4]]);
+    const pants = paint(4, 4, [[c.pants, 0, 0, 4, 4]]);
+    const armSide = paint(limb, 12, [[c.skin, 0, 0, limb, 12], [c.shirt, 0, 0, limb, 4]]);
+    const legSide = paint(limb, 12, [[c.pants, 0, 0, limb, 12], [c.shoe, 0, 10, limb, 2]]);
+    // BoxGeometry yüz sırası: +x, -x, +y, -y, +z (arka), -z (ön)
+    const headMats = [headSide, headSide, hairTop, skin, headBack, headFront];
+    const armMats = [armSide, armSide, shirt, skin, armSide, armSide];
+    const legMats = [legSide, legSide, pants, shoe, legSide, legSide];
 
-  const part = (w, h, d, mats, oy) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w * P, h * P, d * P), mats);
-    m.position.y = oy * P;
-    return m;
-  };
-  const joint = (x, y, child) => { const j = new THREE.Group(); j.position.set(x * P, y * P, 0); j.add(child); return j; };
-  const model = new THREE.Group();
-  const head = joint(0, 24, part(8, 8, 8, headMats, 4));
-  const armR = joint(6, 22, part(4, 12, 4, armMats, -4));
-  const armL = joint(-6, 22, part(4, 12, 4, armMats, -4));
-  const legR = joint(2, 12, part(4, 12, 4, legMats, -6));
-  const legL = joint(-2, 12, part(4, 12, 4, legMats, -6));
-  const torso = part(8, 12, 4, shirt, 18);
-  model.add(head, torso, armR, armL, legR, legL);
+    const part = (w, h, d, mats, oy) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w * P, h * P, d * P), mats);
+      m.position.y = oy * P;
+      return m;
+    };
+    const joint = (x, y, child) => { const j = new THREE.Group(); j.position.set(x * P, y * P, 0); j.add(child); return j; };
+    const root = new THREE.Group();
+    const head = joint(0, 24, part(8, 8, 8, headMats, 4));
+    const armR = joint(4 + limb / 2, 22, part(limb, 12, limb, armMats, -4));
+    const armL = joint(-4 - limb / 2, 22, part(limb, 12, limb, armMats, -4));
+    const legR = joint(2, 12, part(limb, 12, limb, legMats, -6));
+    const legL = joint(-2, 12, part(limb, 12, limb, legMats, -6));
+    root.add(head, part(8, 12, 4, shirt, 18), armR, armL, legR, legL);
+    return { root, head, armR, armL, legR, legL, armMats };
+  }
+  const PLAYER_SKIN = { skin: '#c99a76', hair: '#4a3222', shirt: '#40598e', pants: '#393f4f', shoe: '#212121', eye: '#ffffff', iris: '#2a3e71', mouth: '#8a5a44' };
+  const { root: model, head, armR, armL, legR, legL, armMats } = buildHumanoid(PLAYER_SKIN);
   scene.add(model);
 
   const fpArm = new THREE.Mesh(new THREE.BoxGeometry(4 * P, 12 * P, 4 * P), armMats);
@@ -812,12 +816,19 @@
     return { root, legs };
   }
 
-  // slowFall: düşerken yerçekimi 1/4 (tavuk kanat çırpar)
+  const ZOMBIE_SKIN = { skin: '#5a8f45', hair: '#3c6b2e', shirt: '#3a8fc0', pants: '#3b3fa0', shoe: '#2b2e6e', eye: '#1b1b1b', iris: '#1b1b1b', mouth: '#2e4f24' };
+  function buildZombie() {
+    const { root, armR, armL, legR, legL } = buildHumanoid(ZOMBIE_SKIN);
+    return { root, legs: [legR, legL], arms: [armR, armL] };
+  }
+
+  // slowFall: düşerken yerçekimi 1/4 (tavuk kanat çırpar). hostile: gece doğar, oyuncuya saldırır.
   const MOB_TYPES = {
     cow: { name: 'İnek', health: 10, w: 0.45, h: 1.2, speed: 1.2, build: buildCow },
     pig: { name: 'Domuz', health: 10, w: 0.4, h: 0.9, speed: 1.1, build: buildPig },
     chicken: { name: 'Tavuk', health: 4, w: 0.25, h: 0.8, speed: 1.0, slowFall: true, build: buildChicken },
     sheep: { name: 'Koyun', health: 8, w: 0.45, h: 1.1, speed: 1.1, build: buildSheep },
+    zombie: { name: 'Zombi', health: 20, w: 0.3, h: 1.8, speed: 2.3, hostile: true, build: buildZombie },
   };
   const ANIMAL_KINDS = ['cow', 'pig', 'chicken', 'sheep'];
   const mobs = [];
@@ -830,7 +841,7 @@
       kind, type, body, x, y, z, w: type.w, h: type.h, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0,
       yaw: Math.random() * Math.PI * 2, onGround: false, health: type.health,
       walking: false, timer: Math.random() * 3, walkPhase: 0,
-      invulnerable: 0, hurt: 0, flee: 0, dying: 0, tinted: false, materials: [],
+      invulnerable: 0, hurt: 0, flee: 0, dying: 0, tinted: false, materials: [], attackCooldown: 0, swing: 0,
     };
     // Her canlının kendi malzemeleri var; vurulunca kırmızılaştırmak için toplanır.
     body.root.traverse(o => { if (o.material) mob.materials.push(...[].concat(o.material)); });
@@ -881,7 +892,7 @@
     m.kx = dirX / len * 5;
     m.kz = dirZ / len * 5;
     if (m.onGround) m.vy = 4;
-    m.flee = 4;
+    if (!m.type.hostile) m.flee = 4;
     if (m.health <= 0) m.dying = 0.5;
   }
   function surfaceY(x, z) {
@@ -918,6 +929,38 @@
   }
   // Gündüz, sınırın altındaysa her 30 sn'de oyuncudan 24+ blok uzağa 1 hayvan.
   let animalSpawnTimer = 0;
+  // Düşmanlar: gece her 10 sn'de oyuncudan 16–32 blok uzakta, açık havada doğar (en çok 8).
+  const MAX_HOSTILES = 8, CHASE_DISTANCE = 16, DESPAWN_DISTANCE = 64, ZOMBIE_REACH = 1.2, ZOMBIE_DAMAGE = 3;
+  let hostileSpawnTimer = 0;
+  const hostileCount = () => mobs.filter(m => m.type.hostile && m.dying <= 0).length;
+  function updateHostileSpawning(dt) {
+    hostileSpawnTimer += dt;
+    if (hostileSpawnTimer < 10) return;
+    hostileSpawnTimer = 0;
+    if (daylight(clock.time) >= 0.5 || hostileCount() >= MAX_HOSTILES) return;
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2, distance = 16 + Math.random() * 16;
+      const x = Math.floor(player.x + Math.cos(angle) * distance), z = Math.floor(player.z + Math.sin(angle) * distance);
+      if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1) continue;
+      // Sütunun en üstü: üstünde blok yok, yani açık hava
+      const y = surfaceY(x, z), ground = get(x, y - 1, z);
+      if (y >= SY - 2 || ground === AIR || ground === B.leaves) continue;
+      spawnMob('zombie', x + 0.5, y, z + 0.5);
+      return;
+    }
+  }
+  // Canlının gözünden oyuncunun gözüne 0,25 blok adımlarla bakar; arada blok varsa görmez.
+  function canSeePlayer(m) {
+    const ax = m.x, ay = m.y + m.h * 0.9, az = m.z;
+    const bx = player.x, by = player.y + EYE, bz = player.z;
+    const steps = Math.ceil(Math.hypot(bx - ax, by - ay, bz - az) / 0.25);
+    for (let i = 1; i < steps; i++) {
+      const f = i / steps;
+      if (get(Math.floor(ax + (bx - ax) * f), Math.floor(ay + (by - ay) * f), Math.floor(az + (bz - az) * f)) !== AIR) return false;
+    }
+    return true;
+  }
+
   function updateAnimalSpawning(dt) {
     animalSpawnTimer += dt;
     if (animalSpawnTimer < 30) return;
@@ -941,8 +984,22 @@
     m.invulnerable = Math.max(0, m.invulnerable - dt);
     m.hurt = Math.max(0, m.hurt - dt);
     m.flee = Math.max(0, m.flee - dt);
+    m.attackCooldown = Math.max(0, m.attackCooldown - dt);
+    m.swing = Math.max(0, m.swing - dt);
     m.timer -= dt;
-    if (m.flee > 0) {
+    const dx = player.x - m.x, dz = player.z - m.z, dist = Math.hypot(dx, dz);
+    if (m.type.hostile && dist > DESPAWN_DISTANCE) { removeMob(m); return; }
+    const chasing = m.type.hostile && !dead && dist <= CHASE_DISTANCE && canSeePlayer(m);
+    if (chasing) {
+      // Oyuncuya yürü; 1,2 blok içindeyse saniyede bir vur.
+      m.walking = true;
+      m.yaw = Math.atan2(-dx, -dz);
+      if (dist <= ZOMBIE_REACH && Math.abs(player.y - m.y) < 1.5 && m.attackCooldown <= 0) {
+        damagePlayer(ZOMBIE_DAMAGE, m.x, m.z);
+        m.attackCooldown = 1;
+        m.swing = 0.3;
+      }
+    } else if (m.flee > 0) {
       // Oyuncudan uzağa, 2 kat hızla
       m.walking = true;
       m.yaw = Math.atan2(m.x - player.x, m.z - player.z) + Math.PI;
@@ -952,6 +1009,7 @@
       if (m.walking) m.yaw = Math.random() * Math.PI * 2;
     }
     let speed = m.walking ? m.type.speed * (m.flee > 0 ? 2 : 1) : 0;
+    if (chasing && dist < 0.9) speed = 0;
     if (speed) {
       const fx = -Math.sin(m.yaw), fz = -Math.cos(m.yaw);
       const ax = Math.floor(m.x + fx * (m.w + 0.3)), az = Math.floor(m.z + fz * (m.w + 0.3)), fy = Math.floor(m.y);
@@ -983,6 +1041,8 @@
     const swing = Math.sin(m.walkPhase) * 0.6 * Math.min(1, Math.hypot(m.vx, m.vz) / m.type.speed);
     // Çapraz bacaklar birlikte sallanır (2 bacaklılarda 0 ileri, 1 geri).
     legs.forEach((leg, i) => { leg.rotation.x = (i === 0 || i === 3 ? 1 : -1) * swing; });
+    // Zombi kolları öne uzanık; vururken bir kez savrulur.
+    if (m.body.arms) for (const arm of m.body.arms) arm.rotation.x = 1.45 + Math.sin(m.swing / 0.3 * Math.PI) * 0.6;
   }
   window.game.mobs = mobs;
 
@@ -1109,6 +1169,7 @@
     if (playing) {
       for (const m of mobs) updateMob(m, dt);
       updateAnimalSpawning(dt);
+      updateHostileSpawning(dt);
     }
     for (const m of mobs) renderMob(m);
     // Düşme hasarı: 3 bloğun üstündeki her blok 1 can

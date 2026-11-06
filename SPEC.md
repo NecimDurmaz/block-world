@@ -46,13 +46,13 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Dünya üretimi | Dünya dizisi, `get/set`, gürültü fonksiyonları, arazi ve ağaçlar |
    | Three.js sahnesi | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
    | Gün döngüsü | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
-   | Oyuncu modeli | Bloklu insan modeli ve gözden görünümdeki kol |
+   | Oyuncu modeli | `paint()`, `buildHumanoid()` (oyuncu, zombi, iskelet ortak), oyuncu modeli ve gözden görünümdeki kol |
    | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()` (canlıya vurma dahil), `placeBlock()` |
    | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
-   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, dolaşma yapay zekâsı, `renderMob()` |
+   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `updateMob()`, `renderMob()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
@@ -191,6 +191,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 - **Vurma:** Sol tıkta `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
 - **`hurtMob(m, amount, dirX, dirZ)`:** elle vuruş `FIST_DAMAGE = 1`. 0,5 sn hasarsızlık, 0,3 sn kırmızı (`emissive`), vuruş yönünde 5 blok/sn geri itilme (yerdeyse 4 blok/sn hoplama), 4 sn boyunca oyuncudan 2 kat hızla kaçma (`flee`).
 - **Ölüm:** Can 0 olunca `dying = 0.5`: canlı 0,5 sn'de yana 90° devrilir, kırmızı kalır, sonra `removeMob()` ile sahneden ve diziden silinir (geometri ve malzemeler serbest bırakılır).
+- **Düşmanlar (`hostile`):** Gece (`daylight < 0,5`) her 10 sn'de, sınır `MAX_HOSTILES = 8` dolmadıysa oyuncudan 16–32 blok uzakta bir sütunun en üstüne (açık hava; yaprak üstü olmaz) doğar. `CHASE_DISTANCE = 16` blok içinde oyuncuyu görürse (`canSeePlayer`: gözden göze 0,25 blok adımlı ışın) ona yürür; görmezse dolaşır. Oyuncudan `DESPAWN_DISTANCE = 64` bloktan uzaklaşan düşman silinir. Düşmanlar vurulunca kaçmaz.
 - **Bacak animasyonu:** çapraz bacaklar (0 ile 3, 1 ile 2) birlikte sallanır; iki bacaklılarda 0 ileri, 1 geri.
 
 | Tür (`kind`) | Ad | Can | Kutu (`w` × `h`) | Hız | Model | Doğma |
@@ -199,6 +200,9 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 | `pig` | Domuz | 10 | 0,4 × 0,9 | 1,1 | Gövde 10×8×14, baş 8×8×8, burun 4×3×1, kısa bacaklar 4×6×4; pembe | Sürü, 4 |
 | `chicken` | Tavuk | 4 | 0,25 × 0,8 | 1,0 | Gövde 6×6×8, kanatlar, baş 4×6×3, sarı gaga, kırmızı gıdı ve ibik, 2 sarı bacak; beyaz. `slowFall` | Sürü, 4 |
 | `sheep` | Koyun | 8 | 0,45 × 1,1 | 1,1 | Yünlü gövde 10×9×14, gri yüz 6×6×7, bacaklar 4×8×4 | Sürü, 4 |
+| `zombie` | Zombi | 20 | 0,3 × 1,8 | 2,3 | `buildHumanoid`: yeşil ten, mavi gömlek; kollar öne uzanık (1,45 rad), vururken savrulur | Gece, düşman |
+
+**Zombi saldırısı:** Oyuncuya yatayda `ZOMBIE_REACH = 1.2` blok içinde ve dikeyde 1,5 bloktan yakınsa saniyede bir `ZOMBIE_DAMAGE = 3` hasar verir ve oyuncuyu geri iter (`damagePlayer`). 0,9 bloktan yakına girmez.
 
 ## Test kancası
 
@@ -240,7 +244,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 5 | Canlı altyapısı ve inek | Yapıldı |
 | 6 | Domuz, tavuk ve koyun | Yapıldı |
 | 7 | Canlılara vurma | Yapıldı |
-| 8 | Zombi | Yapılmadı |
+| 8 | Zombi | Yapıldı |
 | 9 | İskelet | Yapılmadı |
 | 10 | Örümcek | Yapılmadı |
 | 11 | Creeper | Yapılmadı |

@@ -98,6 +98,7 @@ function frame(now) {
       updateAnimalSpawning(dt);
       updateHostileSpawning(dt);
     } else updateNetherSpawning(dt);
+    updateBlazeSpawners(dt);
     updateBow(dt);
     updateProjectiles(dt);
     updateParticles(dt);

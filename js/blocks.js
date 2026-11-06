@@ -80,6 +80,9 @@ const BLOCKS = [
   { name: 'Kaktüs', top: TILE.cactusTop, side: TILE.cactusSide, bottom: TILE.cactusTop, breakTime: 0.4, model: 'box', box: [1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16] },
   { name: 'Ladin kütüğü', top: TILE.logTop, side: TILE.spruceLog, bottom: TILE.logTop, breakTime: 3, tool: 'axe' },
   { name: 'Ladin yaprağı', top: TILE.spruceLeaves, side: TILE.spruceLeaves, bottom: TILE.spruceLeaves, breakTime: 0.3, noDrop: true, tint: 'all' },
+  // Nether kalesi (82–83). Doğurucu: kafes, içinde dönen küçük blaze (blaze.js)
+  { name: 'Nether tuğlası', top: TILE.netherBrick, side: TILE.netherBrick, bottom: TILE.netherBrick, breakTime: 10, tool: 'pickaxe', needsTool: true },
+  { name: 'Blaze doğurucu', top: TILE.spawner, side: TILE.spawner, bottom: TILE.spawner, breakTime: 25, tool: 'pickaxe', needsTool: true, transparent: true, cutout: true, noDrop: true },
 ];
 const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17,
   torch_floor: 18, torch_east: 19, torch_west: 20, torch_south: 21, torch_north: 22 };
@@ -93,7 +96,7 @@ const doorId = (dirIndex, part, open) => DOOR_FIRST + dirIndex * 4 + (part === '
 Object.assign(B, { tall_grass: 47, poppy: 48, dandelion: 49, farmland: 50, wheat_0: 51, wheat_1: 52, wheat_2: 53, wheat_3: 54, obsidian: 55, portal_x: 56, portal_z: 57, netherrack: 58, lava: 59, glowstone: 60, chest: 61, diamond_ore: 62 });
 for (let level = 1; level <= 7; level++) { B['water_flow_' + level] = 62 + level; B['lava_flow_' + level] = 69 + level; }
 // Biyom blokları
-Object.assign(B, { snowy_grass: 77, ice: 78, cactus: 79, spruce_log: 80, spruce_leaves: 81 });
+Object.assign(B, { snowy_grass: 77, ice: 78, cactus: 79, spruce_log: 80, spruce_leaves: 81, nether_brick: 82, spawner: 83 });
 // Sıvı yardımcıları: tür ('water', 'lava' ya da null), seviye, türe ve seviyeye göre blok
 const liquidOf = b => BLOCKS[b]?.liquid || null;
 const liquidBlock = (kind, level) => level === 0 ? B[kind] : B[kind + '_flow_' + level];

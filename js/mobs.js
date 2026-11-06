@@ -202,6 +202,7 @@ function updateMob(m, dt) {
   m.timer -= dt;
   m.angry = Math.max(0, (m.angry || 0) - dt);
   if (m.type.flies) { updateGhast(m, dt); return; }
+  if (m.type.blaze) { updateBlaze(m, dt); return; }
   const dx = player.x - m.x, dz = player.z - m.z, dist = Math.hypot(dx, dz);
   if (m.type.hostile && dist > DESPAWN_DISTANCE) { removeMob(m); return; }
   // Gördüğü oyuncuyu, görüş kesilse de CHASE_MEMORY sn kovalar.

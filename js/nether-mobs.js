@@ -101,13 +101,16 @@ function updateFireball(a, dt) {
   for (let i = 0; i < steps && a.life > 0; i++) {
     a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;
     if (isSolid(get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) {
-      blast(a.x, a.y, a.z, FIREBALL_BLAST, FIREBALL_DAMAGE);
+      // Blaze'in küçük ateş topu patlamaz
+      if (!a.small) blast(a.x, a.y, a.z, FIREBALL_BLAST, FIREBALL_DAMAGE);
       a.life = 0;
       break;
     }
     const p = player;
     if (!a.reflected && !dead && a.x > p.x - p.w - 0.2 && a.x < p.x + p.w + 0.2 && a.y > p.y && a.y < p.y + p.h && a.z > p.z - p.w - 0.2 && a.z < p.z + p.w + 0.2) {
       damagePlayer(FIREBALL_DAMAGE, a.x - a.vx, a.z - a.vz);
+      // Küçük ateş topu 3 sn yakar (saniyede 1)
+      if (a.small && !godMode) burnTimer = BURN_TIME;
       a.life = 0;
       break;
     }

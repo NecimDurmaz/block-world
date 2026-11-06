@@ -1,5 +1,5 @@
 // ---------- Yapılar ----------
-// Köyler: dünya üretiminin parçası. Her köy, 6×6 chunk'lık bir bölgenin tohumdan belirlenen planıdır; bir chunk üretilirken
+// Köyler (ana dünya) ve Nether kaleleri: dünya üretiminin parçası. Her köy, 6×6 chunk'lık bir bölgenin tohumdan belirlenen planıdır; bir chunk üretilirken
 // planın o chunk'a düşen kısmı çizilir (chunk sınırında kırpılır). Böylece köy hangi sırayla üretilirse üretilsin aynı çıkar.
 
 const VILLAGE_REGION = 6;
@@ -87,6 +87,69 @@ function villageNear(x, z, r = 2) {
     if (plan && (!best || Math.hypot(plan.x - x, plan.z - z) < Math.hypot(best.x - x, best.z - z))) best = plan;
   }
   return best;
+}
+
+// ---------- Nether kalesi ----------
+// 12×12 chunk'lık her Nether bölgesinde bir kale: ortada 5×5 kavşak, dört yöne 5 blok genişliğinde yüksek köprüler,
+// 2–3 köprünün ucunda kapalı oda; ilk odada blaze doğurucu.
+const FORTRESS_REGION = 12, FORTRESS_DECK = 22;
+const fortressPlans = new Map();
+function fortressPlan(rx, rz) {
+  const key = rx + ',' + rz;
+  if (fortressPlans.has(key)) return fortressPlans.get(key);
+  const rnd = mulberry32(Math.floor(hash(rx * 53 - 11, rz * 29 + 7) * 4294967296));
+  const cx = rx * FORTRESS_REGION + 3 + Math.floor(rnd() * 6), cz = rz * FORTRESS_REGION + 3 + Math.floor(rnd() * 6);
+  const x = cx * CH + 8, z = cz * CH + 8, y = FORTRESS_DECK;
+  const rooms = 2 + Math.floor(rnd() * 2);
+  const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]].sort(() => rnd() - 0.5).map((dir, i) => {
+    const len = 18 + Math.floor(rnd() * 12);
+    // Oda, köprünün ucundan sonra 7×7
+    const room = i < rooms ? { x: x + dir[0] * (len + 3), z: z + dir[1] * (len + 3) } : null;
+    return { dir, len, room };
+  });
+  const first = arms[0].room;
+  const plan = { id: key, x, y, z, arms, spawner: { x: first.x, y: y + 1, z: first.z } };
+  fortressPlans.set(key, plan);
+  return plan;
+}
+function placeFortressParts(cx, cz) {
+  const plan = fortressPlan(Math.floor(cx / FORTRESS_REGION), Math.floor(cz / FORTRESS_REGION));
+  const x0 = cx * CH, z0 = cz * CH;
+  const inside = (x, z) => x >= x0 && x < x0 + CH && z >= z0 && z < z0 + CH;
+  const { y } = plan;
+  // Köprü hücresi: 2 kat taban, üstü boş, kenarlarda 1 blok korkuluk; her 6 blokta kenarlardan zemine inen ayak
+  const deck = (x, z, edge, pillar) => {
+    if (!inside(x, z)) return;
+    set(x, y, z, B.nether_brick); set(x, y - 1, z, B.nether_brick);
+    for (let wy = y + 1; wy <= y + 4; wy++) set(x, wy, z, AIR);
+    if (edge) set(x, y + 1, z, B.nether_brick);
+    if (pillar) for (let wy = y - 2; wy > 0 && get(x, wy, z) !== B.netherrack; wy--) set(x, wy, z, B.nether_brick);
+  };
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) deck(plan.x + dx, plan.z + dz, false, Math.abs(dx) === 2 && Math.abs(dz) === 2);
+  for (const arm of plan.arms) {
+    const [ax, az] = arm.dir;
+    for (let d = 3; d <= arm.len; d++) for (let w = -2; w <= 2; w++) {
+      deck(plan.x + ax * d + az * w, plan.z + az * d + ax * w, Math.abs(w) === 2, Math.abs(w) === 2 && d % 6 === 0);
+    }
+    if (!arm.room) continue;
+    // Oda: 7×7 taban, 4 blok duvar, tavan; köprüye bakan duvarda 3 genişliğinde giriş
+    for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
+      const rx = arm.room.x + dx, rz = arm.room.z + dz;
+      if (!inside(rx, rz)) continue;
+      const wall = Math.abs(dx) === 3 || Math.abs(dz) === 3;
+      const across = ax ? dz : dx, along = ax ? dx * ax : dz * az;
+      const doorway = along === -3 && Math.abs(across) <= 1;
+      deck(rx, rz, false, Math.abs(dx) === 3 && Math.abs(dz) === 3);
+      for (let wy = y + 1; wy <= y + 4; wy++) set(rx, wy, rz, wall && !(doorway && wy <= y + 3) ? B.nether_brick : AIR);
+      set(rx, y + 5, rz, B.nether_brick);
+    }
+  }
+  const s = plan.spawner;
+  if (inside(s.x, s.z)) set(s.x, s.y, s.z, B.spawner);
+}
+// (x, z) yakınındaki ilk Nether kalesi
+function fortressNear(x, z) {
+  return fortressPlan(Math.floor(x / CH / FORTRESS_REGION), Math.floor(z / CH / FORTRESS_REGION));
 }
 
 // Açılışta doğma noktasının çevresi hemen üretilir (başlangıç alanını kapsar); gerisi yürüdükçe (chunk-loader.js).

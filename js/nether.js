@@ -41,6 +41,7 @@ function generateNetherChunk(cx, cz) {
       else z = Math.max(z0, Math.min(z0 + CH - 1, z + dir));
     }
   }
+  placeFortressParts(cx, cz);
 }
 
 // Etkin dünyayı değiştirir: canlılar, yerdeki eşyalar, oklar ve parçacıklar temizlenir, chunk'lar yeniden kurulur.

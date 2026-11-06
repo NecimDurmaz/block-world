@@ -75,7 +75,8 @@ tests/              otomatik testler
    | `mob-models.js` | `box()`/`pivot()` model yardımcıları; hayvan, zombi, iskelet, örümcek ve creeper modelleri |
    | `mobs.js` | `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | `arrows.js` | `projectiles`, `arrowMesh()`, `shootArrow()` (iskelet), `updateProjectiles()` (iskelet ve oyuncu okları) |
-   | `structures.js` | Köy planları ve üretimi: `villagePlan()`, `placeVillageParts()`, `villageNear()`; açılışta doğma noktasının çevresini üretir |
+   | `structures.js` | Köy planları ve üretimi: `villagePlan()`, `placeVillageParts()`, `villageNear()`; Nether kalesi: `fortressPlan()`, `placeFortressParts()`, `fortressNear()`; açılışta doğma noktasının çevresini üretir |
+   | `blaze.js` | Blaze modeli ve davranışı (`updateBlaze()`), küçük ateş topu (`shootSmallFireball()`), blaze çubuğu, doğurucular (`updateBlazeSpawners()`) |
    | `villages.js` | Köylü modeli ve davranışı, zümrüt, `TRADES`, ticaret paneli (`openTrade()`, `trade()`, `tryOpenTrade()`), `updateVillages()` |
    | `chunk-loader.js` | Yürüdükçe chunk üretme, mesh kurma ve kaldırma: `updateChunks()`, `nearestChunk()` |
    | `fluids.js` | Akış: `FLUIDS`, `fluidQueues`, `desiredLiquid()`, `stepFluid()`, `quench()`, `updateFluids()`, `clearFluids()` |
@@ -166,6 +167,8 @@ tests/              otomatik testler
 | 79 | `cactus` | Kaktüs | `cactusTop` / `cactusSide`; dar kutu (`box`), değince hasar |
 | 80 | `spruce_log` | Ladin kütüğü | `logTop` / `spruceLog`; balta, 1 → 4 tahta |
 | 81 | `spruce_leaves` | Ladin yaprağı | `spruceLeaves`; bir şey düşmez |
+| 82 | `nether_brick` | Nether tuğlası | `netherBrick`; kazma (`needsTool`), 10 sn |
+| 83 | `spawner` | Blaze doğurucu | `spawner` (saydam zeminde demir kafes, `cutout`); kazma, 25 sn, bir şey düşmez |
 | 62 | `diamond_ore` | Elmas cevheri | `diamondOre` (taş + turkuaz benekler); `breakTime: 15`, `minTier: 3`, 1 `diamond` düşürür |
 | 61 | `chest` | Sandık | `chestTop` / `chestSide` (yanda koyu kilit çizgisi ve kilit); balta, 3,75 sn |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
@@ -191,7 +194,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 ### Dokular
 
 - Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 37` doku, atlas `592 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide, diamondOre, snowGrassTop, snowGrassSide, ice, cactusSide, cactusTop, spruceLog, spruceLeaves`.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide, diamondOre, snowGrassTop, snowGrassSide, ice, cactusSide, cactusTop, spruceLog, spruceLeaves, netherBrick, spawner`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -501,6 +504,18 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   - Teklif tablosu (`TRADES`): 20 buğday → 1 zümrüt, 15 kömür → 1 zümrüt, 1 zümrüt → 3 ekmek, 1 zümrüt → 8 ok, 3 zümrüt → demir kazma, 5 zümrüt → demir göğüslük.
   - Her köylünün 3 teklifi köy ve ev numarasından belirlenir; bu yüzden kayda yazılmadan da her açılışta aynıdır. Çağrılmış (köysüz) köylünün teklifleri ilk ticarette rastgele seçilir.
 
+## Nether kalesi ve blaze
+
+- **Üretim** (`structures.js`): Nether 12×12 chunk'lık bölgelere ayrılır, her bölgede bir kale (`fortressPlan(rx, rz)`); merkez bölgenin iç 6×6 chunk'ından birinin ortası. Nether chunk'ı üretilirken kalenin o chunk'a düşen kısmı çizilir (`placeFortressParts`).
+  - Köprüler: tabanı `FORTRESS_DECK = 22` yüksekliğinde, 2 kat nether tuğlası; ortada 5×5 kavşak, dört yöne 18–29 blok, 5 blok genişliğinde; kenarlarda 1 blok korkuluk; üstü 4 blok boşaltılır. Her 6 blokta kenarlardan kızıl taşa kadar inen ayaklar.
+  - Odalar: 2–3 köprünün ucunda 7×7, 4 blok yüksek, tavanlı nether tuğlası oda; köprüye bakan duvarda 3 genişliğinde giriş. İlk odanın ortasında blaze doğurucu.
+  - `fortressNear(x, z)`: o noktanın bölgesindeki kale.
+- **Blaze doğurucu** (`spawner`): demir çubuklu kafes, içinde dönen küçük bir blaze modeli (`spawnerModels`). Oyuncu 16 blok içindeyken her 10 sn'de bir, çevresindeki 8 blokta 4'ten az blaze varsa 1 blaze doğurur. Kırılabilir (kazma, 25 sn), bir şey düşürmez; kırılınca doğurma biter.
+- **Blaze** (`blaze.js`, `MOB_TYPES.blaze`): can 20; sarı-turuncu baş, çevresinde iki halka hâlinde zıt yönlere dönen 8 çubuk. Yerçekimsiz süzülür; oyuncuyu 16 blok içinde görünce ona döner, 6 bloktan uzaksa yaklaşır ve oyuncunun 3 blok üstünde durmaya çalışır. 3 sn'de bir 0,3 sn arayla 3 küçük ateş topu atar. Yalnızca vurularak (ve geri çevrilen ateş topuyla) hasar alır; güneşte yanmaz. Güvenli modda atmaz.
+- **Küçük ateş topu** (`small`): ghast ateş topundan hızlı ve yarı boyda; oyuncuya değerse 5 hasar ve 3 sn yanma (saniyede 1, `burnTimer`); bloğa değince patlamaz. Geri çevrilebilir.
+- Blaze ölünce 0–1 **blaze çubuğu** düşürür (şimdilik başka kullanımı yok).
+- Kale merkezine 64 bloktan yakınken her 15 sn'de bir, köprülerin üstüne (oyuncudan 12+ blok uzağa) bir zombi domuz adam doğar (toplam sınır `MAX_PIGMEN`).
+
 ## Yay ve ok
 
 - Yay seçiliyken sağ tuş basılı tutulunca gerilir (`bowCharge`, 1 sn'de 0 → 1; blok konmaz). Gerilirken görüş alanı 10°'ye kadar daralır, gözden görünümde kol geri çekilir, 3. şahısta iki kol bakış yönünde öne uzanır.
@@ -651,7 +666,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `villagePlan(rx, rz)`, `villageNear(x, z)`, `trades`, `openTrade(m)`, `trade(k)`, `tryOpenTrade()`, `villagerTarget(m)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `villagePlan(rx, rz)`, `villageNear(x, z)`, `trades`, `openTrade(m)`, `trade(k)`, `tryOpenTrade()`, `villagerTarget(m)`, `fortressPlan(rx, rz)`, `fortressNear(x, z)`, `shootSmallFireball(m)`, `spawnerModels()`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -735,7 +750,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 41 | Biyomlar | Yapıldı |
 | 42 | Sonsuz dünya | Yapıldı |
 | 43 | Köyler ve köylü ticareti | Yapıldı |
-| 44 | Nether kalesi ve blaze | Yapılmadı |
+| 44 | Nether kalesi ve blaze | Yapıldı |
 | 45 | Sohbet ve komutlar | Yapıldı |
 | 46 | Adım adım rehber | Yapılmadı |
 | 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |

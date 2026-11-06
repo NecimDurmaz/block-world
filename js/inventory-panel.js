@@ -21,6 +21,7 @@ function renderInventory() {
   renderFurnace();
   renderChest();
   renderArmor();
+  renderTrade();
   updateHeldTool();
   paintSlot(heldEl, held);
   heldEl.hidden = !held;
@@ -55,6 +56,8 @@ function openInventory(size = 2) {
   document.getElementById('furnace-ui').hidden = true;
   document.getElementById('chest-ui').hidden = true;
   document.getElementById('picker-ui').hidden = true;
+  document.getElementById('trade-ui').hidden = true;
+  tradingWith = null;
   document.getElementById('craft-ui').hidden = false;
   document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';
   document.getElementById('craft-grid').classList.toggle('small', size === 2);

@@ -227,6 +227,5 @@ function generateChunk(cx, cz) {
     if (r < chance[0]) set(x, y, z, B.tall_grass);
     else if (r < chance[1]) set(x, y, z, hash(x, z * 3) < 0.5 ? B.poppy : B.dandelion);
   }
+  placeVillageParts(cx, cz);
 }
-// Açılışta doğma noktasının çevresi hemen üretilir (başlangıç alanını kapsar); gerisi yürüdükçe (chunk-loader.js).
-ensureArea(SPAWN_X, SPAWN_Z, 3);

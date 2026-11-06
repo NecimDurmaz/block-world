@@ -211,6 +211,7 @@ function updateMob(m, dt) {
   const sees = aggressive && dist <= CHASE_DISTANCE && canSeePlayer(m);
   m.memory = sees ? CHASE_MEMORY : aggressive ? Math.max(0, m.memory - dt) : 0;
   const chasing = aggressive && dist <= CHASE_DISTANCE && m.memory > 0;
+  let prey = null;
   // Zombi ve iskelet gündüz başının üstü açıksa saniyede 1 hasar alır.
   m.burning = m.type.burns && day && skyAbove(m);
   if (m.burning) {
@@ -254,6 +255,16 @@ function updateMob(m, dt) {
       damagePlayer(SPIDER_DAMAGE, m.x, m.z);
       m.leapTimer = 0;
     }
+  } else if (m.kind === 'zombie' && aggressive && (prey = villagerTarget(m)) && (!chasing || Math.hypot(prey.x - m.x, prey.z - m.z) < dist)) {
+    // Zombi yakındaki köylüye de saldırır (oyuncudan yakınsa)
+    const px = prey.x - m.x, pz = prey.z - m.z;
+    m.walking = true;
+    m.yaw = Math.atan2(-px, -pz);
+    if (Math.hypot(px, pz) <= ZOMBIE_REACH && m.attackCooldown <= 0) {
+      hurtMob(prey, ZOMBIE_DAMAGE, px, pz);
+      m.attackCooldown = 1;
+      m.swing = 0.3;
+    }
   } else if (chasing) {
     // Oyuncuya yürü; 1,2 blok içindeyse saniyede bir vur.
     m.walking = true;
@@ -267,6 +278,8 @@ function updateMob(m, dt) {
     // Oyuncudan uzağa, 2 kat hızla
     m.walking = true;
     m.yaw = Math.atan2(m.x - player.x, m.z - player.z) + Math.PI;
+  } else if (m.type.villager && m.home && steerVillager(m, day)) {
+    // köylü yönünü kendisi seçti
   } else if (m.timer <= 0) {
     m.walking = !m.walking;
     m.timer = m.walking ? 2 + Math.random() * 3 : 2 + Math.random() * 2;

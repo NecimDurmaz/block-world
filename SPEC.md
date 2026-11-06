@@ -12,7 +12,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
 | Platform | Masaüstü tarayıcı, klavye + fare. Telefon desteklenmiyor. |
-| Çalışma biçimi | claude.ai Artifact ya da çift tıklanan yerel dosya. İnternet gerekir (Three.js). |
+| Çalışma biçimi | GitHub Pages (`block-world.necim.dev`) ya da çift tıklanan yerel dosya. İnternet gerekir (Three.js). Artifact olarak yayınlanmaz. |
 
 ---
 
@@ -75,6 +75,8 @@ tests/              otomatik testler
    | `mob-models.js` | `box()`/`pivot()` model yardımcıları; hayvan, zombi, iskelet, örümcek ve creeper modelleri |
    | `mobs.js` | `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | `arrows.js` | `projectiles`, `arrowMesh()`, `shootArrow()` (iskelet), `updateProjectiles()` (iskelet ve oyuncu okları) |
+   | `structures.js` | Köy planları ve üretimi: `villagePlan()`, `placeVillageParts()`, `villageNear()`; açılışta doğma noktasının çevresini üretir |
+   | `villages.js` | Köylü modeli ve davranışı, zümrüt, `TRADES`, ticaret paneli (`openTrade()`, `trade()`, `tryOpenTrade()`), `updateVillages()` |
    | `chunk-loader.js` | Yürüdükçe chunk üretme, mesh kurma ve kaldırma: `updateChunks()`, `nearestChunk()` |
    | `fluids.js` | Akış: `FLUIDS`, `fluidQueues`, `desiredLiquid()`, `stepFluid()`, `quench()`, `updateFluids()`, `clearFluids()` |
    | `bucket.js` | Kova eşyaları ve tarifi, `heldBucket()`, `sourceInSight()`, `useBucket()` |
@@ -484,6 +486,21 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - Kuyruk kaydedilmez; dünya değişince (portal) boşalır. Yarıda kalmış akış sayfa yenilenince olduğu gibi durur.
 - **Kova:** Tarif `I.I` / `.I.` (demir külçe), 16'ya kadar yığılır (`maxStack`). Boş kovayla sağ tık bakış ışınındaki ilk sıvı kaynağını alır (araya katı blok girerse almaz) → su kovası / lav kovası (yığılmaz). Dolu kovayla sağ tık bakılan yüzün önüne (hava, bitki ya da akan sıvıysa) kaynak koyar ve kova boşalır. Nether'de su konamaz: "Su buharlaştı".
 
+## Köyler ve ticaret
+
+- **Üretim** (`structures.js`): Dünya 6×6 chunk'lık bölgelere ayrılır; her bölgenin köy planı tohumdan belirlenir (`villagePlan(rx, rz)`, önbellekli). Merkez, bölgenin iç 4×4 chunk'ından birinin ortasıdır; merkez ova ya da ormandaysa ve yüksekliği 16–29 arasındaysa köy vardır (~3 bölgede 1). Bir chunk üretilirken planın o chunk'a düşen kısmı çizilir (`placeVillageParts`, chunk sınırında kırpılır): köy hangi sırayla üretilirse üretilsin aynı çıkar.
+  - Kuyu: merkezde 4×4 kırık taş kenar, ortada 2×2 ve 2 derin su, köşelerde kütük direkler, üstte kırık taş çatı.
+  - 3–5 ev: merkezden 10–11 blok uzakta, 8 yönden rastgele seçilenlerde. 5×5 taban: kırık taş temel ve zemin (arazi alçaksa temel aşağı uzar, yüksekse üstü boşaltılır), köşelerde kütük, tahta duvarlar (3 blok), tahta çatı, kapının yanındaki iki duvarda cam pencere. Kapı kuyuya bakan duvarın ortasında ve açıktır (köylüler kapı açamaz); içeride bir meşale.
+  - Yollar: kuyudan her evin kapısının önüne, önce x sonra z boyunca; çimen toprağa döner, üstündeki bitki kalkar.
+  - `villageNear(x, z, r)`: r bölge çevresindeki en yakın köy.
+- **Köylü** (`villages.js`, `MOB_TYPES.villager`): can 20, hız 1; kahverengi cüppeli insan modeli, büyük burun. Köy 64 bloktan yakına gelince (köyün chunk'ları yüklüyse) her eve bir köylü doğar; bir oturumda bir kez (canlılar kaydedilmez).
+  - Gündüz köyde dolaşır; köy merkezinden 14 bloktan uzaklaşınca merkeze döner. Gece önce kapısının önüne, sonra evin ortasına yürür (`steerVillager`). Vurulunca hayvan gibi kaçar.
+  - Zombi, 16 blok içindeki bir köylü oyuncudan yakınsa köylüye yürür ve vurur (`villagerTarget`, 3 hasar). Güvenli modda saldırmaz.
+- **Zümrüt** (`emerald`): yalnızca ticaretle elde edilir.
+- **Ticaret:** Köylüye sağ tıklamak (elde ne olursa olsun, arada blok yoksa) envanter panelini "Köylü" başlığıyla açar; üretim bölümü yerine 3 teklif satırı (`#trade-ui`): bedel → ürün yuvaları ve "Takas et" düğmesi. Bedel yetmiyorsa düğme soluk görünür ve basınca "Yeterli … yok" bildirimi çıkar. Ürün envantere (sığmazsa yere) gelir; aletler tam dayanıklılıkla.
+  - Teklif tablosu (`TRADES`): 20 buğday → 1 zümrüt, 15 kömür → 1 zümrüt, 1 zümrüt → 3 ekmek, 1 zümrüt → 8 ok, 3 zümrüt → demir kazma, 5 zümrüt → demir göğüslük.
+  - Her köylünün 3 teklifi köy ve ev numarasından belirlenir; bu yüzden kayda yazılmadan da her açılışta aynıdır. Çağrılmış (köysüz) köylünün teklifleri ilk ticarette rastgele seçilir.
+
 ## Yay ve ok
 
 - Yay seçiliyken sağ tuş basılı tutulunca gerilir (`bowCharge`, 1 sn'de 0 → 1; blok konmaz). Gerilirken görüş alanı 10°'ye kadar daralır, gözden görünümde kol geri çekilir, 3. şahısta iki kol bakış yönünde öne uzanır.
@@ -634,11 +651,11 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `biomeAt`, `temp`/`hum` (sıcaklık, nem), `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds` (chunk haritaları), `ensureArea(x, z, r, dim)`, `villagePlan(rx, rz)`, `villageNear(x, z)`, `trades`, `openTrade(m)`, `trade(k)`, `tryOpenTrade()`, `villagerTarget(m)`, `chunkCount()`, `meshCount()`, `modifiedChunks`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `isFlying()`, `isFlyAllowed()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `bowCharge()`, `shootPlayerArrow(charge)`, `fluidQueues`, `updateFluids`, `fluidPending()`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
-- Tarayıcının IndexedDB'si: veritabanı `block-world`, depo `saves`, tek kayıt anahtarı `world1`. Veri yalnızca o tarayıcıda ve o adreste durur (Artifact ile yerel dosyanın kayıtları ayrıdır).
+- Tarayıcının IndexedDB'si: veritabanı `block-world`, depo `saves`, tek kayıt anahtarı `world1`. Veri yalnızca o tarayıcıda ve o adreste durur (GitHub Pages adresi ile yerel dosyanın kayıtları ayrıdır).
 - **Kayıt nesnesi** (`SAVE_VERSION = 3`; sürüm 1–2 kayıtlarındaki 96×96 tek dizi açılışta chunk'lara bölünür ve hepsi değiştirilmiş sayılır, `loadLegacyWorld`):
 
   | Alan | İçerik |
@@ -663,7 +680,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikt
   Yeni özellikler kendi alanlarını bu nesneye ekler ve bu tabloya yazar. Alanların anlamı değişirse `SAVE_VERSION` artırılır; sürümü uymayan kayıt yok sayılır.
 - **Ne zaman kaydedilir:** her 30 sn'de bir (oyun oynanırken), duraklatınca (`pause()`), sayfa arka plana geçince (`visibilitychange`) ve kapanırken (`pagehide`).
 - **Açılış:** Kayıt, bütün betikler yüklendikten sonra `main.js`'in sonunda okunur (`loadGame()`); ardından ayarlar okunur. "Oyna" düğmesi bunlar bitene kadar pasiftir. Kayıt varsa dünya ondan yüklenir, bütün chunk'lar yeniden kurulur, oyuncu, can, hotbar ve saat geri gelir. IndexedDB açılamazsa (3 sn zaman aşımı dahil) oyun kayıtsız çalışır, panelde "Kayıt yapılamıyor" notu çıkar ve "Yeni dünya" düğmesi gizlenir.
-- **Yeni dünya:** İlk basışta düğme "Emin misin? Tekrar bas" olur, ikinci basışta kayıt silinir ve sayfa yeniden yüklenir. (`confirm()` Artifact içinde çalışmadığı için onay sayfanın kendisindedir.)
+- **Yeni dünya:** İlk basışta düğme "Emin misin? Tekrar bas" olur, ikinci basışta kayıt silinir ve sayfa yeniden yüklenir. (`confirm()` kullanılmaz; onay sayfanın kendi arayüzündedir.)
 
 ---
 
@@ -717,7 +734,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 40 | Kova, akan su ve lav | Yapıldı |
 | 41 | Biyomlar | Yapıldı |
 | 42 | Sonsuz dünya | Yapıldı |
-| 43 | Köyler ve köylü ticareti | Yapılmadı |
+| 43 | Köyler ve köylü ticareti | Yapıldı |
 | 44 | Nether kalesi ve blaze | Yapılmadı |
 | 45 | Sohbet ve komutlar | Yapıldı |
 | 46 | Adım adım rehber | Yapılmadı |

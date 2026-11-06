@@ -149,3 +149,7 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #armor-bar { position: absolute; left: 0; bottom: 100%; margin-bottom: 2px; display: flex; gap: 2px; visibility: hidden; }
 #armor-bar i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
 .armor-col { display: grid; gap: 0; margin-right: 10px; }
+#trade-list { display: grid; gap: 6px; padding-bottom: 4px; }
+.trade-row { display: flex; align-items: center; gap: 10px; }
+.trade-row .mc-btn { margin-left: auto; }
+.trade-row.poor .mc-btn { color: #a0a0a0; }

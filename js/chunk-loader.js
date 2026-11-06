@@ -34,4 +34,4 @@ function updateChunks(dt) {
   unloadTimer = 2;
   for (const key of [...world.keys()]) if (far(key, DATA_KEEP_RADIUS) && !modifiedChunks[dimension].has(key)) world.delete(key);
 }
-Object.assign(window.game, { ensureArea, updateChunks, chunkCount: () => world.size, meshCount: () => chunkMeshes.size, modifiedChunks });
+Object.assign(window.game, { villagePlan, villageNear, ensureArea, updateChunks, chunkCount: () => world.size, meshCount: () => chunkMeshes.size, modifiedChunks });

@@ -822,13 +822,23 @@
     return { root, legs: [legR, legL], arms: [armR, armL] };
   }
 
+  const SKELETON_SKIN = { skin: '#d6d6d0', hair: '#d6d6d0', shirt: '#c4c4be', pants: '#c4c4be', shoe: '#a8a8a2', eye: '#1f1f1f', iris: '#1f1f1f', mouth: '#7a7a74' };
+  function buildSkeleton() {
+    const { root, armR, armL, legR, legL } = buildHumanoid(SKELETON_SKIN, 2);
+    // Yay sol elde; kol öne kalkınca dikey durur.
+    armL.add(box(1, 1, 12, paint(1, 1, [['#6b4a2b', 0, 0, 1, 1]]), 0, -10, 0));
+    return { root, legs: [legR, legL], bowArms: [armR, armL] };
+  }
+
   // slowFall: düşerken yerçekimi 1/4 (tavuk kanat çırpar). hostile: gece doğar, oyuncuya saldırır.
+  // ranged: uzaktan ok atar.
   const MOB_TYPES = {
     cow: { name: 'İnek', health: 10, w: 0.45, h: 1.2, speed: 1.2, build: buildCow },
     pig: { name: 'Domuz', health: 10, w: 0.4, h: 0.9, speed: 1.1, build: buildPig },
     chicken: { name: 'Tavuk', health: 4, w: 0.25, h: 0.8, speed: 1.0, slowFall: true, build: buildChicken },
     sheep: { name: 'Koyun', health: 8, w: 0.45, h: 1.1, speed: 1.1, build: buildSheep },
     zombie: { name: 'Zombi', health: 20, w: 0.3, h: 1.8, speed: 2.3, hostile: true, build: buildZombie },
+    skeleton: { name: 'İskelet', health: 20, w: 0.3, h: 1.8, speed: 2.3, hostile: true, ranged: true, build: buildSkeleton },
   };
   const ANIMAL_KINDS = ['cow', 'pig', 'chicken', 'sheep'];
   const mobs = [];
@@ -945,7 +955,7 @@
       // Sütunun en üstü: üstünde blok yok, yani açık hava
       const y = surfaceY(x, z), ground = get(x, y - 1, z);
       if (y >= SY - 2 || ground === AIR || ground === B.leaves) continue;
-      spawnMob('zombie', x + 0.5, y, z + 0.5);
+      spawnMob(Math.random() < 0.4 ? 'skeleton' : 'zombie', x + 0.5, y, z + 0.5);
       return;
     }
   }
@@ -990,7 +1000,16 @@
     const dx = player.x - m.x, dz = player.z - m.z, dist = Math.hypot(dx, dz);
     if (m.type.hostile && dist > DESPAWN_DISTANCE) { removeMob(m); return; }
     const chasing = m.type.hostile && !dead && dist <= CHASE_DISTANCE && canSeePlayer(m);
-    if (chasing) {
+    m.aiming = chasing && m.type.ranged;
+    if (m.aiming) {
+      // İskelet: 8 blok mesafede durmaya çalışır, 4 bloktan yakında geri çekilir, 2 sn'de bir ok atar.
+      m.walking = true;
+      m.yaw = Math.atan2(-dx, -dz);
+      if (m.attackCooldown <= 0) {
+        shootArrow(m);
+        m.attackCooldown = SKELETON_SHOT_INTERVAL;
+      }
+    } else if (chasing) {
       // Oyuncuya yürü; 1,2 blok içindeyse saniyede bir vur.
       m.walking = true;
       m.yaw = Math.atan2(-dx, -dz);
@@ -1010,7 +1029,8 @@
     }
     let speed = m.walking ? m.type.speed * (m.flee > 0 ? 2 : 1) : 0;
     if (chasing && dist < 0.9) speed = 0;
-    if (speed) {
+    if (m.aiming) speed = dist > 8.5 ? m.type.speed : dist < 4 ? -m.type.speed : 0;
+    if (speed > 0) {
       const fx = -Math.sin(m.yaw), fz = -Math.cos(m.yaw);
       const ax = Math.floor(m.x + fx * (m.w + 0.3)), az = Math.floor(m.z + fz * (m.w + 0.3)), fy = Math.floor(m.y);
       const wall = solid(ax, fy, az) ? (solid(ax, fy + 1, az) ? 2 : 1) : 0;
@@ -1043,8 +1063,65 @@
     legs.forEach((leg, i) => { leg.rotation.x = (i === 0 || i === 3 ? 1 : -1) * swing; });
     // Zombi kolları öne uzanık; vururken bir kez savrulur.
     if (m.body.arms) for (const arm of m.body.arms) arm.rotation.x = 1.45 + Math.sin(m.swing / 0.3 * Math.PI) * 0.6;
+    // İskelet nişan alırken iki kolunu da öne kaldırır.
+    if (m.body.bowArms) m.body.bowArms.forEach((arm, i) => { arm.rotation.x = m.aiming ? 1.4 : (i ? swing : -swing); });
+  }
+  // ---------- Oklar ----------
+  // 20 blok/sn, hafif yerçekimi. Oyuncuya değerse 3 hasar; bloğa değerse 3 sn takılı kalıp kaybolur.
+  const ARROW_SPEED = 20, ARROW_GRAVITY = 6, ARROW_DAMAGE = 3, SKELETON_SHOT_INTERVAL = 2;
+  const projectiles = [];
+  const arrowMaterials = {
+    shaft: new THREE.MeshBasicMaterial({ color: 0x6b4a2b }),
+    tip: new THREE.MeshBasicMaterial({ color: 0x9a9a9a }),
+    feather: new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }),
+  };
+  function arrowMesh() {
+    // Model +z yönünü gösterir; lookAt ile uçuş yönüne çevrilir.
+    const g = new THREE.Group();
+    const part = (w, h, d, mat, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.z = z; g.add(m); };
+    part(0.04, 0.04, 0.5, arrowMaterials.shaft, 0);
+    part(0.07, 0.07, 0.08, arrowMaterials.tip, 0.27);
+    part(0.12, 0.02, 0.12, arrowMaterials.feather, -0.2);
+    scene.add(g);
+    return g;
+  }
+  function shootArrow(m) {
+    const fx = -Math.sin(m.yaw), fz = -Math.cos(m.yaw);
+    const x = m.x + fx * 0.5, y = m.y + 1.5, z = m.z + fz * 0.5;
+    const dx = player.x - x, dy = player.y + 1.1 - y, dz = player.z - z;
+    const flight = Math.hypot(dx, dy, dz) / ARROW_SPEED;
+    // Yerçekimini telafi etmek için biraz yukarı nişan
+    projectiles.push({ x, y, z, vx: dx / flight, vy: dy / flight + 0.5 * ARROW_GRAVITY * flight, vz: dz / flight, stuck: false, life: 8, mesh: arrowMesh() });
+  }
+  function updateProjectiles(dt) {
+    for (const a of [...projectiles]) {
+      a.life -= dt;
+      if (!a.stuck) {
+        const steps = 4;
+        for (let i = 0; i < steps; i++) {
+          a.vy -= ARROW_GRAVITY * dt / steps;
+          a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;
+          if (get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)) !== AIR) { a.stuck = true; a.life = 3; break; }
+          const p = player;
+          if (!dead && a.x > p.x - p.w && a.x < p.x + p.w && a.y > p.y && a.y < p.y + p.h && a.z > p.z - p.w && a.z < p.z + p.w) {
+            damagePlayer(ARROW_DAMAGE, a.x - a.vx, a.z - a.vz);
+            a.life = 0;
+            break;
+          }
+        }
+        a.mesh.position.set(a.x, a.y, a.z);
+        if (!a.stuck) a.mesh.lookAt(a.x + a.vx, a.y + a.vy, a.z + a.vz);
+      }
+      if (a.life <= 0) {
+        scene.remove(a.mesh);
+        a.mesh.traverse(o => o.geometry?.dispose());
+        projectiles.splice(projectiles.indexOf(a), 1);
+      }
+    }
   }
   window.game.mobs = mobs;
+  window.game.projectiles = projectiles;
+  window.game.spawnMob = spawnMob;
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -1170,6 +1247,7 @@
       for (const m of mobs) updateMob(m, dt);
       updateAnimalSpawning(dt);
       updateHostileSpawning(dt);
+      updateProjectiles(dt);
     }
     for (const m of mobs) renderMob(m);
     // Düşme hasarı: 3 bloğun üstündeki her blok 1 can

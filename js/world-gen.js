@@ -90,11 +90,11 @@ for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
   for (let y = heights[z * SX + x] + 1; y <= WATER_LEVEL; y++) if (get(x, y, z) === AIR) set(x, y, z, B.water);
 }
 
-// Cevher damarları: chunk başına kömür ~8 (y ≤ 30), demir ~4 (y ≤ 20); 3–8 blokluk, yalnızca taşın içinde.
+// Cevher damarları: chunk başına kömür ~8 (y ≤ 30), demir ~4 (y ≤ 20), 3–8 blokluk; elmas ~1 (y ≤ 10), 1–4 blokluk. Yalnızca taşın içinde.
 const oreRnd = mulberry32(SEED + 7);
-function placeVein(ore, maxY) {
+function placeVein(ore, maxY, minSize = 3, maxSize = 8) {
   let x = Math.floor(oreRnd() * SX), y = 1 + Math.floor(oreRnd() * maxY), z = Math.floor(oreRnd() * SZ);
-  const size = 3 + Math.floor(oreRnd() * 6);
+  const size = minSize + Math.floor(oreRnd() * (maxSize - minSize + 1));
   for (let i = 0; i < size; i++) {
     if (get(x, y, z) === B.stone) set(x, y, z, ore);
     const axis = Math.floor(oreRnd() * 3), step = oreRnd() < 0.5 ? -1 : 1;
@@ -104,6 +104,7 @@ function placeVein(ore, maxY) {
 const chunkCount = (SX / CH) * (SZ / CH);
 for (let i = 0; i < chunkCount * 8; i++) placeVein(B.coal_ore, 30);
 for (let i = 0; i < chunkCount * 4; i++) placeVein(B.iron_ore, 20);
+for (let i = 0; i < chunkCount; i++) placeVein(B.diamond_ore, 10, 1, 4);
 
 const treeRnd = mulberry32(SEED);
 for (let i = 0; i < 160; i++) {

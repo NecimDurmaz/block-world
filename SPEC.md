@@ -137,11 +137,12 @@ tests/              otomatik testler
 | 49 | `dandelion` | Karahindiba | `dandelion`; uzun ot gibi, eşya düşürmez |
 | 50 | `farmland` | Tarla | `farmland` / `dirt` / `dirt`; kırılınca toprak düşer |
 | 51–54 | `wheat_0` … `wheat_3` | Buğday | `wheat0` … `wheat3`; `model: 'cross'`, `crop` (aşama 0–3) |
-| 55 | `obsidian` | Obsidyen | `obsidian`; `breakTime: 36`, `pickaxe`, `minTier: 3` (yalnızca demir kazma, 6 sn) |
+| 55 | `obsidian` | Obsidyen | `obsidian`; `breakTime: 36`, `pickaxe`, `minTier: 3` (demir kazmayla 6 sn, elmas kazmayla 4,5 sn) |
 | 56–57 | `portal_x`, `portal_z` | Portal | `model: 'portal'` (chunk mesh'inde değil, `portal.js`), `axis`, `fluid` (çarpışmasız, nişan geçer), `noDrop` |
 | 58 | `netherrack` | Kızıl taş | `netherrack`; `breakTime: 2`, `pickaxe`, `needsTool` |
 | 59 | `lava` | Lav | `lava`; `fluid`, `selfLit` (kendi ışıklı malzeme), `hidden`, `noDrop` |
 | 60 | `glowstone` | Işıltı taşı | `glowstone`; `selfLit`, ışık kaynağı (`isLightSource`), kırılınca 2–4 `glowstone_dust` (`dropCount`) |
+| 62 | `diamond_ore` | Elmas cevheri | `diamondOre` (taş + turkuaz benekler); `breakTime: 15`, `minTier: 3`, 1 `diamond` düşürür |
 | 61 | `chest` | Sandık | `chestTop` / `chestSide` (yanda koyu kilit çizgisi ve kilit); balta, 3,75 sn |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
 | 23–30 | `bed_foot_<yön>`, `bed_head_<yön>` (yön: `east`, `west`, `south`, `north`) | Yatak | `bedHeadTop` / `bedFootTop` / `bedSide`; `model: 'bed'`, `part`, `dir` (baş tarafı), `height: 9/16`, kırılınca `bed` eşyası (bir kez) |
@@ -166,7 +167,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 ### Dokular
 
 - Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 37` doku, atlas `592 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide`.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian, netherrack, lava, glowstone, chestTop, chestSide, diamondOre`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -402,7 +403,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `apple` | Elma |
   | `bed` | Yatak (konulabilir) |
   | `door` | Kapı (konulabilir) |
-  | `iron_pickaxe` | Demir kazma (`tier: 3`, `speed: 6`, dayanıklılık 250, hasar 4) |
+  | `diamond` | Elmas; elmas cevherinden (demir ya da elmas kazmayla) düşer |
   | `flint_and_steel` | Çakmak (dayanıklılık 64, yığılmaz) |
   | `obsidian` | Obsidyen |
   | `netherrack`, `glowstone` | Kızıl taş, ışıltı taşı (konulabilir) |
@@ -449,21 +450,23 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Aletler
 
-- 2 seviye × 4 tür = 8 alet; anahtar `<seviye>_<tür>`: `wooden_pickaxe`, `stone_sword` … Adlar Türkçe: "Tahta kazma", "Taş kılıç" vb. `ITEMS[key]` alanları: `tool` (tür), `speed`, `durability` (en yüksek), `damage`, `canvas` (8×8 desenden simge).
+- 4 seviye × 4 tür = 16 alet; anahtar `<seviye>_<tür>`: `wooden_pickaxe`, `stone_sword` … Adlar Türkçe: "Tahta kazma", "Taş kılıç" vb. `ITEMS[key]` alanları: `tool` (tür), `speed`, `durability` (en yüksek), `damage`, `canvas` (8×8 desenden simge).
 
   | Seviye | `tier` | Malzeme | `speed` | `durability` |
   | --- | --- | --- | --- | --- |
   | `wooden` (Tahta) | 1 | tahta | ×2 | 60 |
   | `stone` (Taş) | 2 | kırık taş | ×4 | 132 |
+  | `iron` (Demir) | 3 | demir külçe | ×6 | 251 |
+  | `diamond` (Elmas) | 4 | elmas | ×8 | 1562 |
 
   Bir bloğun `minTier` değeri varsa, düşmesi için kazmanın `tier` değeri en az o kadar olmalıdır.
 
-  | Tür | Hızlandırdığı bloklar | Hasar (tahta / taş) | Tarif (M malzeme, S çubuk) |
+  | Tür | Hızlandırdığı bloklar | Hasar (tahta / taş / demir / elmas) | Tarif (M malzeme, S çubuk) |
   | --- | --- | --- | --- |
-  | `pickaxe` (kazma) | taş grubu, kumtaşı; taş grubu yalnızca kazmayla düşer | 2 / 3 | `MMM` / `.S.` / `.S.` |
-  | `axe` (balta) | kütük, tahta, çalışma masası | 3 / 3 | `MM` / `MS` / `.S` |
-  | `shovel` (kürek) | toprak, çimen, kum | 2 / 2 | `M` / `S` / `S` |
-  | `sword` (kılıç) | — | 4 / 5 | `M` / `M` / `S` |
+  | `pickaxe` (kazma) | taş grubu, kumtaşı; taş grubu yalnızca kazmayla düşer | 2 / 3 / 4 / 5 | `MMM` / `.S.` / `.S.` |
+  | `axe` (balta) | kütük, tahta, çalışma masası, sandık | 3 / 3 / 5 / 6 | `MM` / `MS` / `.S` |
+  | `shovel` (kürek) | toprak, çimen, kum | 2 / 2 / 3 / 4 | `M` / `S` / `S` |
+  | `sword` (kılıç) | — | 4 / 5 / 6 / 7 | `M` / `M` / `S` |
 
 - Elle vuruş `FIST_DAMAGE = 1`; seçili yuvada alet varsa onun `damage` değeri kullanılır.
 - **Dayanıklılık:** Alet yığını `{ key, count: 1, durability }` taşır. Her blok kırışta ve her canlıya vuruşta 1 azalır; 0 olunca alet kaybolur ve "… kırıldı" bildirimi çıkar. Aşınmış aletin yuvasında altta yeşilden kırmızıya giden bir çubuk görünür. Yığınlar taşınırken, atılırken (`drop.extra`) ve kaydedilirken `durability` korunur (`extraOf`).
@@ -488,7 +491,6 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `PP` / `PP` / `PP` | tahta | 3 kapı |
   | `PP` / `.S` / `.S` | tahta + çubuk | tahta çapa |
   | `WWW` | buğday | ekmek |
-  | `III` / `.S.` / `.S.` | demir külçe + çubuk | demir kazma |
   | `IC` ya da `I` / `C` | demir külçe + kömür | çakmak |
   | (Aletler tablosu) | tahta ya da kırık taş + çubuk | 8 alet |
 
@@ -540,7 +542,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `isGod()`, `chatLines()`, `itemIcon`, `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `isGod()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -615,7 +617,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 34 | Nether boyutu | Yapıldı |
 | 35 | Nether yaratıkları | Yapıldı |
 | 36 | Sandık | Yapıldı |
-| 37 | Elmas, demir ve elmas aletler | Yapılmadı |
+| 37 | Elmas, demir ve elmas aletler | Yapıldı |
 | 38 | Zırh | Yapılmadı |
 | 39 | Yay ve ok | Yapılmadı |
 | 40 | Kova, akan su ve lav | Yapılmadı |
@@ -626,3 +628,6 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 45 | Sohbet ve komutlar | Yapıldı |
 | 46 | Adım adım rehber | Yapılmadı |
 | 47 | Üretim rehberi (tarif kitabı) | Yapılmadı |
+| 48 | Eşya seçici (`/give` paneli) | Yapılmadı |
+| 49 | Eldeki eşya her zaman görünür | Yapılmadı |
+| 50 | Güvenli mod (`/safe`) | Yapılmadı |

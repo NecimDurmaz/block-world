@@ -20,7 +20,7 @@ type('/give stone_pickaxe');
 const gavePick = g.inventory.some(s => s && s.key === 'stone_pickaxe' && s.durability === 132);
 g.openChat(); type('/give taş 10');
 const gaveStone = g.inventory.some(s => s && s.key === 'stone' && s.count === 10);
-g.openChat(); type('/give elmas');
+g.openChat(); type('/give uçan halı');
 const unknownItem = last().startsWith('Böyle bir eşya yok');
 g.openChat(); type('/zıpla');
 const unknownCommand = last().startsWith('Bilinmeyen komut');

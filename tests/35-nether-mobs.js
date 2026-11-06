@@ -35,9 +35,13 @@ const neutral = p.health === 20 && !(pig.angry > 0);
 // Vurulunca o ve yakındakiler kızar, saldırır
 p.yaw = Math.atan2(-(pig.x - p.x), -(pig.z - p.z));
 p.pitch = -0.2;
-Object.assign(pig, { x: 40.5, y: 20, z: 38.5, vx: 0, vz: 0, kx: 0, kz: 0, walking: false, timer: 30 });
-await wait(200);
-await hit();
+// Yük altında tek vuruş ıskalayabilir: kızana kadar en çok 5 kez dene
+for (let i = 0; i < 5 && !(pig.angry > 0); i++) {
+  Object.assign(pig, { x: 40.5, y: 20, z: 38.5, vx: 0, vz: 0, kx: 0, kz: 0, walking: false, timer: 30 });
+  p.yaw = 0; p.pitch = -0.2;
+  await wait(200);
+  await hit();
+}
 const angered = pig.angry > 25 && friend.angry > 25;
 for (let i = 0; i < 60 && p.health === 20; i++) await wait(100);
 const attacks = p.health < 20;
@@ -62,7 +66,9 @@ g.shootFireball(ghast);
 const ball = g.projectiles.find(a => a.fireball);
 ghast.attackCooldown = 99;
 let reflected = false;
+const holdGhast = () => Object.assign(ghast, { x: 40.5, y: 24, z: 52.5, vx: 0, vy: 0, vz: 0 });
 for (let i = 0; i < 60 && !reflected; i++) {
+  holdGhast();
   await wait(30);
   const dist = Math.hypot(ball.x - p.x, ball.y - (p.y + 1.6), ball.z - p.z);
   if (dist < 4) {
@@ -74,7 +80,7 @@ for (let i = 0; i < 60 && !reflected; i++) {
   }
 }
 let ghastDead = false;
-for (let i = 0; i < 40 && !ghastDead; i++) { await wait(100); ghastDead = ghast.dying > 0 || !g.mobs.includes(ghast); }
+for (let i = 0; i < 40 && !ghastDead; i++) { holdGhast(); await wait(100); ghastDead = ghast.dying > 0 || !g.mobs.includes(ghast); }
 
 // Ateş topu bloğa çarpınca küçük patlama: duvarı deler
 g.setBlock(40, 21, 34, 58);

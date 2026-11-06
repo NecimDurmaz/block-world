@@ -4,10 +4,10 @@
 // Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
 window.game = {};
 
-const T = 16, N_TILES = 42;
+const T = 16, N_TILES = 43;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39, chestTop: 40, chestSide: 41,
+  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36, netherrack: 37, lava: 38, glowstone: 39, chestTop: 40, chestSide: 41, diamondOre: 42,
 };
 
 function mulberry32(a) {
@@ -89,8 +89,9 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
   const stone = shade([125, 125, 125], 0.88 + rnd() * 0.24);
   px(TILE.coalOre, x, y, stone);
   px(TILE.ironOre, x, y, stone);
+  px(TILE.diamondOre, x, y, stone);
 }
-for (const [tile, color, light] of [[TILE.coalOre, [28, 28, 28], [55, 55, 55]], [TILE.ironOre, [196, 160, 122], [226, 196, 160]]]) {
+for (const [tile, color, light] of [[TILE.coalOre, [28, 28, 28], [55, 55, 55]], [TILE.ironOre, [196, 160, 122], [226, 196, 160]], [TILE.diamondOre, [70, 210, 200], [190, 255, 248]]]) {
   for (let k = 0; k < 7; k++) {
     const cx = 1 + Math.floor(rnd() * 12), cy = 1 + Math.floor(rnd() * 12);
     px(tile, cx, cy, shade(color, 1)); px(tile, cx + 1, cy, shade(color, 1)); px(tile, cx, cy + 1, shade(color, 1)); px(tile, cx + 1, cy + 1, shade(light, 1));

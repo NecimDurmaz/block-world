@@ -30,6 +30,7 @@ const ITEM_ART = {
   iron_ingot: ['Demir külçe', { w: '#e6e6e6', g: '#b8b8b8', d: '#8a8a8a' }, ['........', '........', '..wwwww.', '.wwwwwgd', 'wggggggd', 'dddddddd', '........', '........']],
   charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
   apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
+  diamond: ['Elmas', { c: '#6ff0e0', d: '#2bb5a8', w: '#e8fffc' }, ['........', '..cccc..', '.cwcccc.', 'cwccccdc', '.cccccd.', '..cccd..', '...cd...', '........']],
   coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
 };
 // Minecraft simgelerindeki koyu kenar: dolu bir komşusu olan saydam pikseller o komşunun koyu tonuyla boyanır.
@@ -89,26 +90,26 @@ function drawTool(kind, head, dark) {
   }
   return outlineIcon(c);
 }
-// Aletler: 2 seviye x 4 tür. tool: tür, speed: doğru blokta hız çarpanı, durability: kullanım hakkı, damage: vuruş hasarı.
+// Aletler: 4 seviye x 4 tür. tool: tür, speed: doğru blokta hız çarpanı, durability: kullanım hakkı, damage: vuruş hasarı.
 const TOOL_TIERS = {
   wooden: { name: 'Tahta', tier: 1, head: '#c4995a', dark: '#8a6536', speed: 2, durability: 60, material: 'planks' },
   stone: { name: 'Taş', tier: 2, head: '#a5a5a5', dark: '#6e6e6e', speed: 4, durability: 132, material: 'cobble' },
+  iron: { name: 'Demir', tier: 3, head: '#f0f0f0', dark: '#b4b4b4', speed: 6, durability: 251, material: 'iron_ingot' },
+  diamond: { name: 'Elmas', tier: 4, head: '#6ff0e0', dark: '#2bb5a8', speed: 8, durability: 1562, material: 'diamond' },
 };
-// damage: [tahta, taş]. Desen: M malzeme, S çubuk.
+// damage: seviye sırasıyla [tahta, taş, demir, elmas]. Desen: M malzeme, S çubuk.
 const TOOL_KINDS = {
-  pickaxe: { name: 'kazma', damage: [2, 3], pattern: ['MMM', '.S.', '.S.'] },
-  axe: { name: 'balta', damage: [3, 3], pattern: ['MM', 'MS', '.S'] },
-  shovel: { name: 'kürek', damage: [2, 2], pattern: ['M', 'S', 'S'] },
-  sword: { name: 'kılıç', damage: [4, 5], pattern: ['M', 'M', 'S'] },
+  pickaxe: { name: 'kazma', damage: [2, 3, 4, 5], pattern: ['MMM', '.S.', '.S.'] },
+  axe: { name: 'balta', damage: [3, 3, 5, 6], pattern: ['MM', 'MS', '.S'] },
+  shovel: { name: 'kürek', damage: [2, 2, 3, 4], pattern: ['M', 'S', 'S'] },
+  sword: { name: 'kılıç', damage: [4, 5, 6, 7], pattern: ['M', 'M', 'S'] },
 };
 for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) Object.entries(TOOL_KINDS).forEach(([kindKey, kind]) => {
   ITEMS[`${tierKey}_${kindKey}`] = {
     name: `${tier.name} ${kind.name}`, canvas: drawTool(kindKey, tier.head, tier.dark), tool: kindKey, speed: tier.speed,
-    durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1], tier: tier.tier,
+    durability: tier.durability, damage: kind.damage[tier.tier - 1], tier: tier.tier,
   };
 });
-// Demir kazma (yalnızca kazma; obsidyeni kırabilen tek alet)
-ITEMS.iron_pickaxe = { name: 'Demir kazma', canvas: drawTool('pickaxe', '#f0f0f0', '#b4b4b4'), tool: 'pickaxe', speed: 6, durability: 250, damage: 4, tier: 3 };
 ITEMS.wooden_hoe = { name: 'Tahta çapa', canvas: drawTool('hoe', TOOL_TIERS.wooden.head, TOOL_TIERS.wooden.dark), tool: 'hoe', tier: 1, speed: 1, durability: 60, damage: 1 };
 // Yemekler: doldurduğu açlık puanı
 Object.assign(ITEMS.raw_beef, { food: 3 });

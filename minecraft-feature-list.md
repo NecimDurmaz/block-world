@@ -399,7 +399,7 @@ Bu maddeler listenin geri kalanından sonra gelir; her biri öncekilerden biraz 
   - Yeni blok: elmas cevheri (taş + açık turkuaz benekler). Dünya üretiminde y ≤ 10, chunk başına ~1 damar, 1–4 blok. Yalnızca demir ya da elmas kazmayla kırılınca 1 elmas düşer.
   - Madde 17'deki aletlere demir (madde 33'teki demir kazma dahil 4 alet, malzeme demir külçe) ve elmas seviyesi eklenir; tarif desenleri aynıdır.
   - Hız çarpanı: tahta ×2, taş ×4, demir ×6, elmas ×8. Kılıç hasarı: demir 6, elmas 7. Dayanıklılık: demir 251, elmas 1562 kullanım.
-  - Obsidyen artık elmas kazmayla da kırılır (elmasla 3 sn).
+  - Obsidyen artık elmas kazmayla da kırılır (elmasla 4,5 sn: 36 / 8).
 - **Kabul ölçütü:** Derinde elmas cevheri bulunuyor; taş kazmayla kırılınca bir şey düşmüyor, demir kazmayla elmas düşüyor; elmas kazma taşı gözle görülür hızda kırıyor.
 - **Bağımlılık:** 17, 20, 33
 
@@ -507,6 +507,38 @@ Bu maddeler listenin geri kalanından sonra gelir; her biri öncekilerden biraz 
   - Arama kutusu: Türkçe ada göre süzer.
 - **Kabul ölçütü:** Tarifler açılınca bütün üretilebilir eşyalar görünüyor; demir kazmaya tıklayınca 3 demir külçe ve 2 çubuğun dizilişi görünüyor; malzemeler varken tek tıkla ızgaraya diziliyor.
 - **Bağımlılık:** 16
+
+---
+
+## 9. Sonradan eklenenler
+
+Bu maddeler 37'den hemen sonra yapılır.
+
+### 48. Eşya seçici (`/give` paneli)
+- **Minecraft'ta:** Yaratıcı modda bütün eşyalar aranabilir bir panelde listelenir.
+- **Bu oyunda:**
+  - `/give` adsız yazılınca (ya da sohbet `/give ` ile açılıp Enter'a basılınca) Minecraft tarzı bir eşya paneli açılır: bütün eşyalar simgeleriyle yuvalarda, üzerine gelince adı.
+  - Üstte arama kutusu: Türkçe ada ya da İngilizce anahtara göre anında süzer; panel açılınca imleç arama kutusundadır.
+  - Sol tık: 1 yığın (aletlerde 1 tane), sağ tık: 1 tane envantere ekler. Esc ya da E paneli kapatır.
+  - `/give <eşya> [adet]` eskisi gibi çalışır.
+- **Kabul ölçütü:** `/give` yazınca panel açılıyor; "elmas" yazınca elmas ve elmas aletler kalıyor; elmas kazmaya tıklayınca envantere geliyor.
+- **Bağımlılık:** 14, 45
+
+### 49. Eldeki eşya her zaman görünür
+- **Minecraft'ta:** Elde ne tutuluyorsa (blok, eşya, alet) gözden görünümde ve karakterin elinde görünür.
+- **Bu oyunda:**
+  - Alet olmayan eşyalar da (et, kömür, meşale …) aletler gibi düz simge olarak elde görünür.
+  - Bloklar elde küçük bir küp olarak, gerçek blok dokularıyla görünür (gözden görünümde sağ alt köşede, 3. şahısta sağ elde).
+- **Kabul ölçütü:** Hotbar'da toprak seçilince elde küçük toprak küpü, kömür seçilince kömür simgesi görünüyor.
+- **Bağımlılık:** 14, 17
+
+### 50. Güvenli mod (`/safe`)
+- **Neden:** Küçük bir çocuk oynarken korkmasın diye.
+- **Bu oyunda:**
+  - `/safe on` ve `/safe off` komutları (`/safe` tek başına durumu söyler). Açıkken düşman canlılar dünyada durur, dolaşır ama hiçbir şekilde saldırmaz: zombi ve örümcek vurmaz, iskelet ok atmaz, creeper patlamaz, ghast ateş topu atmaz, domuz adamlar kızmaz.
+  - Durum kayda yazılır; açıkken sohbette ve menüde "Güvenli mod açık" yazar.
+- **Kabul ölçütü:** `/safe on` açıkken zombi yanında durunca can gitmiyor, creeper patlamıyor; `/safe off` ile eski hale dönüyor; sayfa yenilenince durum korunuyor.
+- **Bağımlılık:** 8–11, 35, 45
 
 ---
 

@@ -47,11 +47,12 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Three.js sahnesi | Renderer, sahne, kamera, ışıklar (`lightRigs`), kol sahnesi, chunk mesh'leri, seçim çerçevesi |
    | Gün döngüsü | `clock`, `daylight()`, `clockText()`, `updateDayCycle()`, güneş ve ay |
    | Oyuncu modeli | Bloklu insan modeli ve gözden görünümdeki kol |
-   | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, AABB çarpışma |
+   | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()`, `placeBlock()` |
    | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, dolaşma yapay zekâsı, `renderMob()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
@@ -140,7 +141,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 | Yürüme | 4,3 | blok/sn |
 | Koşma | 6,2 | blok/sn |
 
-- Çarpışma eksen eksen yapılır (`moveAxis`): önce x, sonra z, sonra y. Adım 0,4 bloktan büyükse alt adımlara bölünür. Kare süresi 0 ile 0,05 sn arasına sıkıştırılır.
+- Çarpışma eksen eksen yapılır (`moveAxis(e, axis, d)`): önce x, sonra z, sonra y. `stepEntity(e, dt)` adım 0,4 bloktan büyükse alt adımlara böler ve yatayda çarpıp çarpmadığını döndürür. Aynı kod canlılar için de kullanılır; her varlık `{ x, y, z, w, h, vx, vy, vz, onGround }` taşır (`w` yarı genişlik). Kare süresi 0 ile 0,05 sn arasına sıkıştırılır.
 - **Geri itilme:** `player.kx`, `player.kz` hıza eklenir ve her karede `e^(-6·dt)` ile söner.
 
 ### Can
@@ -179,9 +180,20 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 
 ---
 
+## Canlılar
+
+- `mobs` dizisindeki her canlı: konum, hız, geri itilme (`kx`, `kz`), `yaw`, `health`, kutu (`w`, `h`), yapay zekâ durumu (`walking`, `timer`) ve modeli (`body = { root, legs }`).
+- Fizik oyuncuyla aynıdır (`stepEntity`). Canlılar yalnızca oyun oynanırken güncellenir, kaydedilmez: her açılışta dünya (ya da kayıt) yüklendikten sonra yeniden doğarlar.
+- **Dolaşma:** 2–5 sn rastgele bir yöne yürür, 2–4 sn durur. Önündeki hücrede 1 blokluk basamak varsa zıplar; 2 blok duvar, dünya kenarı ya da 3 bloktan derin uçurum varsa döner.
+- Hayvan sınırı `MAX_ANIMALS = 16`.
+
+| Tür (`kind`) | Ad | Can | Kutu (`w` × `h`) | Hız | Model | Doğma |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cow` | İnek | 10 | 0,45 × 1,2 | 1,2 | Gövde 10×8×16, baş 8×8×6, boynuz, 4 bacak 4×10×4 (P birimi); kahverengi-beyaz lekeli | Açılışta çimen üstüne 6 tane |
+
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -216,7 +228,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 2 | Düşme hasarı, ölüm ve yeniden doğma | Yapıldı |
 | 3 | Sabah / akşam döngüsü | Yapıldı |
 | 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapıldı |
-| 5 | Canlı altyapısı ve inek | Yapılmadı |
+| 5 | Canlı altyapısı ve inek | Yapıldı |
 | 6 | Domuz, tavuk ve koyun | Yapılmadı |
 | 7 | Canlılara vurma | Yapılmadı |
 | 8 | Zombi | Yapılmadı |

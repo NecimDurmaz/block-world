@@ -26,6 +26,7 @@ const ITEM_ART = {
   cooked_beef: ['Pişmiş biftek', { r: '#7a3e22', w: '#c08a5a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
   cooked_pork: ['Pişmiş domuz eti', { r: '#b8704a', w: '#e8b88a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
   cooked_chicken: ['Pişmiş tavuk', { p: '#c8823e', w: '#f4f4f0' }, ['....pppp', '...ppppp', '..pppppp', '.ppppp..', '.pppp...', 'wpp.....', 'ww......', 'w.......']],
+  flint_and_steel: ['Çakmak', { i: '#c8c8c8', d: '#8a8a8a', k: '#2a2a2a', o: '#ff8a1f' }, ['......o.', '.....o..', '..iii...', '.i...i..', '.i...i..', '..iii...', '...kk...', '...kk...']],
   iron_ingot: ['Demir külçe', { w: '#e6e6e6', g: '#b8b8b8', d: '#8a8a8a' }, ['........', '........', '..wwwww.', '.wwwwwgd', 'wggggggd', 'dddddddd', '........', '........']],
   charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
   apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
@@ -63,6 +64,13 @@ for (const [tierKey, tier] of Object.entries(TOOL_TIERS)) Object.entries(TOOL_KI
     durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1], tier: tier.tier,
   };
 });
+// Demir kazma (yalnızca kazma; obsidyeni kırabilen tek alet)
+ITEMS.iron_pickaxe = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const ic = c.getContext('2d'), palette = { h: '#e2e2e2', d: '#a8a8a8', s: '#6b4a2b' };
+  TOOL_KINDS.pickaxe.art.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
+  return { name: 'Demir kazma', canvas: c, tool: 'pickaxe', speed: 6, durability: 250, damage: 4, tier: 3 };
+})();
 // Yemekler: doldurduğu açlık puanı
 Object.assign(ITEMS.raw_beef, { food: 3 });
 Object.assign(ITEMS.raw_pork, { food: 3 });
@@ -73,6 +81,7 @@ Object.assign(ITEMS.cooked_chicken, { food: 6 });
 Object.assign(ITEMS.rotten_flesh, { food: 2 });
 Object.assign(ITEMS.apple, { food: 4 });
 Object.assign(ITEMS.bread, { food: 5 });
+Object.assign(ITEMS.flint_and_steel, { durability: 64 });
 Object.assign(ITEMS.wooden_hoe, { tool: 'hoe', tier: 1, speed: 1, durability: 60, damage: 1 });
 ITEMS.furnace_lit.hidden = true; // yalnızca dünyada; kırılınca fırın düşer
 const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};

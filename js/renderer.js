@@ -185,6 +185,7 @@ function buildChunk(cx, cz) {
     if (def.model === 'bed') { addBedModel(buffers[0], x, y, z, def, torches); continue; }
     if (def.model === 'box') { addBoxModel(buffers[0], x, y, z, def, torches); continue; }
     if (def.model === 'cross') { addCrossModel(buffers[0], x, y, z, def, torches); continue; }
+    if (def.model === 'portal') continue; // portal.js ayrı çizer
     const buf = buffers[def.transparent && !def.cutout ? 1 : 0];
     const { pos, uv, col, light, idx } = buf;
     for (const f of FACES) {

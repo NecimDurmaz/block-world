@@ -56,6 +56,8 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #food i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
 #hearts i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
 #hearts i.shake { transform: translateY(var(--shake, 0)); }
+#portal-fx { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(120, 40, 200, 0.5), rgba(24, 0, 40, 0.97)); opacity: 0; }
+#portal-hud { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); font-size: 22px; font-weight: 700; color: #ead8ff; text-shadow: 0 2px 6px #000; pointer-events: none; }
 #low-health { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(60, 0, 0, 0.55)); opacity: 0; transition: opacity 0.4s; }
 #sleep { position: fixed; inset: 0; pointer-events: none; background: #05070d; opacity: 0; transition: opacity 0.6s; }
 #underwater { position: fixed; inset: 0; pointer-events: none; background: rgba(30, 80, 170, 0.35); }

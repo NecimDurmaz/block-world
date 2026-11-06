@@ -59,6 +59,7 @@ function applySave(save) {
   for (const f of save.furnaces || []) furnaces[furnaceKey(f.x, f.y, f.z)] = f;
   spawnPoint = save.spawnPoint || null;
   scanCrops();
+  rebuildPortalMeshes();
   renderHearts();
   renderFood();
   // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.

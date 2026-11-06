@@ -65,6 +65,7 @@ function frame(now) {
     updateCrops(dt);
     updateMobSounds(dt);
     updateDebris(dt);
+    updatePortal(dt);
   }
   for (const m of mobs) renderMob(m);
   renderDrops();

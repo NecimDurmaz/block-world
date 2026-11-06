@@ -4,7 +4,8 @@
 // 36 yuva: 0–8 hotbar, 9–35 çanta. Yuva: { key, count } ya da null.
 const INVENTORY_SIZE = 36;
 const inventory = new Array(INVENTORY_SIZE).fill(null);
-const maxStack = key => ITEMS[key].tool ? 1 : 64;
+// Alet ve dayanıklılığı olan eşyalar (çakmak) yığılmaz.
+const maxStack = key => ITEMS[key].tool || ITEMS[key].durability ? 1 : 64;
 let held = null; // envanter ekranında farenin tuttuğu yığın
 
 // Önce aynı türdeki yuvalara, sonra ilk boş yuvaya koyar. Sığmayan adedi döndürür.

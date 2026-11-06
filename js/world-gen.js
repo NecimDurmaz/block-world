@@ -67,6 +67,21 @@ for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {
     if (a * a + b * b < CAVE_RADIUS * CAVE_RADIUS) set(x, y, z, AIR);
   }
 }
+// Obsidyen: chunk başına ~1 öbek, y ≤ 8'deki mağara tabanlarında 2–4 blok
+const obsidianRnd = mulberry32(SEED + 13);
+for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const x = cx * CH + Math.floor(obsidianRnd() * CH), z = cz * CH + Math.floor(obsidianRnd() * CH);
+    const y = 2 + Math.floor(obsidianRnd() * 7);
+    if (get(x, y, z) !== AIR || get(x, y - 1, z) !== B.stone) continue;
+    const size = 2 + Math.floor(obsidianRnd() * 3);
+    for (let i = 0, ox = x, oz = z; i < size; i++) {
+      if (get(ox, y - 1, oz) === B.stone && get(ox, y, oz) === AIR) set(ox, y - 1, oz, B.obsidian);
+      if (obsidianRnd() < 0.5) ox += obsidianRnd() < 0.5 ? 1 : -1; else oz += obsidianRnd() < 0.5 ? 1 : -1;
+    }
+    break;
+  }
+}
 // Göller: y ≤ 12'de, arazi yüzeyinin üstünde kalan boşluklar suyla dolar (mağaralar kuru kalır).
 const WATER_LEVEL = 12;
 for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) {

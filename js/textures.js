@@ -4,10 +4,10 @@
 // Konsoldan ve testlerden erişim için ortak kanca nesnesi; diğer betikler buna ekler (bkz. SPEC.md "Test kancası").
 window.game = {};
 
-const T = 16, N_TILES = 36;
+const T = 16, N_TILES = 37;
 const TILE = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35,
+  craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21, torch: 22, bedHeadTop: 23, bedFootTop: 24, bedSide: 25, doorLower: 26, doorUpper: 27, tallGrass: 28, poppy: 29, dandelion: 30, farmland: 31, wheat0: 32, wheat1: 33, wheat2: 34, wheat3: 35, obsidian: 36,
 };
 
 function mulberry32(a) {
@@ -141,6 +141,10 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) px(TILE.farmland, x, y, 
     if (stage === 3) px(tile, x, 16 - hh, shade([150, 110, 40], 1)); // başak
   }
 });
+// Obsidyen: çok koyu mor-siyah, açık mor benekler
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  px(TILE.obsidian, x, y, rnd() < 0.08 ? shade([84, 56, 120], 0.9 + rnd() * 0.3) : shade([22, 16, 34], 0.8 + rnd() * 0.4));
+}
 // Kapı: koyu çerçeveli tahta; üst yarıda iki küçük pencere
 for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
   const frame = x < 2 || x > 13 || y === 0 || y === 15;

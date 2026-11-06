@@ -7,7 +7,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | | |
 | --- | --- |
 | Tür | Tarayıcıda oynanan, Minecraft'tan esinlenen tek oyunculu blok oyunu |
-| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (30 betik, sırayla yüklenir) |
+| Dosyalar | `index.html` (sayfa iskeleti), `css/style.css`, `js/*.js` (31 betik, sırayla yüklenir) |
 | Teknoloji | Düz HTML + CSS + JavaScript, Three.js r128 (cdnjs) |
 | Arayüz dili | Türkçe |
 | Kod dili | İngilizce adlar, Türkçe yorumlar |
@@ -40,6 +40,8 @@ tests/              otomatik testler
    | `sleep` | Uyurken ekranı karartan katman |
    | `underwater` | Kamera suyun içindeyken ekranı mavi tonlayan katman |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
+   | `portal-fx` | Portalda beklerken mora dönüp kararan katman |
+   | `portal-hud` | Portal geri sayımı: "Portal: 2…" |
    | `low-health` | Can 4 ve altındayken ekran kenarını koyu kırmızıya karartan katman |
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), fırın bölümü (`#furnace-ui`: girdi, alev göstergesi, yakıt, ilerleme çubuğu, çıktı), üretim bölümü (`#craft-ui`: `#craft-grid` ve `#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
@@ -63,6 +65,7 @@ tests/              otomatik testler
    | `block-interaction.js` | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
    | `hud.js` | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | `health.js` | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | `portal.js` | Portal dokusu ve düzlemleri (`rebuildPortalMeshes()`), çerçeve denetimi (`portalInterior()`), `tryLightPortal()`, `extinguishPortalNear()`, portalda bekleme (`updatePortal()`), `travelThroughPortal()` |
    | `crops.js` | `crops`, `plantCrop()`, `scanCrops()`, `updateCrops()` |
    | `doors.js` | `toggleDoor()` |
    | `bed.js` | `setSpawnNearBed()`, `useBed()`, `updateSleep()` |
@@ -94,6 +97,7 @@ tests/              otomatik testler
   - `h ≤ 14`: üstte 3 blok kum, altı taş.
   - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
 - **Mağaralar:** Arazi kurulduktan hemen sonra, her sütunda `y = 2` ile yüzeyin 4 altı arasında iki 3B değer gürültüsünün (`valueNoise3`) aynı anda 0,5'e yakın olduğu hücreler (`a² + b² < CAVE_RADIUS²`, `CAVE_RADIUS = 0.075`) oyulur; kıvrımlı tüneller çıkar (yer altının ~%8'i). Tüneller yamaçlarda alçak komşu sütunlara ağız açar. Mağaralar aydınlıktır (ışık hesabı yok).
+- **Obsidyen:** Mağaralardan sonra, chunk başına ~1 öbek: y 2–8 arasında, altı taş olan bir mağara tabanı hücresinin altındaki taş ve yanındaki 1–3 taş obsidyene döner (`mulberry32(SEED + 13)`).
 - **Göller:** `y ≤ WATER_LEVEL = 12`'de arazi yüzeyinin üstünde kalan boşluklar suyla dolar (alçak kumlu bölgeler göl olur); mağaralar kuru kalır. Akan su yok.
 - **Bitkiler:** Ağaçlardan sonra, üstü boş her çimen sütununun %12'sine uzun ot, %2'sine çiçek (yarı yarıya gelincik ve karahindiba) konur (`mulberry32(SEED + 11)`).
 - **Cevherler:** Arazi kurulduktan sonra chunk başına ~8 kömür damarı (y 1–30) ve ~4 demir damarı (y 1–20), her biri 3–8 blokluk rastgele yürüyüş; yalnızca taşın yerini alır (`mulberry32(SEED + 7)`). Yalnızca yeni üretilen dünyada; kayıttan yüklenen dünya değişmez.
@@ -127,6 +131,8 @@ tests/              otomatik testler
 | 49 | `dandelion` | Karahindiba | `dandelion`; uzun ot gibi, eşya düşürmez |
 | 50 | `farmland` | Tarla | `farmland` / `dirt` / `dirt`; kırılınca toprak düşer |
 | 51–54 | `wheat_0` … `wheat_3` | Buğday | `wheat0` … `wheat3`; `model: 'cross'`, `crop` (aşama 0–3) |
+| 55 | `obsidian` | Obsidyen | `obsidian`; `breakTime: 36`, `pickaxe`, `minTier: 3` (yalnızca demir kazma, 6 sn) |
+| 56–57 | `portal_x`, `portal_z` | Portal | `model: 'portal'` (chunk mesh'inde değil, `portal.js`), `axis`, `fluid` (çarpışmasız, nişan geçer), `noDrop` |
 | 31–46 | `door_<yön>_<lower\|upper>_<closed\|open>` | Kapı | `doorLower` / `doorUpper`; `model: 'box'`, `box` (3/16 kalınlığında levha), `part`, `dir`, `open`, kırılınca `door` eşyası (bir kez) |
 | 23–30 | `bed_foot_<yön>`, `bed_head_<yön>` (yön: `east`, `west`, `south`, `north`) | Yatak | `bedHeadTop` / `bedFootTop` / `bedSide`; `model: 'bed'`, `part`, `dir` (baş tarafı), `height: 9/16`, kırılınca `bed` eşyası (bir kez) |
 | 18–22 | `torch_floor`, `torch_east`, `torch_west`, `torch_south`, `torch_north` | Meşale | `torch`; `model: 'torch'`, `lean` (eğilme yönü), `noCollide`, `transparent`, kırılınca `torch` eşyası |
@@ -149,8 +155,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 36` doku, atlas `576 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 37` doku, atlas `592 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre, water, torch, bedHeadTop, bedFootTop, bedSide, doorLower, doorUpper, tallGrass, poppy, dandelion, farmland, wheat0, wheat1, wheat2, wheat3, obsidian`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -229,6 +235,14 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - **Büyüme:** `crops` haritası (`"x,y,z"` → kalan sn) her olgunlaşmamış ekini tutar; her aşama `CROP_STAGE_TIME = 60` sn'nin 0,6–1,4 katı sürer ve yalnızca oyun oynanırken ilerler. Aşamalar dünya dizisinde durduğu için kayda girer; kayıt yüklenince `scanCrops()` sayaçları yeniden kurar.
 - **Hasat:** Olgun buğday (`wheat_3`) kırılınca 1 buğday + 1–3 tohum, olgunlaşmamışsa 1 tohum düşer. Tarla kırılınca üstündeki ekin kalkar.
 - **Ekmek:** 3 yatay buğday (çalışma masasında) → ekmek, açlığa 5.
+
+### Portal
+
+- **Çerçeve:** Dikey, iç boşluğu tam 2×3 olan obsidyen çerçeve (alt ve üst 2'şer, yanlar 3'er obsidyen; köşeler isteğe bağlı), x ya da z ekseninde.
+- **Yakma:** Elde çakmak varken çerçevenin iç tabanındaki bir obsidyenin üstüne sağ tık: iç boşluk tamamen boşsa 6 portal bloğuyla dolar, çakmak 1 aşınır.
+- **Görünüm:** Portal blokları kendi dokusuyla (32×32, mor dalgalar), yarı saydam ve çift yüzlü düzlemler olarak çizilir; doku her karede yukarı kayar. Gece karartmasından etkilenmez.
+- **Sönme:** Çerçeveden bir obsidyen kırılınca bitişik portal blokları ve onlara bağlı bütün portal söner.
+- **Geçiş:** Oyuncu portal bloğunun içinde `PORTAL_TIME = 3` sn kesintisiz kalırsa ekran mora dönüp kararır (`#portal-fx`), HUD'da geri sayım çıkar (`#portal-hud`) ve `travelThroughPortal()` çağrılır. Oyuncu portaldan çıkmadan tekrar tetiklenmez. (Diğer dünyaya geçiş madde 34'te.)
 
 ### Kapı
 
@@ -353,6 +367,9 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `apple` | Elma |
   | `bed` | Yatak (konulabilir) |
   | `door` | Kapı (konulabilir) |
+  | `iron_pickaxe` | Demir kazma (`tier: 3`, `speed: 6`, dayanıklılık 250, hasar 4) |
+  | `flint_and_steel` | Çakmak (dayanıklılık 64, yığılmaz) |
+  | `obsidian` | Obsidyen |
   | `wheat_seeds` | Buğday tohumu (uzun ottan) |
   | `wheat` | Buğday |
   | `bread` | Ekmek |
@@ -427,6 +444,8 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
   | `PP` / `PP` / `PP` | tahta | 3 kapı |
   | `PP` / `.S` / `.S` | tahta + çubuk | tahta çapa |
   | `WWW` | buğday | ekmek |
+  | `III` / `.S.` / `.S.` | demir külçe + çubuk | demir kazma |
+  | `IC` ya da `I` / `C` | demir külçe + kömür | çakmak |
   | (Aletler tablosu) | tahta ya da kırık taş + çubuk | 8 alet |
 
 ## Kırılma parçacıkları
@@ -459,7 +478,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `furnaces`, `openFurnace`, `clickFurnace`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -526,7 +545,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 30 | Duraklat menüsü ve ayarlar | Yapıldı |
 | 31 | Bulutlar ve yıldızlar | Yapıldı |
 | 32 | Hasar ve ölüm geri bildirimleri | Yapıldı |
-| 33 | Obsidyen ve Nether portalı | Yapılmadı |
+| 33 | Obsidyen ve Nether portalı | Yapıldı |
 | 34 | Nether boyutu | Yapılmadı |
 | 35 | Nether yaratıkları | Yapılmadı |
 | 36 | Sandık | Yapılmadı |

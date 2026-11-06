@@ -71,6 +71,8 @@ function breakBlockAt(hit) {
   const def = BLOCKS[broken], tool = selectedTool();
   if (tool) useTool();
   if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
+  // Çerçeveden obsidyen kırılınca bitişik portal söner
+  if (broken === B.obsidian) extinguishPortalNear(hit.x, hit.y, hit.z);
   // Bitkiler eşya düşürmez; uzun ot %12 olasılıkla buğday tohumu verir.
   // Buğday: olgunsa 1 buğday + 1–3 tohum, değilse 1 tohum
   if (isCrop(broken)) {
@@ -164,6 +166,11 @@ function placeBlock() {
   const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
   if (overlapsPlayer) return;
   const slot = inventory[selected];
+  // Çakmak: obsidyen çerçevenin iç tabanına tıklanınca portalı yakar
+  if (slot?.key === 'flint_and_steel') {
+    if (get(hit.x, hit.y, hit.z) === B.obsidian && y - hit.y === 1 && tryLightPortal(x, y, z)) useTool();
+    return;
+  }
   // Çapa: üstü boş çimen ya da toprağı tarlaya çevirir
   if (slot?.key === 'wooden_hoe') {
     const target = get(hit.x, hit.y, hit.z);

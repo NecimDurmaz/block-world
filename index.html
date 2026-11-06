@@ -155,10 +155,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 19;
+  const T = 16, N_TILES = 21;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20,
   };
 
   function mulberry32(a) {
@@ -235,6 +235,18 @@
     const flame = mouth && (y >= 11 || rnd() < 0.45);
     px(TILE.furnaceLit, x, y, flame ? (rnd() < 0.5 ? '#ffb02a' : '#e8601c') : mouth ? shade([60, 30, 20], 1) : y === 3 ? shade([80, 80, 80], 1) : base);
   }
+  // Cevherler: taş dokusunun üstüne benekler
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const stone = shade([125, 125, 125], 0.88 + rnd() * 0.24);
+    px(TILE.coalOre, x, y, stone);
+    px(TILE.ironOre, x, y, stone);
+  }
+  for (const [tile, color, light] of [[TILE.coalOre, [28, 28, 28], [55, 55, 55]], [TILE.ironOre, [196, 160, 122], [226, 196, 160]]]) {
+    for (let k = 0; k < 7; k++) {
+      const cx = 1 + Math.floor(rnd() * 12), cy = 1 + Math.floor(rnd() * 12);
+      px(tile, cx, cy, shade(color, 1)); px(tile, cx + 1, cy, shade(color, 1)); px(tile, cx, cy + 1, shade(color, 1)); px(tile, cx + 1, cy + 1, shade(light, 1));
+    }
+  }
   // Cam: açık gri çerçeve, içi açık mavi-beyaz (saydamlık madde 24'te)
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const edge = x === 0 || y === 0 || x === 15 || y === 15;
@@ -275,8 +287,11 @@
     { name: 'Kumtaşı', top: TILE.sandstoneTop, side: TILE.sandstoneSide, bottom: TILE.sandstoneTop, breakTime: 4, tool: 'pickaxe', needsTool: true },
     { name: 'Fırın', top: TILE.furnaceTop, side: TILE.furnaceLit, bottom: TILE.furnaceTop, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'furnace' },
     { name: 'Cam', top: TILE.glass, side: TILE.glass, bottom: TILE.glass, breakTime: 0.5 },
+    // minTier: düşmesi için gereken en düşük alet seviyesi (1 tahta, 2 taş)
+    { name: 'Kömür cevheri', top: TILE.coalOre, side: TILE.coalOre, bottom: TILE.coalOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'coal' },
+    { name: 'Demir cevheri', top: TILE.ironOre, side: TILE.ironOre, bottom: TILE.ironOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, minTier: 2 },
   ];
-  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14 };
+  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16 };
 
   // ---------- Dünya üretimi ----------
   const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
@@ -319,6 +334,21 @@
       set(x, y, z, b);
     }
   }
+  // Cevher damarları: chunk başına kömür ~8 (y ≤ 30), demir ~4 (y ≤ 20); 3–8 blokluk, yalnızca taşın içinde.
+  const oreRnd = mulberry32(SEED + 7);
+  function placeVein(ore, maxY) {
+    let x = Math.floor(oreRnd() * SX), y = 1 + Math.floor(oreRnd() * maxY), z = Math.floor(oreRnd() * SZ);
+    const size = 3 + Math.floor(oreRnd() * 6);
+    for (let i = 0; i < size; i++) {
+      if (get(x, y, z) === B.stone) set(x, y, z, ore);
+      const axis = Math.floor(oreRnd() * 3), step = oreRnd() < 0.5 ? -1 : 1;
+      if (axis === 0) x += step; else if (axis === 1) y = Math.max(1, Math.min(maxY, y + step)); else z += step;
+    }
+  }
+  const chunkCount = (SX / CH) * (SZ / CH);
+  for (let i = 0; i < chunkCount * 8; i++) placeVein(B.coal_ore, 30);
+  for (let i = 0; i < chunkCount * 4; i++) placeVein(B.iron_ore, 20);
+
   const treeRnd = mulberry32(SEED);
   for (let i = 0; i < 160; i++) {
     const x = 3 + Math.floor(treeRnd() * (SX - 6)), z = 3 + Math.floor(treeRnd() * (SZ - 6));
@@ -727,7 +757,7 @@
     const def = BLOCKS[broken], tool = selectedTool();
     if (tool) useTool();
     if (broken === B.furnace || broken === B.furnace_lit) removeFurnace(hit.x, hit.y, hit.z);
-    if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool)) return;
+    if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool || ITEMS[tool.key].tier < (def.minTier || 1))) return;
     if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
     if (broken === B.leaves && Math.random() < 0.05) dropItem('apple', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
   }
@@ -1516,6 +1546,7 @@
     cooked_beef: ['Pişmiş biftek', { r: '#7a3e22', w: '#c08a5a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
     cooked_pork: ['Pişmiş domuz eti', { r: '#b8704a', w: '#e8b88a' }, ['..rrrr..', '.rrwrrr.', 'rrrrrwrr', 'rrwrrrrr', 'rrrrrrwr', '.rrrwrr.', '..rrrr..', '........']],
     cooked_chicken: ['Pişmiş tavuk', { p: '#c8823e', w: '#f4f4f0' }, ['....pppp', '...ppppp', '..pppppp', '.ppppp..', '.pppp...', 'wpp.....', 'ww......', 'w.......']],
+    iron_ingot: ['Demir külçe', { w: '#e6e6e6', g: '#b8b8b8', d: '#8a8a8a' }, ['........', '........', '..wwwww.', '.wwwwwgd', 'wggggggd', 'dddddddd', '........', '........']],
     charcoal: ['Odun kömürü', { k: '#2a2219', g: '#4a3a2a' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
     apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
     coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
@@ -1528,8 +1559,8 @@
   }
   // Aletler: 2 seviye x 4 tür. tool: tür, speed: doğru blokta hız çarpanı, durability: kullanım hakkı, damage: vuruş hasarı.
   const TOOL_TIERS = {
-    wooden: { name: 'Tahta', head: '#b08a52', dark: '#7a5a32', speed: 2, durability: 60, material: 'planks' },
-    stone: { name: 'Taş', head: '#9a9a9a', dark: '#626262', speed: 4, durability: 132, material: 'cobble' },
+    wooden: { name: 'Tahta', tier: 1, head: '#b08a52', dark: '#7a5a32', speed: 2, durability: 60, material: 'planks' },
+    stone: { name: 'Taş', tier: 2, head: '#9a9a9a', dark: '#626262', speed: 4, durability: 132, material: 'cobble' },
   };
   // damage: [tahta, taş]. Desen: M malzeme, S çubuk.
   const TOOL_KINDS = {
@@ -1549,7 +1580,7 @@
     kind.art.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
     ITEMS[`${tierKey}_${kindKey}`] = {
       name: `${tier.name} ${kind.name}`, canvas: c, tool: kindKey, speed: tier.speed,
-      durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1],
+      durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1], tier: tier.tier,
     };
   });
   // Yemekler: doldurduğu açlık puanı
@@ -1848,7 +1879,7 @@
   // ---------- Fırın ----------
   // Her fırın kendi yuvalarını tutar: [girdi, yakıt, çıktı]. Panel kapalıyken de pişirir. Kayda yazılır.
   const SMELT_TIME = 5;
-  const SMELTING = { raw_beef: 'cooked_beef', raw_pork: 'cooked_pork', raw_chicken: 'cooked_chicken', sand: 'glass', cobble: 'stone', log: 'charcoal' };
+  const SMELTING = { raw_beef: 'cooked_beef', raw_pork: 'cooked_pork', raw_chicken: 'cooked_chicken', sand: 'glass', cobble: 'stone', log: 'charcoal', iron_ore: 'iron_ingot' };
   // Yakıt: kaç eşya pişirir
   const FUEL = { coal: 8, charcoal: 8, log: 1.5, planks: 1.5 };
   const furnaces = {};

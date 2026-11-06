@@ -76,6 +76,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 - **Arazi:** 4 oktavlı değer gürültüsü (`fbm`) ile yükseklik haritası, `h = 6 + fbm^1.4 * 34`.
   - `h ≤ 14`: üstte 3 blok kum, altı taş.
   - Diğerleri: üstte çimen, altında 3 blok toprak, en altta taş.
+- **Cevherler:** Arazi kurulduktan sonra chunk başına ~8 kömür damarı (y 1–30) ve ~4 demir damarı (y 1–20), her biri 3–8 blokluk rastgele yürüyüş; yalnızca taşın yerini alır (`mulberry32(SEED + 7)`). Yalnızca yeni üretilen dünyada; kayıttan yüklenen dünya değişmez.
 - **Ağaçlar:** 160 deneme; yalnızca çimen üstüne. 4–5 blok kütük, üstünde yaprak kümesi.
 - **Doğma noktası:** Dünyanın ortası, sütunun en üstü. (Bilinen sorun: ortada bir çukura denk gelebiliyor.)
 
@@ -98,6 +99,8 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 12 | `sandstone` | Kumtaşı | `sandstoneTop` / `sandstoneSide` / `sandstoneTop` |
 | 13 | `furnace_lit` | Fırın (yanan) | `furnaceTop` / `furnaceLit` / `furnaceTop`; yalnızca dünyada, kırılınca fırın düşer |
 | 14 | `glass` | Cam | `glass` (şimdilik opak; saydamlık madde 24) |
+| 15 | `coal_ore` | Kömür cevheri | `coalOre` (taş + siyah benekler) |
+| 16 | `iron_ore` | Demir cevheri | `ironOre` (taş + bej benekler) |
 
 Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
 
@@ -110,12 +113,13 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 | Ahşap | Kütük, Tahta, Çalışma masası | 3 sn | `axe` | Evet |
 | Taş | Taş (kırık taş düşürür, `drop`), Kırık taş, Tuğla, Fırın | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
 | Cam | Cam | 0,5 sn | — | Evet |
+| Cevher | Kömür cevheri (kömür düşürür), Demir cevheri (kendisi; `minTier: 2`, en az taş kazma) | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
 | Kumtaşı | Kumtaşı | 4 sn | `pickaxe` (`needsTool`) | Hayır |
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 19` doku, atlas `304 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 21` doku, atlas `336 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide, furnaceLit, glass, coalOre, ironOre`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -279,12 +283,13 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
   | `arrow` | Ok |
   | `stick` | Çubuk |
   | `torch` | Meşale (şimdilik konulamaz, madde 22) |
-  | `coal` | Kömür (şimdilik elde edilemez, madde 19–20) |
+  | `coal` | Kömür (kömür cevherinden) |
   | `apple` | Elma |
   | `cooked_beef` | Pişmiş biftek |
   | `cooked_pork` | Pişmiş domuz eti |
   | `cooked_chicken` | Pişmiş tavuk |
   | `charcoal` | Odun kömürü |
+  | `iron_ingot` | Demir külçe |
 
 - **`itemIcon(key)`:** HUD için data URL (bloklarda yan doku).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok. Creeper patlayınca bir şey düşmez.
@@ -304,7 +309,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 - Fırına sağ tıklayınca envanter paneli "Fırın" başlığıyla açılır; üretim bölümü yerine fırın bölümü görünür. Her fırının durumu `furnaces["x,y,z"] = { x, y, z, slots: [girdi, yakıt, çıktı], burn, burnMax, progress }`; ilk açılışta oluşturulur.
 - Girdi ve yakıt yuvalarına envanter gibi tıklanır; çıktıdan yalnızca alınır.
-- **Pişirme** (`SMELT_TIME = 5` sn her eşya): çiğ biftek → pişmiş biftek, çiğ domuz eti → pişmiş domuz eti, çiğ tavuk → pişmiş tavuk, kum → cam, kırık taş → taş, kütük → odun kömürü.
+- **Pişirme** (`SMELT_TIME = 5` sn her eşya): çiğ biftek → pişmiş biftek, çiğ domuz eti → pişmiş domuz eti, çiğ tavuk → pişmiş tavuk, kum → cam, kırık taş → taş, kütük → odun kömürü, demir cevheri → demir külçe.
 - **Yakıt** (`FUEL`, kaç eşya pişirir): kömür ve odun kömürü 8, kütük ve tahta 1,5. Yanma bitince ve pişecek bir şey varsa yeni yakıt tüketilir; yanma süresi `FUEL × 5` sn.
 - Fırınlar oyun oynanırken her karede güncellenir (panel kapalıyken de). Yanarken blok `furnace_lit` olur (ağzında alev dokusu), sönünce `furnace`'a döner.
 - Fırın kırılınca içindekiler yere düşer. Bütün fırınlar kayda yazılır.
@@ -313,10 +318,12 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 - 2 seviye × 4 tür = 8 alet; anahtar `<seviye>_<tür>`: `wooden_pickaxe`, `stone_sword` … Adlar Türkçe: "Tahta kazma", "Taş kılıç" vb. `ITEMS[key]` alanları: `tool` (tür), `speed`, `durability` (en yüksek), `damage`, `canvas` (8×8 desenden simge).
 
-  | Seviye | Malzeme | `speed` | `durability` |
-  | --- | --- | --- | --- |
-  | `wooden` (Tahta) | tahta | ×2 | 60 |
-  | `stone` (Taş) | kırık taş | ×4 | 132 |
+  | Seviye | `tier` | Malzeme | `speed` | `durability` |
+  | --- | --- | --- | --- | --- |
+  | `wooden` (Tahta) | 1 | tahta | ×2 | 60 |
+  | `stone` (Taş) | 2 | kırık taş | ×4 | 132 |
+
+  Bir bloğun `minTier` değeri varsa, düşmesi için kazmanın `tier` değeri en az o kadar olmalıdır.
 
   | Tür | Hızlandırdığı bloklar | Hasar (tahta / taş) | Tarif (M malzeme, S çubuk) |
   | --- | --- | --- | --- |
@@ -401,7 +408,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 17 | Aletler | Yapıldı |
 | 18 | Açlık barı ve yemek | Yapıldı |
 | 19 | Fırın ve pişirme | Yapıldı |
-| 20 | Maden cevherleri | Yapılmadı |
+| 20 | Maden cevherleri | Yapıldı |
 | 21 | Su | Yapılmadı |
 | 22 | Meşale ve basit ışık | Yapılmadı |
 | 23 | Yatak | Yapılmadı |

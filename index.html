@@ -63,6 +63,7 @@
   #food { display: flex; flex-direction: row-reverse; gap: 2px; margin-left: auto; }
   #food i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
   #hearts i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
+  #underwater { position: fixed; inset: 0; pointer-events: none; background: rgba(30, 80, 170, 0.35); }
   #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
   #blockname { position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
   #info { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 12px; font-variant-numeric: tabular-nums; padding: 4px 8px; background: var(--hud-bg); border-radius: var(--ew-radius-btn); }
@@ -95,6 +96,7 @@
 <div id="saved" hidden>Kaydedildi</div>
 <div id="hotbar"></div>
 <div id="status"><div id="hearts"></div><div id="food"></div></div>
+<div id="underwater" hidden></div>
 <div id="hurt"></div>
 <div id="inventory" hidden>
   <div class="panel inv-panel">
@@ -155,10 +157,10 @@
 <script>
 (() => {
   // ---------- Dokular (16x16 piksel, kodla üretilir) ----------
-  const T = 16, N_TILES = 21;
+  const T = 16, N_TILES = 22;
   const TILE = {
     grassTop: 0, grassSide: 1, dirt: 2, stone: 3, logSide: 4, logTop: 5, leaves: 6, sand: 7, planks: 8, brick: 9, cobble: 10,
-    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20,
+    craftingTop: 11, craftingSide: 12, furnaceFront: 13, furnaceTop: 14, sandstoneTop: 15, sandstoneSide: 16, furnaceLit: 17, glass: 18, coalOre: 19, ironOre: 20, water: 21,
   };
 
   function mulberry32(a) {
@@ -247,6 +249,11 @@
       px(tile, cx, cy, shade(color, 1)); px(tile, cx + 1, cy, shade(color, 1)); px(tile, cx, cy + 1, shade(color, 1)); px(tile, cx + 1, cy + 1, shade(light, 1));
     }
   }
+  // Su: mavi dalgacıklar (saydamlık malzemeden gelir)
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const ripple = (x + y * 3) % 7 === 0 || (x * 2 + y) % 11 === 0;
+    px(TILE.water, x, y, ripple ? shade([90, 150, 230], 1) : shade([46, 98, 200], 0.92 + rnd() * 0.12));
+  }
   // Cam: açık gri çerçeve, içi açık mavi-beyaz (saydamlık madde 24'te)
   for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
     const edge = x === 0 || y === 0 || x === 15 || y === 15;
@@ -290,8 +297,12 @@
     // minTier: düşmesi için gereken en düşük alet seviyesi (1 tahta, 2 taş)
     { name: 'Kömür cevheri', top: TILE.coalOre, side: TILE.coalOre, bottom: TILE.coalOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, drop: 'coal' },
     { name: 'Demir cevheri', top: TILE.ironOre, side: TILE.ironOre, bottom: TILE.ironOre, breakTime: 7.5, tool: 'pickaxe', needsTool: true, minTier: 2 },
+    // fluid: katı değil, nişan ışını geçer. transparent: arkasındaki yüzler çizilir, ayrı saydam mesh'te çizilir.
+    { name: 'Su', top: TILE.water, side: TILE.water, bottom: TILE.water, breakTime: Infinity, fluid: true, transparent: true, hidden: true },
   ];
-  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16 };
+  const B = { grass: 1, dirt: 2, stone: 3, log: 4, leaves: 5, sand: 6, planks: 7, brick: 8, cobble: 9, crafting_table: 10, furnace: 11, sandstone: 12, furnace_lit: 13, glass: 14, coal_ore: 15, iron_ore: 16, water: 17 };
+  // Katı blok: çarpışır, nişan ışınını durdurur, görüşü keser.
+  const isSolid = b => b !== AIR && !BLOCKS[b].fluid;
 
   // ---------- Dünya üretimi ----------
   const SX = 96, SY = 48, SZ = 96, CH = 16, SEED = 20261106;
@@ -334,6 +345,10 @@
       set(x, y, z, b);
     }
   }
+  // Göller: y ≤ 12 olan bütün boşluklar suyla dolar.
+  const WATER_LEVEL = 12;
+  for (let y = 1; y <= WATER_LEVEL; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) if (get(x, y, z) === AIR) set(x, y, z, B.water);
+
   // Cevher damarları: chunk başına kömür ~8 (y ≤ 30), demir ~4 (y ≤ 20); 3–8 blokluk, yalnızca taşın içinde.
   const oreRnd = mulberry32(SEED + 7);
   function placeVein(ore, maxY) {
@@ -419,15 +434,20 @@
   ];
   const EPS = 0.001;
 
+  // Saydam bloklar (su) ayrı, yarı saydam bir malzemeyle ve ayrı mesh'te çizilir.
+  const waterMaterial = new THREE.MeshBasicMaterial({ map: texture, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
   const chunkMeshes = new Map();
+  // Yüz, komşu hava ise ya da komşu kendisinden farklı saydam bir bloksa çizilir.
+  const faceVisible = (b, n) => n === AIR || (n !== b && BLOCKS[n].transparent);
   function buildChunk(cx, cz) {
-    const pos = [], uv = [], col = [], idx = [];
+    const buffers = [0, 1].map(() => ({ pos: [], uv: [], col: [], idx: [] })); // 0 opak, 1 saydam
     for (let y = 0; y < SY; y++) for (let z = cz * CH; z < cz * CH + CH; z++) for (let x = cx * CH; x < cx * CH + CH; x++) {
       const b = get(x, y, z);
       if (b === AIR) continue;
       const def = BLOCKS[b];
+      const { pos, uv, col, idx } = buffers[def.transparent ? 1 : 0];
       for (const f of FACES) {
-        if (get(x + f.dir[0], y + f.dir[1], z + f.dir[2]) !== AIR) continue;
+        if (!faceVisible(b, get(x + f.dir[0], y + f.dir[1], z + f.dir[2]))) continue;
         const tile = f.dir[1] === 1 ? def.top : f.dir[1] === -1 ? def.bottom : def.side;
         const u0 = tile / N_TILES + EPS, u1 = (tile + 1) / N_TILES - EPS;
         const base = pos.length / 3;
@@ -439,15 +459,24 @@
         idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
       }
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    geo.setIndex(idx);
     const key = cx + ',' + cz;
     const old = chunkMeshes.get(key);
-    if (old) { old.geometry.dispose(); old.geometry = geo; }
-    else { const m = new THREE.Mesh(geo, material); scene.add(m); chunkMeshes.set(key, m); }
+    const geos = buffers.map(({ pos, uv, col, idx }) => {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      geo.setIndex(idx);
+      return geo;
+    });
+    if (old) {
+      old.forEach((m, i) => { m.geometry.dispose(); m.geometry = geos[i]; });
+    } else {
+      const meshes = [new THREE.Mesh(geos[0], material), new THREE.Mesh(geos[1], waterMaterial)];
+      meshes[1].renderOrder = 1;
+      scene.add(...meshes);
+      chunkMeshes.set(key, meshes);
+    }
   }
   for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
 
@@ -508,6 +537,7 @@
     scene.fog.color.copy(sky);
     const brightness = NIGHT_BRIGHTNESS + (1 - NIGHT_BRIGHTNESS) * light;
     material.color.setScalar(brightness);
+    waterMaterial.color.setScalar(brightness);
     dropBlockMaterial.color.setScalar(brightness);
     for (const rig of lightRigs) {
       rig.hemi.intensity = HEMI_INTENSITY * brightness;
@@ -587,7 +617,15 @@
   }
   spawn();
 
-  const solid = (x, y, z) => (x < 0 || z < 0 || x >= SX || z >= SZ) ? true : get(x, y, z) !== AIR;
+  const solid = (x, y, z) => (x < 0 || z < 0 || x >= SX || z >= SZ) ? true : isSolid(get(x, y, z));
+  // Varlığın kutusu verilen blok türüyle kesişiyor mu (ör. su)
+  function overlapsBlock(e, block) {
+    for (let bx = Math.floor(e.x - e.w); bx <= Math.floor(e.x + e.w); bx++)
+      for (let by = Math.floor(e.y); by <= Math.floor(e.y + e.h - 0.001); by++)
+        for (let bz = Math.floor(e.z - e.w); bz <= Math.floor(e.z + e.w); bz++)
+          if (get(bx, by, bz) === block) return true;
+    return false;
+  }
   // Oyuncu ve canlılar için ortak AABB fiziği: e = { x, y, z, w, h, vx, vy, vz, onGround }
   function collides(e, x, y, z) {
     for (let bx = Math.floor(x - e.w); bx <= Math.floor(x + e.w); bx++)
@@ -727,7 +765,7 @@
     let tmz = sz > 0 ? (z + 1 - o.z) * tdz : sz < 0 ? (o.z - z) * tdz : Infinity;
     let px = x, py = y, pz = z, t = 0;
     while (t <= maxDist) {
-      if (inBounds(x, y, z) && world[index(x, y, z)] !== AIR) return { x, y, z, px, py, pz, t };
+      if (inBounds(x, y, z) && isSolid(world[index(x, y, z)])) return { x, y, z, px, py, pz, t };
       px = x; py = y; pz = z;
       if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; }
       else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; }
@@ -824,7 +862,7 @@
       return;
     }
     const { px: x, py: y, pz: z } = hit;
-    if (!inBounds(x, y, z) || get(x, y, z) !== AIR) return;
+    if (!inBounds(x, y, z) || isSolid(get(x, y, z))) return;
     const p = player;
     const overlapsPlayer = x < p.x + W && x + 1 > p.x - W && y < p.y + H && y + 1 > p.y && z < p.z + W && z + 1 > p.z - W;
     if (overlapsPlayer) return;
@@ -1263,7 +1301,7 @@
       if (x < 1 || z < 1 || x >= SX - 1 || z >= SZ - 1) continue;
       // Sütunun en üstü: üstünde blok yok, yani açık hava
       const y = surfaceY(x, z), ground = get(x, y - 1, z);
-      if (y >= SY - 2 || ground === AIR || ground === B.leaves) continue;
+      if (y >= SY - 2 || !isSolid(ground) || ground === B.leaves) continue;
       // Gece düşmanları: %40 iskelet, %20 örümcek, %15 creeper, kalanı zombi
       const roll = Math.random();
       spawnMob(roll < 0.4 ? 'skeleton' : roll < 0.6 ? 'spider' : roll < 0.75 ? 'creeper' : 'zombie', x + 0.5, y, z + 0.5);
@@ -1277,7 +1315,7 @@
     const steps = Math.ceil(Math.hypot(bx - ax, by - ay, bz - az) / 0.25);
     for (let i = 1; i < steps; i++) {
       const f = i / steps;
-      if (get(Math.floor(ax + (bx - ax) * f), Math.floor(ay + (by - ay) * f), Math.floor(az + (bz - az) * f)) !== AIR) return false;
+      if (isSolid(get(Math.floor(ax + (bx - ax) * f), Math.floor(ay + (by - ay) * f), Math.floor(az + (bz - az) * f)))) return false;
     }
     return true;
   }
@@ -1390,6 +1428,8 @@
       const wall = solid(ax, fy, az) ? (solid(ax, fy + 1, az) ? 2 : 1) : 0;
       let drop = 0;
       if (!wall) while (drop <= 3 && !solid(ax, fy - 1 - drop, az)) drop++;
+      // Hayvanlar suya girmez
+      if (!m.type.hostile && (get(ax, fy, az) === B.water || get(ax, fy - 1, az) === B.water)) drop = 99;
       if (wall && m.type.climbs) climbing = true;
       else if (wall === 2 || drop > 3) { m.yaw += Math.PI * (0.5 + Math.random()); speed = 0; }
       else if (wall === 1 && m.onGround) m.vy = JUMP;
@@ -1428,7 +1468,7 @@
   }
   // Başının üstündeki sütunda hiç blok yoksa (yaprak da gölge sayılır) gökyüzünü görür.
   function skyAbove(m) {
-    for (let y = Math.floor(m.y + m.h); y < SY; y++) if (get(Math.floor(m.x), y, Math.floor(m.z)) !== AIR) return false;
+    for (let y = Math.floor(m.y + m.h); y < SY; y++) if (isSolid(get(Math.floor(m.x), y, Math.floor(m.z)))) return false;
     return true;
   }
   // Yanma parçacıkları: canlının üstünde yükselip küçülen turuncu-kırmızı küpler.
@@ -1503,7 +1543,7 @@
         for (let i = 0; i < steps; i++) {
           a.vy -= ARROW_GRAVITY * dt / steps;
           a.x += a.vx * dt / steps; a.y += a.vy * dt / steps; a.z += a.vz * dt / steps;
-          if (get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)) !== AIR) { a.stuck = true; a.life = 3; break; }
+          if (isSolid(get(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { a.stuck = true; a.life = 3; break; }
           const p = player;
           if (!dead && a.x > p.x - p.w && a.x < p.x + p.w && a.y > p.y && a.y < p.y + p.h && a.z > p.z - p.w && a.z < p.z + p.w) {
             damagePlayer(ARROW_DAMAGE, a.x - a.vx, a.z - a.vz);
@@ -1990,7 +2030,7 @@
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
   Object.assign(window.game, { hunger, renderFood });
-  Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance });
+  Object.assign(window.game, { furnaces, openFurnace, clickFurnace, rebuild: buildChunk, camera, cameraDistance: () => cameraDistance, raycast });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -2094,6 +2134,9 @@
 
   // ---------- Oyun döngüsü ----------
   let last = performance.now(), walkPhase = 0, walkAmp = 0;
+  // Su: yukarı yüzme hızı ve en yüksek batma hızı (blok/sn)
+  const SWIM_UP_SPEED = 3, SINK_SPEED = 3;
+  const underwaterEl = document.getElementById('underwater');
   // Arkadan kamera: omuz kayması, uzaklık ve engellere göre yumuşatılmış anlık uzaklık
   const CAMERA_DISTANCE = 3.5, SHOULDER_OFFSET = 0.6, SHOULDER_RISE = 0.25;
   let cameraDistance = CAMERA_DISTANCE;
@@ -2103,7 +2146,7 @@
     for (let d = 0.05; d <= max; d += 0.05) {
       q.copy(from).addScaledVector(dir, d);
       const blocked = [[0, 0, 0], [0.25, 0, 0], [-0.25, 0, 0], [0, 0.25, 0], [0, -0.25, 0], [0, 0, 0.25], [0, 0, -0.25]]
-        .some(([ox, oy, oz]) => get(Math.floor(q.x + ox), Math.floor(q.y + oy), Math.floor(q.z + oz)) !== AIR);
+        .some(([ox, oy, oz]) => isSolid(get(Math.floor(q.x + ox), Math.floor(q.y + oy), Math.floor(q.z + oz))));
       if (blocked) return Math.max(0, d - 0.05);
     }
     return max;
@@ -2114,6 +2157,7 @@
     last = now;
     const p = player;
 
+    const inWater = overlapsBlock(p, B.water);
     if (playing && !inventoryOpen) {
       const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
       const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
@@ -2126,17 +2170,19 @@
       if (!keys.KeyW) sprinting = false;
       if (p.food <= SPRINT_FOOD) sprinting = false;
       const sprintNow = (sprinting || keys.ShiftLeft || keys.ShiftRight) && p.food > SPRINT_FOOD;
-      const speed = sprintNow ? 6.2 : 4.3;
+      const speed = (sprintNow ? 6.2 : 4.3) * (inWater ? 0.5 : 1);
       updateHunger(dt, sprintNow && len > 0);
       p.vx = (len ? mx / len * speed : 0) + p.kx;
       p.vz = (len ? mz / len * speed : 0) + p.kz;
-      if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
+      if (keys.Space && inWater) p.vy = SWIM_UP_SPEED;
+      else if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }
     } else { p.vx = p.vz = 0; }
     const knockDecay = Math.exp(-dt * 6);
     p.kx *= knockDecay; p.kz *= knockDecay;
     updateHealth(dt);
 
-    p.vy = Math.max(p.vy - GRAVITY * dt, -40);
+    // Suda yerçekimi 1/4, batma hızı sınırlı
+    p.vy = inWater ? Math.max(p.vy - GRAVITY / 4 * dt, -SINK_SPEED) : Math.max(p.vy - GRAVITY * dt, -40);
     stepEntity(p, dt);
     if (playing) {
       for (const m of mobs) updateMob(m, dt);
@@ -2151,7 +2197,8 @@
     renderDrops();
     // Düşme hasarı: 3 bloğun üstündeki her blok 1 can
     if (playing) {
-      if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);
+      if (inWater) p.fallPeak = null; // suya düşen hasar almaz
+      else if (!p.onGround) p.fallPeak = Math.max(p.fallPeak ?? p.y, p.y);
       else if (p.fallPeak !== null) {
         const fall = p.fallPeak - p.y;
         p.fallPeak = null;
@@ -2216,6 +2263,12 @@
     if (hit) highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
 
     updateDayCycle(dt);
+    // Kamera suyun içindeyse ekran mavi tonlanır, sis 8 bloğa iner.
+    const cameraInWater = get(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.water;
+    underwaterEl.hidden = !cameraInWater;
+    scene.fog.near = cameraInWater ? 0 : 30;
+    scene.fog.far = cameraInWater ? 8 : 70;
+    if (cameraInWater) scene.fog.color.setRGB(0.1, 0.25, 0.5).multiplyScalar(material.color.r);
     info.textContent = `${clockText()} · X ${Math.floor(p.x)} · Y ${Math.floor(p.y)} · Z ${Math.floor(p.z)}`;
     renderer.clear();
     renderer.render(scene, camera);

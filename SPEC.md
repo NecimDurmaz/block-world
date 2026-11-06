@@ -49,10 +49,10 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Oyuncu modeli | Bloklu insan modeli ve gözden görünümdeki kol |
    | Oyuncu ve fizik | Oyuncu durumu, `spawn()`, ortak AABB fiziği: `collides()`, `moveAxis()`, `stepEntity()` |
    | Girdi | Klavye, fare, fare kilidi, kamera değiştirme, koşma |
-   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()`, `placeBlock()` |
+   | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `breakBlock()` (canlıya vurma dahil), `placeBlock()` |
    | HUD | Hotbar yuvaları, `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
-   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, dolaşma yapay zekâsı, `renderMob()` |
+   | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, dolaşma yapay zekâsı, `renderMob()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
 
@@ -160,7 +160,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 | Fare | Bak (fare kilidiyle). Kilit reddedilirse sol tuşla sürükleyerek bak. |
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
-| Sol tık | Bloğu kır (yedek modda: sürüklemeden kısa tık) |
+| Sol tık | Bloğu kır ya da canlıya vur (yedek modda: sürüklemeden kısa tık) |
 | Sağ tık | Blok koy |
 | 1–9 / tekerlek | Blok seç |
 | V | Kamera: arkadan → gözden → önden |
@@ -168,7 +168,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 
 ### Kamera
 
-- **Arkadan (varsayılan):** Gözden 4 blok geride, bakış doğrultusunda. Arada blok varsa yaklaşır (en az 0,3 blok). Nişan ışını kameradan başlar, menzil `6 + uzaklık`.
+- **Arkadan (varsayılan):** Gözden 4 blok geride, bakış doğrultusunda. Arada blok varsa yaklaşır (en az 0,3 blok). Nişan ışını kameradan başlar, blok menzili `6 + uzaklık`; `aim.start = uzaklık` canlı menziline eklenir.
 - **Gözden:** Göz hizasında, sağ altta oyuncunun kolu. Nişan ışını gözden başlar, menzil 6.
 - **Önden:** Oyuncunun önünde, oyuncuya bakar. Artı işareti gizlenir; nişan ışını gözden başlar.
 
@@ -188,6 +188,9 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz.
 - Hayvan sınırı `MAX_ANIMALS = 16` (`ANIMAL_KINDS` türlerinin toplamı).
 - **Doğma:** Açılışta her türden 4'lük bir sürü (`spawnHerd`): ilk hayvan rastgele bir çimen sütununda, diğerleri onun 8 blok çevresindeki çimenlerde. Gündüz (`daylight ≥ 0,5`) ve sınırın altındaysa her 30 sn'de oyuncudan en az 24 blok uzaktaki bir çimene rastgele türden 1 hayvan doğar.
 - **`slowFall`:** düşerken (`vy < 0`) yerçekimi 1/4'e iner.
+- **Vurma:** Sol tıkta `raycast()` (bloğun giriş uzaklığı `t`) ve `rayMob()` (canlı kutularına slab testi, menzil `aim.start + MOB_REACH`, `MOB_REACH = 3.5`) karşılaştırılır; canlı daha yakınsa blok yerine canlı vurulur. İmleç bir canlının üstündeyken blok çerçevesi gizlenir.
+- **`hurtMob(m, amount, dirX, dirZ)`:** elle vuruş `FIST_DAMAGE = 1`. 0,5 sn hasarsızlık, 0,3 sn kırmızı (`emissive`), vuruş yönünde 5 blok/sn geri itilme (yerdeyse 4 blok/sn hoplama), 4 sn boyunca oyuncudan 2 kat hızla kaçma (`flee`).
+- **Ölüm:** Can 0 olunca `dying = 0.5`: canlı 0,5 sn'de yana 90° devrilir, kırmızı kalır, sonra `removeMob()` ile sahneden ve diziden silinir (geometri ve malzemeler serbest bırakılır).
 - **Bacak animasyonu:** çapraz bacaklar (0 ile 3, 1 ile 2) birlikte sallanır; iki bacaklılarda 0 ileri, 1 geri.
 
 | Tür (`kind`) | Ad | Can | Kutu (`w` × `h`) | Hız | Model | Doğma |
@@ -236,7 +239,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 4 | İlerlemeyi IndexedDB'ye kaydetme | Yapıldı |
 | 5 | Canlı altyapısı ve inek | Yapıldı |
 | 6 | Domuz, tavuk ve koyun | Yapıldı |
-| 7 | Canlılara vurma | Yapılmadı |
+| 7 | Canlılara vurma | Yapıldı |
 | 8 | Zombi | Yapılmadı |
 | 9 | İskelet | Yapılmadı |
 | 10 | Örümcek | Yapılmadı |

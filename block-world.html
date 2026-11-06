@@ -576,7 +576,9 @@
 
   // ---------- Blok kırma / koyma ----------
   // Nişan ışını her karede kameraya göre güncellenir (aim).
-  const aim = { o: new THREE.Vector3(), d: new THREE.Vector3(), max: 6 };
+  // start: ışının başlangıcından gözlere uzaklık (arkadan kamerada kamera mesafesi), canlı menzili buna eklenir.
+  const aim = { o: new THREE.Vector3(), d: new THREE.Vector3(), max: 6, start: 0 };
+  const MOB_REACH = 3.5, FIST_DAMAGE = 1;
   let punch = 0;
   function raycast() {
     const { o, d, max: maxDist } = aim;
@@ -588,7 +590,7 @@
     let tmz = sz > 0 ? (z + 1 - o.z) * tdz : sz < 0 ? (o.z - z) * tdz : Infinity;
     let px = x, py = y, pz = z, t = 0;
     while (t <= maxDist) {
-      if (inBounds(x, y, z) && world[index(x, y, z)] !== AIR) return { x, y, z, px, py, pz };
+      if (inBounds(x, y, z) && world[index(x, y, z)] !== AIR) return { x, y, z, px, py, pz, t };
       px = x; py = y; pz = z;
       if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; }
       else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; }
@@ -596,9 +598,15 @@
     }
     return null;
   }
+  // Sol tık: ışın önce canlılara bakar; bloktan daha yakın bir canlı varsa ona vurur.
   function breakBlock() {
     punch = 0.25;
     const hit = raycast();
+    const mobHit = rayMob();
+    if (mobHit && (!hit || mobHit.t < hit.t)) {
+      hurtMob(mobHit.mob, FIST_DAMAGE, aim.d.x, aim.d.z);
+      return;
+    }
     if (!hit || hit.y === 0) return;
     set(hit.x, hit.y, hit.z, AIR);
     rebuildAround(hit.x, hit.z);
@@ -822,9 +830,59 @@
       kind, type, body, x, y, z, w: type.w, h: type.h, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0,
       yaw: Math.random() * Math.PI * 2, onGround: false, health: type.health,
       walking: false, timer: Math.random() * 3, walkPhase: 0,
+      invulnerable: 0, hurt: 0, flee: 0, dying: 0, tinted: false, materials: [],
     };
+    // Her canlının kendi malzemeleri var; vurulunca kırmızılaştırmak için toplanır.
+    body.root.traverse(o => { if (o.material) mob.materials.push(...[].concat(o.material)); });
     mobs.push(mob);
     return mob;
+  }
+  function removeMob(m) {
+    scene.remove(m.body.root);
+    m.body.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    for (const mat of new Set(m.materials)) { mat.map?.dispose(); mat.dispose(); }
+    mobs.splice(mobs.indexOf(m), 1);
+  }
+
+  // Nişan ışınının bir kutuya giriş uzaklığı (slab yöntemi); kesmiyorsa null.
+  function rayBox(min, max) {
+    const o = [aim.o.x, aim.o.y, aim.o.z], d = [aim.d.x, aim.d.y, aim.d.z];
+    let t0 = 0, t1 = aim.start + MOB_REACH;
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(d[i]) < 1e-9) {
+        if (o[i] < min[i] || o[i] > max[i]) return null;
+        continue;
+      }
+      let a = (min[i] - o[i]) / d[i], b = (max[i] - o[i]) / d[i];
+      if (a > b) [a, b] = [b, a];
+      t0 = Math.max(t0, a);
+      t1 = Math.min(t1, b);
+      if (t0 > t1) return null;
+    }
+    return t0;
+  }
+  // Menzil içindeki en yakın canlı: { mob, t } ya da null.
+  function rayMob() {
+    let best = null;
+    for (const m of mobs) {
+      if (m.dying > 0) continue;
+      const t = rayBox([m.x - m.w, m.y, m.z - m.w], [m.x + m.w, m.y + m.h, m.z + m.w]);
+      if (t !== null && (!best || t < best.t)) best = { mob: m, t };
+    }
+    return best;
+  }
+  // Vuruş: 0,5 sn hasarsızlık, 0,3 sn kırmızılık, 5 blok/sn geri itilme; hayvan 4 sn kaçar.
+  function hurtMob(m, amount, dirX, dirZ) {
+    if (m.invulnerable > 0 || m.dying > 0) return;
+    m.health -= amount;
+    m.invulnerable = 0.5;
+    m.hurt = 0.3;
+    const len = Math.hypot(dirX, dirZ) || 1;
+    m.kx = dirX / len * 5;
+    m.kz = dirZ / len * 5;
+    if (m.onGround) m.vy = 4;
+    m.flee = 4;
+    if (m.health <= 0) m.dying = 0.5;
   }
   function surfaceY(x, z) {
     let y = SY - 1;
@@ -874,13 +932,26 @@
   // Dolaşma: 2–5 sn rastgele yöne yürü, 2–4 sn dur. Önde 1 blokluk basamak varsa zıpla,
   // 2 blok duvar ya da 3 bloktan derin uçurum varsa dön.
   function updateMob(m, dt) {
+    // Ölüm: 0,5 sn yana devrilir, sonra kaybolur.
+    if (m.dying > 0) {
+      m.dying -= dt;
+      if (m.dying <= 0) removeMob(m);
+      return;
+    }
+    m.invulnerable = Math.max(0, m.invulnerable - dt);
+    m.hurt = Math.max(0, m.hurt - dt);
+    m.flee = Math.max(0, m.flee - dt);
     m.timer -= dt;
-    if (m.timer <= 0) {
+    if (m.flee > 0) {
+      // Oyuncudan uzağa, 2 kat hızla
+      m.walking = true;
+      m.yaw = Math.atan2(m.x - player.x, m.z - player.z) + Math.PI;
+    } else if (m.timer <= 0) {
       m.walking = !m.walking;
       m.timer = m.walking ? 2 + Math.random() * 3 : 2 + Math.random() * 2;
       if (m.walking) m.yaw = Math.random() * Math.PI * 2;
     }
-    let speed = m.walking ? m.type.speed : 0;
+    let speed = m.walking ? m.type.speed * (m.flee > 0 ? 2 : 1) : 0;
     if (speed) {
       const fx = -Math.sin(m.yaw), fz = -Math.cos(m.yaw);
       const ax = Math.floor(m.x + fx * (m.w + 0.3)), az = Math.floor(m.z + fz * (m.w + 0.3)), fy = Math.floor(m.y);
@@ -903,6 +974,12 @@
     const { root, legs } = m.body;
     root.position.set(m.x, m.y, m.z);
     root.rotation.y = m.yaw;
+    root.rotation.z = m.dying > 0 ? (1 - m.dying / 0.5) * Math.PI / 2 : 0;
+    const tinted = m.hurt > 0 || m.dying > 0;
+    if (tinted !== m.tinted) {
+      m.tinted = tinted;
+      for (const mat of m.materials) mat.emissive.setRGB(tinted ? 0.6 : 0, 0, 0);
+    }
     const swing = Math.sin(m.walkPhase) * 0.6 * Math.min(1, Math.hypot(m.vx, m.vz) / m.type.speed);
     // Çapraz bacaklar birlikte sallanır (2 bacaklılarda 0 ileri, 1 geri).
     legs.forEach((leg, i) => { leg.rotation.x = (i === 0 || i === 3 ? 1 : -1) * swing; });
@@ -1048,7 +1125,7 @@
     // Kamera: 0 arkadan, 1 gözden, 2 önden. Arkada/önde duvar varsa kamera yaklaşır.
     const eye = new THREE.Vector3(p.x, p.y + EYE, p.z);
     const dir = new THREE.Vector3(-Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), -Math.cos(p.yaw) * Math.cos(p.pitch));
-    aim.o.copy(eye); aim.d.copy(dir); aim.max = 6;
+    aim.o.copy(eye); aim.d.copy(dir); aim.max = 6; aim.start = 0;
     if (view === 1) {
       camera.position.copy(eye);
       camera.rotation.set(p.pitch, p.yaw, 0);
@@ -1064,7 +1141,7 @@
       camera.position.copy(eye).addScaledVector(dir, side * dist);
       if (view === 0) {
         camera.rotation.set(p.pitch, p.yaw, 0);
-        aim.o.copy(camera.position); aim.max = 6 + dist;
+        aim.o.copy(camera.position); aim.max = 6 + dist; aim.start = dist;
       } else camera.lookAt(eye);
     }
     const fov = (sprinting && playing && Math.hypot(p.vx, p.vz) > 0.1) ? 85 : 75;
@@ -1089,7 +1166,9 @@
 
     document.getElementById('crosshair').hidden = view === 2;
     const hit = playing ? raycast() : null;
-    highlight.visible = !!hit;
+    const mobHit = playing ? rayMob() : null;
+    // İmleç bir canlının üstündeyse blok çerçevesi gizlenir.
+    highlight.visible = !!hit && !(mobHit && mobHit.t < hit.t);
     if (hit) highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
 
     updateDayCycle(dt);

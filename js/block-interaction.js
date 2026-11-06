@@ -42,6 +42,7 @@ function breakBlockAt(hit) {
   const broken = get(hit.x, hit.y, hit.z);
   set(hit.x, hit.y, hit.z, AIR);
   blockSound(broken, 'break');
+  spawnDebris(broken, hit.x, hit.y, hit.z, 12);
   // Bu bloğa dayanan meşaleler düşer
   // Kapının diğer yarısı da kalkar
   if (isDoor(broken)) {
@@ -130,6 +131,9 @@ function updateMining(dt, hit) {
   // Kazarken 0,25 sn'de bir çıtırtı
   miningState.digTimer = (miningState.digTimer || 0) - dt;
   if (miningState.digTimer <= 0) { miningState.digTimer = 0.25; blockSound(get(target.x, target.y, target.z), 'dig'); }
+  // Kazarken 0,2 sn'de bir 2 küçük parça
+  miningState.debrisTimer = (miningState.debrisTimer || 0) - dt;
+  if (miningState.debrisTimer <= 0) { miningState.debrisTimer = 0.2; spawnDebris(get(target.x, target.y, target.z), target.x, target.y, target.z, 2, 1.5); }
   if (punch <= 0) punch = 0.25; // kol vurmaya devam eder
   if (miningState.progress >= 1) {
     breakBlockAt(target);

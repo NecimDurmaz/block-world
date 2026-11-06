@@ -64,6 +64,7 @@ function frame(now) {
     updateFurnaces(dt);
     updateCrops(dt);
     updateMobSounds(dt);
+    updateDebris(dt);
   }
   for (const m of mobs) renderMob(m);
   renderDrops();

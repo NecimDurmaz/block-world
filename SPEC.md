@@ -32,7 +32,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `hotbar` | 9 yuvalı hotbar: eşya simgesi, sol üstte yuva numarası, sağ altta adet |
    | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
-   | `inventory` | E ile açılan envanter paneli: çanta (`#inv-bag`, 27 yuva) ve hotbar satırı (`#inv-hotbar`) |
+   | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), üretim ızgarası (`#craft-grid`) ve sonuç (`#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
    | `death` | "Öldün!" paneli ve "Yeniden doğ" düğmesi (`#respawn`) |
    | `overlay` | Başlangıç / duraklatma paneli: tuş listesi (`.keys`), "Oyna" (`#play`, kayıt okunana kadar pasif), "Yeni dünya" (`#reset`), kayıt durumu (`#save-note`) |
@@ -57,6 +57,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | Oklar | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
    | Eşyalar | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
+   | Üretim | `craftGrid`, `craftSize`, `RECIPES`, `craftResult()`, üretim ızgarası yuvaları |
    | Envanter | `inventory`, `addItem()`, `takeFromSlot()`, `throwSelected()`, envanter paneli (`clickSlot()`, `openInventory()`, `closeInventory()`), `renderInventory()` |
    | Kayıt | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
    | Oyun döngüsü | `frame()`: hareket, fizik, kamera, animasyon, çizim |
@@ -89,6 +90,9 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
 | 7 | `planks` | Tahta | `planks` |
 | 8 | `brick` | Tuğla | `brick` |
 | 9 | `cobble` | Kırık taş | `cobble` |
+| 10 | `crafting_table` | Çalışma masası | `craftingTop` / `craftingSide` / `planks` |
+| 11 | `furnace` | Fırın | `furnaceTop` / `furnaceFront` / `furnaceTop` (blok yön tutmadığı için ağız dört yanda) |
+| 12 | `sandstone` | Kumtaşı | `sandstoneTop` / `sandstoneSide` / `sandstoneTop` |
 
 Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envanterden harcanır (bkz. Envanter).
 
@@ -98,13 +102,14 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 | --- | --- | --- | --- | --- |
 | Yaprak | Yaprak | 0,3 sn | — | %10 |
 | Toprak | Çimen, Toprak, Kum | 0,75 sn | `shovel` | Evet |
-| Ahşap | Kütük, Tahta | 3 sn | `axe` | Evet |
-| Taş | Taş, Kırık taş, Tuğla | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
+| Ahşap | Kütük, Tahta, Çalışma masası | 3 sn | `axe` | Evet |
+| Taş | Taş, Kırık taş, Tuğla, Fırın | 7,5 sn | `pickaxe` (`needsTool`) | Hayır |
+| Kumtaşı | Kumtaşı | 4 sn | `pickaxe` (`needsTool`) | Hayır |
 
 ### Dokular
 
-- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 11` doku, atlas `176 × 16` piksel.
-- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble`.
+- Tek satırlık atlas: `T = 16` piksel kare, `N_TILES = 17` doku, atlas `272 × 16` piksel.
+- `TILE` sırası: `grassTop, grassSide, dirt, stone, logSide, logTop, leaves, sand, planks, brick, cobble, craftingTop, craftingSide, furnaceFront, furnaceTop, sandstoneTop, sandstoneSide`.
 - Yeni doku eklerken `N_TILES` artırılır, `TILE`'a eklenir, çizim kodu aynı bölüme yazılır.
 - Dokular `mulberry32(1337)` ile her açılışta aynı üretilir. Filtre `NearestFilter`, mipmap yok.
 
@@ -249,6 +254,9 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
   | `rotten_flesh` | Çürük et |
   | `bone` | Kemik |
   | `arrow` | Ok |
+  | `stick` | Çubuk |
+  | `torch` | Meşale (şimdilik konulamaz, madde 22) |
+  | `coal` | Kömür (şimdilik elde edilemez, madde 19–20) |
 
 - **`itemIcon(key)`:** HUD için data URL (bloklarda yan doku).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok. Creeper patlayınca bir şey düşmez.
@@ -264,9 +272,25 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 - **Envanter paneli (E):** Fare kilidi bırakılır ama oyun durmaz (dünya, canlılar ve zaman işler); oyuncu yürümez, dünyaya tıklanamaz. Sol tık: boş elde yığını alır; elde yığın varken boş yuvaya bırakır, aynı türse sığdığı kadar birleştirir, farklı türse yer değiştirir. Sağ tık: boş elde yığının yarısını (yukarı yuvarlayarak) alır; elde yığın varken boş ya da aynı türdeki yuvaya 1 tane bırakır. Kapanınca eldeki yığın envantere döner, sığmayan yere atılır; fare yeniden kilitlenir.
 - **Q:** seçili yığından 1 tanesini bakış yönünde 5 blok/sn fırlatır.
 
+## Üretim
+
+- Envanter panelinde 2×2, çalışma masasına sağ tıklanınca 3×3 üretim ızgarası (`openInventory(size)`). `craftGrid` her zaman 9 hücrelik dizidir (indeks `satır × 3 + sütun`); 2×2'de yalnızca sol üst dört hücre görünür ve kullanılır.
+- Izgara hücrelerine envanterdeki gibi tıklanır (`clickIn`). **Sonuç yuvası:** elde ürün yoksa ya da aynı üründen yığına sığacak kadar yer varsa ürün ele gelir ve ızgaradaki her dolu hücre 1 azalır.
+- Panel kapanınca ızgaradakiler ve eldeki yığın envantere döner; sığmayan oyuncunun önüne atılır (`giveOrDrop`).
+- **Tarifler** (`RECIPES`, şekilli; dolu hücrelerin sınır kutusu desenle birebir eşleşmeli, ızgarada kaydırılabilir, aynalanmaz):
+
+  | Desen | Malzeme | Ürün |
+  | --- | --- | --- |
+  | `L` | kütük | 4 tahta |
+  | `P` / `P` (dikey) | tahta | 4 çubuk |
+  | `PP` / `PP` | tahta | çalışma masası |
+  | `C` / `S` | kömür üstte, çubuk altta | 4 meşale |
+  | `CCC` / `C.C` / `CCC` | kırık taş | fırın |
+  | `SS` / `SS` | kum | kumtaşı |
+
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `mining` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -313,7 +337,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 13 | Eşya düşmesi ve toplama | Yapıldı |
 | 14 | Sınırlı hotbar ve envanter ekranı | Yapıldı |
 | 15 | Blok kırma süresi ve çatlama | Yapıldı |
-| 16 | Üretim ve çalışma masası | Yapılmadı |
+| 16 | Üretim ve çalışma masası | Yapıldı |
 | 17 | Aletler | Yapılmadı |
 | 18 | Açlık barı ve yemek | Yapılmadı |
 | 19 | Fırın ve pişirme | Yapılmadı |

@@ -54,6 +54,8 @@
   .slot.active { border-color: var(--hud-fg); box-shadow: 0 0 0 2px var(--ew-primary); }
   #status { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; pointer-events: none; }
   #hearts { display: flex; gap: 2px; }
+  #food { display: flex; flex-direction: row-reverse; gap: 2px; margin-left: auto; }
+  #food i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
   #hearts i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
   #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
   #blockname { position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px #000; }
@@ -86,7 +88,7 @@
 <div id="blockname"></div>
 <div id="saved" hidden>Kaydedildi</div>
 <div id="hotbar"></div>
-<div id="status"><div id="hearts"></div></div>
+<div id="status"><div id="hearts"></div><div id="food"></div></div>
 <div id="hurt"></div>
 <div id="inventory" hidden>
   <div class="panel inv-panel">
@@ -121,6 +123,7 @@
       <kbd>1–9 / Tekerlek</kbd><span>Hotbar'dan seç</span>
       <kbd>E</kbd><span>Envanter</span>
       <kbd>Q</kbd><span>Seçili eşyadan birini at</span>
+      <kbd>Sağ tık (basılı)</kbd><span>Eldeki yemeği ye</span>
       <kbd>V</kbd><span>Kamera: arkadan / gözden / önden</span>
       <kbd>Esc</kbd><span>Duraklat</span>
     </div>
@@ -516,10 +519,10 @@
   fpScene.add(fpArm);
 
   // ---------- Oyuncu ve fizik ----------
-  const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4, MAX_HEALTH = 20;
+  const W = 0.3, H = 1.8, EYE = 1.62, GRAVITY = 26, JUMP = 8.4, MAX_HEALTH = 20, MAX_FOOD = 20;
   // kx/kz: geri itilme hızı, her karede söner. fallPeak: havadayken ulaşılan en yüksek y.
   // w/h: çarpışma kutusunun yarı genişliği ve boyu (canlılarla ortak fizik bunları kullanır).
-  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, w: W, h: H, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, fallPeak: null };
+  const player = { x: SX / 2 + 0.5, y: 0, z: SZ / 2 + 0.5, w: W, h: H, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, yaw: 0, pitch: 0, onGround: false, health: MAX_HEALTH, food: MAX_FOOD, fallPeak: null };
   function spawn() {
     const x = Math.floor(SX / 2), z = Math.floor(SZ / 2);
     let y = SY - 1;
@@ -634,15 +637,16 @@
     }
   });
   // Sol tuş basılı tutuldukça kazılır (mining). Yedek modda sürükleme bakıştır, kazmayı keser.
-  let mining = false;
+  let mining = false, using = false; // using: sağ tuş basılı (yemek yeme)
   canvas.addEventListener('mousedown', e => {
     if (!playing || inventoryOpen) return;
     if (document.pointerLockElement !== canvas) { fallbackLook = true; if (e.button === 0) drag = { moved: 0 }; }
     if (e.button === 0) { mining = true; attackMob(); }
-    else if (e.button === 2) placeBlock();
+    else if (e.button === 2) { using = true; if (!heldFood()) placeBlock(); }
   });
   window.addEventListener('mouseup', e => {
     if (e.button === 0) mining = false;
+    if (e.button === 2) using = false;
     drag = null;
   });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -698,6 +702,7 @@
     if (tool) useTool();
     if (def.needsTool && (!tool || ITEMS[tool.key].tool !== def.tool)) return;
     if (broken !== B.leaves || Math.random() < 0.1) dropItem(def.drop || BLOCK_ITEM[broken], hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
+    if (broken === B.leaves && Math.random() < 0.05) dropItem('apple', hit.x + 0.5, hit.y + 0.3, hit.z + 0.5);
   }
 
   // Kazma ilerlemesi: aynı bloğa basılı tutuldukça dolar; hedef değişir ya da tuş bırakılırsa sıfırlanır.
@@ -859,7 +864,9 @@
     dead = false;
     deathEl.hidden = true;
     player.health = MAX_HEALTH;
+    player.food = MAX_FOOD;
     renderHearts();
+    renderFood();
     spawn();
     start();
   });
@@ -867,9 +874,63 @@
     invulnerable = Math.max(0, invulnerable - dt);
     hurtFlash = Math.max(0, hurtFlash - dt);
     hurtEl.style.opacity = hurtFlash / 0.2;
-    if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
+    if (!playing || player.health >= MAX_HEALTH || player.health <= 0 || player.food < REGEN_FOOD || performance.now() - lastDamageAt < 5000) { regenTimer = 0; return; }
     regenTimer += dt;
     if (regenTimer >= 4) { regenTimer = 0; player.health++; renderHearts(); }
+  }
+
+  // ---------- Açlık ----------
+  // Her 30 sn'de 1 (koşarken 15 sn'de 1) azalır. 18 ve üstünde can yenilenir, 0'da 4 sn'de 1 can gider (1'in altına inmez).
+  // 6 ve altında koşulamaz. Eldeki yemek sağ tuş 1,6 sn basılı tutulunca yenir.
+  const HUNGER_INTERVAL = 30, REGEN_FOOD = 18, SPRINT_FOOD = 6, STARVE_INTERVAL = 4, EAT_TIME = 1.6;
+  const FOOD_SHAPE = ['....##.', '...####', '..#####', '..####.', '.o###..', 'oo.....', '.o.....'];
+  function foodImage(fill) { // 0 boş, 1 yarım, 2 dolu
+    const c = document.createElement('canvas'); c.width = c.height = 9;
+    const fg = c.getContext('2d');
+    const eachPixel = fn => FOOD_SHAPE.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') fn(x, y, ch); }));
+    fg.fillStyle = '#1a0f08';
+    eachPixel((x, y) => { for (const [ox, oy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) fg.fillRect(x + ox, y + oy, 1, 1); });
+    eachPixel((x, y, ch) => {
+      const filled = fill === 2 || (fill === 1 && x >= 3);
+      fg.fillStyle = !filled ? '#4a3a32' : ch === 'o' ? '#ece6d6' : (x === 4 && y === 1 ? '#e0a070' : '#b5653a');
+      fg.fillRect(x + 1, y + 1, 1, 1);
+    });
+    return c.toDataURL();
+  }
+  const FOOD_IMAGES = [0, 1, 2].map(foodImage);
+  const foodEls = Array.from({ length: MAX_FOOD / 2 }, () => document.getElementById('food').appendChild(document.createElement('i')));
+  function renderFood() {
+    foodEls.forEach((el, i) => { el.style.backgroundImage = `url(${FOOD_IMAGES[Math.max(0, Math.min(2, player.food - i * 2))]})`; });
+  }
+  renderFood();
+  const hunger = { timer: 0, starve: 0, eating: 0 };
+  const heldFood = () => inventory[selected] && ITEMS[inventory[selected].key].food ? inventory[selected] : null;
+  function updateHunger(dt, sprintingNow) {
+    hunger.timer += dt * (sprintingNow ? 2 : 1);
+    if (hunger.timer >= HUNGER_INTERVAL) {
+      hunger.timer = 0;
+      if (player.food > 0) { player.food--; renderFood(); }
+    }
+    if (player.food === 0) {
+      hunger.starve += dt;
+      if (hunger.starve >= STARVE_INTERVAL) {
+        hunger.starve = 0;
+        if (player.health > 1) damagePlayer(1);
+      }
+    } else hunger.starve = 0;
+    // Yemek yeme
+    const food = heldFood();
+    if (using && food && player.food < MAX_FOOD && !inventoryOpen) {
+      hunger.eating += dt;
+      if (punch <= 0) punch = 0.2;
+      if (hunger.eating >= EAT_TIME) {
+        hunger.eating = 0;
+        player.food = Math.min(MAX_FOOD, player.food + ITEMS[food.key].food);
+        toast(ITEMS[food.key].name + ' yendi');
+        takeFromSlot(selected, 1);
+        renderFood();
+      }
+    } else hunger.eating = 0;
   }
 
   // ---------- Canlılar ----------
@@ -1421,6 +1482,7 @@
     arrow: ['Ok', { b: '#6b4a2b', g: '#9a9a9a', w: '#f4f4f0' }, ['......gg', '.....ggg', '....bg..', '...b....', '..b.....', 'wb......', 'ww......', 'w.......']],
     stick: ['Çubuk', { b: '#6b4a2b', l: '#8f6a40' }, ['......lb', '.....lb.', '....lb..', '...lb...', '..lb....', '.lb.....', 'lb......', '........']],
     torch: ['Meşale', { b: '#6b4a2b', y: '#ffd23a', o: '#ff8a1f' }, ['...yy...', '..yooy..', '...oo...', '...bb...', '...bb...', '...bb...', '...bb...', '........']],
+    apple: ['Elma', { r: '#d0302c', d: '#9a1f1c', g: '#4f8a2a', b: '#6b4a2b' }, ['....b...', '...bg...', '.rrrrrr.', 'rrrrrrdr', 'rrrrrrdr', 'rrrrrddr', '.rrrrdd.', '..rrrr..']],
     coal: ['Kömür', { k: '#1e1e1e', g: '#3c3c3c' }, ['........', '..kkkk..', '.kkgkkk.', '.kkkkgk.', '.kgkkkk.', '.kkkkkk.', '..kkkk..', '........']],
   };
   for (const [key, [name, palette, rows]] of Object.entries(ITEM_ART)) {
@@ -1455,6 +1517,12 @@
       durability: tier.durability, damage: kind.damage[tierKey === 'wooden' ? 0 : 1],
     };
   });
+  // Yemekler: doldurduğu açlık puanı
+  Object.assign(ITEMS.raw_beef, { food: 3 });
+  Object.assign(ITEMS.raw_pork, { food: 3 });
+  Object.assign(ITEMS.raw_chicken, { food: 2 });
+  Object.assign(ITEMS.rotten_flesh, { food: 2 });
+  Object.assign(ITEMS.apple, { food: 4 });
   const extraOf = s => s.durability !== undefined ? { durability: s.durability } : {};
 
   // HUD'da kullanılacak simge (data URL)
@@ -1768,6 +1836,7 @@
   selectSlot(0);
   Object.assign(window.game, { inventory, addItem, openInventory, closeInventory, clickSlot, clickCraft, clickResult, craftGrid });
   Object.assign(window.game, { mining: miningState, crackVisible: () => crackBox.visible });
+  Object.assign(window.game, { hunger, renderFood });
 
   // ---------- Kayıt ----------
   // Tarayıcının IndexedDB'sine tek bir kayıt yazılır. Açılamazsa oyun kayıtsız çalışır.
@@ -1804,6 +1873,7 @@
         world,
         player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
         health: player.health,
+        food: player.food,
         selected,
         inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
         time: clock.time,
@@ -1821,7 +1891,9 @@
     for (let cz = 0; cz < SZ / CH; cz++) for (let cx = 0; cx < SX / CH; cx++) buildChunk(cx, cz);
     Object.assign(player, save.player, { vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, fallPeak: null });
     player.health = save.health > 0 ? save.health : MAX_HEALTH;
+    player.food = save.food ?? MAX_FOOD;
     renderHearts();
+    renderFood();
     // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
     (save.inventory || []).forEach((s, i) => { inventory[i] = s && ITEMS[s.key] ? { key: s.key, count: s.count, ...extraOf(s) } : null; });
     renderInventory();
@@ -1882,7 +1954,10 @@
       if (keys.KeyA) { mx -= rx; mz -= rz; }
       const len = Math.hypot(mx, mz);
       if (!keys.KeyW) sprinting = false;
-      const speed = (sprinting || keys.ShiftLeft || keys.ShiftRight) ? 6.2 : 4.3;
+      if (p.food <= SPRINT_FOOD) sprinting = false;
+      const sprintNow = (sprinting || keys.ShiftLeft || keys.ShiftRight) && p.food > SPRINT_FOOD;
+      const speed = sprintNow ? 6.2 : 4.3;
+      updateHunger(dt, sprintNow && len > 0);
       p.vx = (len ? mx / len * speed : 0) + p.kx;
       p.vz = (len ? mz / len * speed : 0) + p.kz;
       if (keys.Space && p.onGround) { p.vy = JUMP; p.onGround = false; }

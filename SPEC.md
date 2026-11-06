@@ -30,7 +30,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | `info` | Sol üstte gün, saat ve konum: `Gün 1 · 07:12 · X 48 · Y 13 · Z 48` |
    | `blockname` | Hotbar üstünde 1,5 sn görünen bildirim (blok adı, kamera adı) |
    | `hotbar` | 9 yuvalı hotbar: eşya simgesi, sol üstte yuva numarası, sağ altta adet |
-   | `status` / `hearts` | Hotbar'ın üstünde, solda 10 kalp. Genişliği hotbar'la aynıdır. |
+   | `status` / `hearts` / `food` | Hotbar'ın üstünde, solda 10 kalp, sağda 10 but (açlık; soldan boşalır). Genişliği hotbar'la aynıdır. |
    | `hurt` | Hasar alınca 0,2 sn yanan kırmızı ekran kenarı |
    | `inventory` | E ile açılan envanter paneli: başlık (`#inv-title`), üretim ızgarası (`#craft-grid`) ve sonuç (`#craft-result`), çanta (`#inv-bag`, 27 yuva), hotbar satırı (`#inv-hotbar`) |
    | `held` | Envanterde farenin tuttuğu yığın, imleci izler |
@@ -54,6 +54,7 @@ Bu belge oyunun **şu anki** halini anlatır. Bir özellik eklendiğinde ya da b
    | Blok kırma / koyma | Nişan ışını (`aim`), `raycast()`, `targetedMob()`, `attackMob()`, `breakBlockAt()`, çatlak dokuları, `updateMining()`, `placeBlock()` |
    | HUD | Hotbar yuvaları (`HOTBAR_SIZE = 9`), `toast()`, `selectSlot()` |
    | Can | Kalp çizimi, `renderHearts()`, `damagePlayer()`, `updateHealth()`, `die()`, yeniden doğma |
+   | Açlık | `FOOD_SHAPE`, `renderFood()`, `hunger`, `heldFood()`, `updateHunger()` (azalma, açlıktan hasar, yemek yeme) |
    | Canlılar | `box()`/`pivot()` model yardımcıları, `MOB_TYPES`, `mobs`, `spawnMob()`, `removeMob()`, `rayMob()`, `hurtMob()`, hayvan ve düşman doğurma, `canSeePlayer()`, `skyAbove()`, yanma parçacıkları (`particles`), `explode()`, `updateMob()`, `renderMob()` |
    | Oklar | `projectiles`, `arrowMesh()`, `shootArrow()`, `updateProjectiles()` |
    | Eşyalar | `ITEMS`, `BLOCK_ITEM`, eşya simgeleri (`ITEM_ART`, `itemIcon()`), `MOB_DROPS`, yerdeki eşyalar (`drops`, `dropItem()`, `updateDrops()`), toplama |
@@ -166,7 +167,22 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 - `player.health`, en fazla `MAX_HEALTH = 20`. HUD'da 10 kalp; her kalp 2 puan (dolu, yarım, boş). Kalpler 9×9 piksellik canvas görselleridir.
 - `damagePlayer(amount, sourceX, sourceZ)`: canı düşürür, 0,5 sn hasarsızlık verir, ekran kenarını 0,2 sn kırmızı yakar. Kaynak verilirse oyuncuyu kaynaktan uzağa 4 blok/sn iter ve 6 blok/sn yukarı zıplatır; kaynak verilmezse (düşme gibi) itmez. Konsoldan test için `window.damagePlayer` olarak da açıktır.
-- **Yenilenme:** Can 20'den azsa ve son 5 sn hasar alınmadıysa, oyun duraklatılmamışken her 4 sn'de 1 puan geri gelir.
+- **Yenilenme:** Can 20'den azsa, açlık en az `REGEN_FOOD = 18` ise ve son 5 sn hasar alınmadıysa, oyun duraklatılmamışken her 4 sn'de 1 puan geri gelir.
+
+### Açlık
+
+- `player.food`, en fazla `MAX_FOOD = 20`. HUD'da can barının sağında 10 but (dolu, yarım, boş; 9×9 canvas).
+- `hunger.timer` her saniye 1, koşarken (hareket ederek) 2 artar; `HUNGER_INTERVAL = 30`'a ulaşınca açlık 1 azalır.
+- Açlık `SPRINT_FOOD = 6` ve altındaysa koşulamaz. Açlık 0 iken her `STARVE_INTERVAL = 4` sn'de 1 hasar; can 1'in altına inmez.
+- **Yemek:** Seçili yuvada `food` değeri olan bir eşya varken sağ tuş `EAT_TIME = 1.6` sn basılı tutulursa 1 tane yenir, açlık `food` kadar artar (en çok 20), kol vurur. Yemek elindeyken sağ tık blok koymaz. Ölüp yeniden doğunca açlık 20 olur.
+
+  | Eşya | `food` |
+  | --- | --- |
+  | Çiğ biftek, Çiğ domuz eti | 3 |
+  | Çiğ tavuk, Çürük et | 2 |
+  | Elma | 4 |
+
+- **Elma:** Kırılan yaprak %5 olasılıkla elma düşürür.
 - **Düşme hasarı:** Havadayken ulaşılan en yüksek y `player.fallPeak` içinde tutulur. Yere değince düşülen yükseklik 3,5 bloğu aşıyorsa `round(yükseklik - 3)` hasar verilir: 4 blok 1 can, 10 blok 7 can.
 - **Ölüm:** Can 0 olunca ya da `y < -20` olunca `die()` çalışır: oyun durur, fare kilidi bırakılır, "Öldün!" paneli açılır (başlangıç paneli gizli kalır). "Yeniden doğ" oyuncuyu `spawn()` noktasında 20 canla başlatır.
 
@@ -179,7 +195,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 | Boşluk | Zıpla |
 | W-W (300 ms içinde iki kez) / Shift | Koş. W bırakılınca koşma biter. Koşarken görüş alanı 75° → 85°. |
 | Sol tık (basılı tut) | Basınca bakılan canlıya vurur; basılı tutuldukça bakılan bloğu kazar (yedek modda 6 pikselden fazla sürüklemek bakıştır, kazmayı keser) |
-| Sağ tık | Seçili yuvadaki bloğu koy (canlıların ya da oyuncunun içine konmaz) |
+| Sağ tık | Seçili yuvadaki bloğu koy (canlıların ya da oyuncunun içine konmaz); çalışma masasına bakılıyorsa 3×3 üretimi açar; elde yemek varsa basılı tutunca yer |
 | 1–9 / tekerlek | Hotbar yuvası seç |
 | E | Envanteri aç / kapat (Esc de kapatır) |
 | Q | Seçili yığından 1 tanesini bakılan yöne at |
@@ -258,6 +274,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
   | `stick` | Çubuk |
   | `torch` | Meşale (şimdilik konulamaz, madde 22) |
   | `coal` | Kömür (şimdilik elde edilemez, madde 19–20) |
+  | `apple` | Elma |
 
 - **`itemIcon(key)`:** HUD için data URL (bloklarda yan doku).
 - **Düşme:** Kırılan blok kendisini düşürür; yaprak yalnızca %10 olasılıkla. Ölen canlı devrilme bittikten sonra `MOB_DROPS` tablosuna göre düşürür: inek 1–3 çiğ biftek, domuz 1–3 çiğ domuz eti, tavuk 1 çiğ tavuk + 0–2 tüy, koyun 1 yün, zombi 0–2 çürük et, iskelet 0–2 kemik + 0–2 ok. Creeper patlayınca bir şey düşmez.
@@ -312,7 +329,7 @@ Bütün bloklar katı ve opaktır. `y = 0` katmanı kırılamaz. Bloklar envante
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -325,6 +342,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır: `player`, `damag
   | `world` | Tüm dünya dizisi (`Uint8Array`, 442.368 bayt) |
   | `player` | `{ x, y, z, yaw, pitch }` |
   | `health` | Can (0 kaydedildiyse 20 yüklenir) |
+  | `food` | Açlık (yoksa 20) |
   | `selected` | Seçili hotbar yuvası (0–8) |
   | `inventory` | 36 yuva: `{ key, count }` (aletlerde `durability` da) ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
   | `time`, `day` | `clock.time`, `clock.day` |
@@ -361,7 +379,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 15 | Blok kırma süresi ve çatlama | Yapıldı |
 | 16 | Üretim ve çalışma masası | Yapıldı |
 | 17 | Aletler | Yapıldı |
-| 18 | Açlık barı ve yemek | Yapılmadı |
+| 18 | Açlık barı ve yemek | Yapıldı |
 | 19 | Fırın ve pişirme | Yapılmadı |
 | 20 | Maden cevherleri | Yapılmadı |
 | 21 | Su | Yapılmadı |

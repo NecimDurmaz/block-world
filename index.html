@@ -14,7 +14,7 @@
 <div id="blockname"></div>
 <div id="saved" hidden>Kaydedildi</div>
 <div id="hotbar"></div>
-<div id="status"><div id="hearts"></div><div id="food"></div></div>
+<div id="status"><div id="armor-bar"></div><div id="hearts"></div><div id="food"></div></div>
 <div id="underwater" hidden></div>
 <div id="sleep"></div>
 <div id="low-health"></div>
@@ -39,6 +39,12 @@
       <div class="inv-slot" id="furnace-output"><span class="count"></span><span class="dur"></span></div>
     </div>
     <div class="craft" id="craft-ui">
+      <div class="armor-col" id="armor-ui">
+        <div class="inv-slot armor-slot" data-empty="Kask"><span class="count"></span><span class="dur"></span></div>
+        <div class="inv-slot armor-slot" data-empty="Göğüslük"><span class="count"></span><span class="dur"></span></div>
+        <div class="inv-slot armor-slot" data-empty="Pantolon"><span class="count"></span><span class="dur"></span></div>
+        <div class="inv-slot armor-slot" data-empty="Bot"><span class="count"></span><span class="dur"></span></div>
+      </div>
       <div class="craft-grid" id="craft-grid"></div>
       <span class="craft-arrow">→</span>
       <div class="inv-slot" id="craft-result"><span class="count"></span><span class="dur"></span></div>
@@ -187,6 +193,7 @@
 <script src="js/inventory-panel.js"></script>
 <script src="js/furnace.js"></script>
 <script src="js/chest.js"></script>
+<script src="js/armor.js"></script>
 <script src="js/held-tool.js"></script>
 <script src="js/save.js"></script>
 <script src="js/sound.js"></script>

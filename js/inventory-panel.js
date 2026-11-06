@@ -20,6 +20,7 @@ function renderInventory() {
   if (result) resultEl.querySelector('.count').textContent = result.count > 1 ? result.count : '';
   renderFurnace();
   renderChest();
+  renderArmor();
   updateHeldTool();
   paintSlot(heldEl, held);
   heldEl.hidden = !held;
@@ -57,6 +58,8 @@ function openInventory(size = 2) {
   document.getElementById('craft-ui').hidden = false;
   document.getElementById('inv-title').textContent = size === 3 ? 'Çalışma masası' : 'Envanter';
   document.getElementById('craft-grid').classList.toggle('small', size === 2);
+  // Zırh yuvaları yalnızca oyuncu envanterinde
+  document.getElementById('armor-ui').hidden = size !== 2;
   craftSlotEls.forEach((el, i) => { el.hidden = i % 3 >= size || i >= size * 3; });
   inventoryOpen = true;
   for (const k in keys) keys[k] = false;

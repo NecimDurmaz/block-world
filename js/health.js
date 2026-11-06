@@ -36,6 +36,8 @@ const lowHealthEl = document.getElementById('low-health');
 // Kaynak verilmezse (ör. düşme) geri itme olmaz.
 function damagePlayer(amount, sourceX, sourceZ) {
   if (godMode || invulnerable > 0 || player.health <= 0) return;
+  // Kaynağı olan (canlı, ok, patlama) hasar zırhla azalır.
+  amount = armorReduce(amount, sourceX !== undefined);
   player.health = Math.max(0, player.health - amount);
   invulnerable = 0.5;
   hurtFlash = 0.2;

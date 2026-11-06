@@ -50,13 +50,14 @@ function outlineIcon(c) {
   ctx.putImageData(new ImageData(out, 16, 16), 0, 0);
   return c;
 }
-for (const [key, [name, palette, rows]] of Object.entries(ITEM_ART)) {
+// 8x8 desen 2 kat büyütülerek 16x16 çizilir; sonra koyu kenar eklenir.
+function pixelArt(rows, palette) {
   const c = document.createElement('canvas'); c.width = c.height = 16;
   const ic = c.getContext('2d');
-  // 8x8 desen, 1 piksel kenar payıyla 7x7 hücreye sığacak şekilde 2 kat çizilir; sonra koyu kenar eklenir.
   rows.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) { ic.fillStyle = palette[ch]; ic.fillRect(x * 2, y * 2, 2, 2); } }));
-  ITEMS[key] = { name, canvas: outlineIcon(c) };
+  return outlineIcon(c);
 }
+for (const [key, [name, palette, rows]] of Object.entries(ITEM_ART)) ITEMS[key] = { name, canvas: pixelArt(rows, palette) };
 // Aletler: Minecraft'taki gibi sol alttan sağ üste çapraz sap ve sağ üstte baş; koyu kenarlı 16x16.
 function drawTool(kind, head, dark) {
   const c = document.createElement('canvas'); c.width = c.height = 16;

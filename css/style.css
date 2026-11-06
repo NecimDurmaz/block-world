@@ -75,7 +75,7 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
 #sleep { position: fixed; inset: 0; pointer-events: none; background: #05070d; opacity: 0; transition: opacity 0.6s; }
 #underwater { position: fixed; inset: 0; pointer-events: none; background: rgba(30, 80, 170, 0.35); }
 #hurt { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(181, 46, 49, 0.7)); opacity: 0; }
-#blockname { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font: 18px var(--mc-font); text-shadow: 2px 2px 0 #3f3f3f; }
+#blockname { position: fixed; left: 50%; bottom: calc(114px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font: 18px var(--mc-font); text-shadow: 2px 2px 0 #3f3f3f; }
 #info { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 12px; font-variant-numeric: tabular-nums; padding: 4px 8px; background: var(--hud-bg); border-radius: var(--ew-radius-btn); }
 #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(28, 46, 95, 0.55); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .panel { color-scheme: light; background: var(--ew-bg); color: var(--ew-text); border: 1px solid var(--ew-border); border-radius: var(--ew-radius); box-shadow: 0 0 6px 2px rgba(161, 161, 161, 0.22); padding: 24px; max-width: 420px; width: 100%; display: grid; gap: 16px; }
@@ -146,3 +146,6 @@ body { margin: 0; background: var(--ew-panel-dark); color: var(--hud-fg); font-f
   .control-toggles { grid-template-columns: 1fr; }
 }
 #control-times { display: grid; grid-template-columns: 1fr 1fr; }
+#armor-bar { position: absolute; left: 0; bottom: 100%; margin-bottom: 2px; display: flex; gap: 2px; visibility: hidden; }
+#armor-bar i { width: 18px; height: 18px; background-size: cover; image-rendering: pixelated; }
+.armor-col { display: grid; gap: 0; margin-right: 10px; }

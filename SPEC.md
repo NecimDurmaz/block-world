@@ -82,6 +82,7 @@ tests/              otomatik testler
    | `crafting.js` | `craftGrid`, `craftSize`, `RECIPES`, `craftResult()`, üretim ızgarası yuvaları, `clickCraft()`, `clickResult()` |
    | `inventory-panel.js` | `paintSlot()`, `renderInventory()`, `clickIn()`/`clickSlot()`, `openInventory()`, `giveOrDrop()`, `closeInventory()` |
    | `furnace.js` | `furnaces`, `SMELTING`, `FUEL`, `openFurnace()`, `clickFurnace()`, `updateFurnaces()`, `removeFurnace()`, `renderFurnace()` |
+   | `armor.js` | Zırh eşyaları ve tarifleri, `armor`, `armorPoints()`, `armorReduce()`, `clickArmor()`, `renderArmor()`, modeldeki parçalar (`armorMeshes`) |
    | `chest.js` | `chests`, `CHEST_SIZE`, `openChest()`, `clickChest()`, `removeChest()`, `renderChest()` |
    | `held-tool.js` | `selectedTool()`, `useTool()`, gözden ve 3. şahıs görünümde eldeki eşya (`fpTool`, `tpTool`, `fpBlock`, `tpBlock`, `updateHeldTool()`) |
    | `save.js` | IndexedDB: `openDb()`, `saveGame()`, `loadGame()`, `applySave()`, "Yeni dünya" |
@@ -451,6 +452,24 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 - Durum: `chests["dünya:x,y,z"] = { dim, x, y, z, slots[27] }` (anahtar fırınlarla aynı, `furnaceKey`); ilk açılışta oluşturulur.
 - Sandık kırılınca içindekiler (aletlerin dayanıklılığı korunarak) yere saçılır, sandığın kendisi de düşer. Bütün sandıklar kayda yazılır.
 
+## Zırh
+
+- Demir ve elmas; 4 parça (`ARMOR_PIECES`): kask, göğüslük, pantolon, bot. Anahtar `<seviye>_<parça>` (`iron_helmet`, `diamond_boots` …). Simgeler 8×8 desenden (`pixelArt`).
+
+  | Parça | Tarif (M: demir külçe ya da elmas) | Puan (demir / elmas) |
+  | --- | --- | --- |
+  | Kask | `MMM` / `M.M` | 2 / 3 |
+  | Göğüslük | `M.M` / `MMM` / `MMM` | 6 / 8 |
+  | Pantolon | `MMM` / `M.M` / `M.M` | 5 / 6 |
+  | Bot | `M.M` / `M.M` | 2 / 3 |
+
+- Dayanıklılık: demir 165, elmas 363. Her hasarda (kaynağı olsun olmasın) giyili her parçanın dayanıklılığı 1 azalır; biten parça "… kırıldı" bildirimiyle kaybolur.
+- **Azaltma:** Kaynağı olan hasar (`damagePlayer(amount, x, z)`: canlı, ok, ateş topu, patlama) `max(1, round(hasar × (1 − puan × 0,04)))` olur; düşme, lav, açlık, yatak hasarı azalmaz (`armorReduce`).
+- **Yuvalar:** Oyuncu envanterinde (çalışma masasında değil) üretim ızgarasının solunda 4 dikey yuva (`#armor-ui`). Zırh yalnızca kendi yuvasına konur (`clickArmor`); yuvalar envanterle aynı tıklama kurallarını kullanır.
+- **HUD:** Kalplerin üstünde 10 zırh simgesi (`#armor-bar`, her biri 2 puan, yarım simge olabilir); zırh yokken gizli. Bildirim yazısı (`#blockname`) zırh satırının üstündedir.
+- **Model:** Her parça ilgili vücut kutusundan 1 piksel büyük renkli kutu (demir açık gri, elmas turkuaz): kask başta (ön yüzü açık, yüz görünür), göğüslük gövde ve kollarda, pantolon bacakların üst 9 pikselinde, bot alt 3 pikselinde.
+- Kayda yazılır (`armor`); ölünce zırh kalır.
+
 ## Aletler
 
 - 4 seviye × 4 tür = 16 alet; anahtar `<seviye>_<tür>`: `wooden_pickaxe`, `stone_sword` … Adlar Türkçe: "Tahta kazma", "Taş kılıç" vb. `ITEMS[key]` alanları: `tool` (tür), `speed`, `durability` (en yüksek), `damage`, `canvas` (8×8 desenden simge).
@@ -576,7 +595,7 @@ Su dışındaki bütün bloklar katı ve opaktır. `isSolid(b)`: hava, `fluid` v
 
 ## Test kancası
 
-Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
+Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikte (`textures.js`) boş olarak oluşturulur, her betik kendi kancalarını `Object.assign(window.game, …)` ile ekler. Kancalar: `player`, `damagePlayer`, `clock`, `getBlock`, `setBlock`, `saveGame`, `mobs`, `projectiles`, `particles`, `spawnMob`, `drops`, `dropItem`, `inventory`, `addItem`, `openInventory`, `closeInventory`, `clickSlot`, `clickCraft`, `clickResult`, `craftGrid`, `mining`, `hunger`, `renderFood`, `getSpawnPoint()`, `isSleeping()`, `crops`, `trySpawnHostile(night)`, `settings`, `fogFar()`, `showSettings`, `soundLog`, `setSound`, `isSoundOn()`, `audioReady()`, `debris`, `spawnDebris`, `clouds`, `stars`, `cloudDrift()`, `tryLightPortal`, `rebuildPortalMeshes`, `portalTimer()`, `worlds`, `switchDimension`, `trySpawnNether(kind)`, `reflectFireball`, `shootFireball`, `portalLinks`, `getDimension()`, `createPortalNear`, `useBed`, `recipes`, `openChat`, `closeChat`, `submitChat`, `openPicker`, `clickPicker(key, right)`, `openControl`, `closeControl`, `isControlOpen()`, `pickerItems()`, `isGod()`, `isSafe()`, `chatLines()`, `itemIcon`, `items` (`ITEMS`), `heldView()` (`{ cube, icon }`), `furnaces`, `openFurnace`, `clickFurnace`, `armor`, `clickArmor(i, right)`, `armorPoints()`, `armorMeshes`, `renderArmor`, `chests`, `openChest`, `clickChest(i, right)`, `rebuild` (`buildChunk`), `camera`, `cameraDistance()`, `raycast`, `torchNearby`, `torchLight(x, y, z)` (kazma ilerlemesi), `crackVisible()` ve kayıt okunduktan sonra `true` olan `ready`. Yeni sistemler test gerektiriyorsa buraya eklenir.
 
 ## Kayıt
 
@@ -596,6 +615,7 @@ Konsoldan ve testlerden erişim için `window.game` açıktır. Nesne ilk betikt
   | `spawnPoint` | Yatakla belirlenen doğma noktası `{ x, y, z }` ya da `null` |
   | `furnaces` | Fırınların dizisi: `{ dim, x, y, z, slots, burn, burnMax, progress }` (`dim` yoksa ana dünya) |
   | `safeMode` | Güvenli mod açık mı (yoksa kapalı) |
+  | `armor` | 4 zırh yuvası: `{ key, count: 1, durability }` ya da `null` |
   | `chests` | Sandıkların dizisi: `{ dim, x, y, z, slots[27] }`; alan yoksa sandık yok |
   | `selected` | Seçili hotbar yuvası (0–8) |
   | `inventory` | 36 yuva: `{ key, count }` (aletlerde `durability` da) ya da `null`; bilinmeyen anahtarlar yüklenirken atlanır |
@@ -653,7 +673,7 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 35 | Nether yaratıkları | Yapıldı |
 | 36 | Sandık | Yapıldı |
 | 37 | Elmas, demir ve elmas aletler | Yapıldı |
-| 38 | Zırh | Yapılmadı |
+| 38 | Zırh | Yapıldı |
 | 39 | Yay ve ok | Yapılmadı |
 | 40 | Kova, akan su ve lav | Yapılmadı |
 | 41 | Biyomlar | Yapılmadı |
@@ -667,3 +687,5 @@ Numaralar [minecraft-feature-list.md](minecraft-feature-list.md) ile aynıdır.
 | 49 | Eldeki eşya her zaman görünür | Yapıldı |
 | 50 | Güvenli mod (`/safe`) | Yapıldı |
 | 51 | Kontrol paneli | Yapıldı |
+| 52 | Eğilme | Yapılmadı |
+| 53 | Uçma | Yapılmadı |

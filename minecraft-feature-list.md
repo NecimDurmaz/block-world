@@ -551,6 +551,24 @@ Bu maddeler 37'den hemen sonra yapılır.
 - **Kabul ölçütü:** K ile panel açılıyor; güvenli mod tek tıkla açılıp kapanıyor; saat, can, ışınlanma ve canlı çağırma düğmeleri çalışıyor; hiç komut yazmadan bütün özellikler kullanılabiliyor.
 - **Bağımlılık:** 45, 48, 50
 
+### 52. Eğilme
+- **Minecraft'ta:** Shift basılıyken karakter eğilir, yavaş yürür ve blok kenarından düşmez; köprü ve kenar yapmak için kullanılır.
+- **Bu oyunda:**
+  - Shift basılıyken eğilir: hız %30, kamera 0,3 blok alçalır, modelde gövde öne eğilir ve baş alçalır.
+  - Eğilirken yerdeyse ayağın altındaki blok kenarından düşülmez: bir adım oyuncuyu desteksiz bırakacaksa o eksendeki hareket durur (Minecraft gibi kenarda durur, sarkarak blok konabilir).
+  - Koşma Minecraft'taki gibi Ctrl ya da W-W olur (Shift artık eğilme).
+- **Kabul ölçütü:** Shift basılıyken bir platformun kenarına yürüyünce düşmüyor; kenardan aşağıya bakıp yan yüze blok konabiliyor; Shift bırakınca düşülüyor.
+- **Bağımlılık:** 3
+
+### 53. Uçma
+- **Minecraft'ta:** Yaratıcı modda boşluğa iki kez hızlıca basınca uçulur; boşluk yükseltir, Shift alçaltır; yine iki kez basınca iniş.
+- **Bu oyunda:**
+  - Kontrol panelinde (madde 51) "Uçma" anahtarı; kayda yazılır. Yalnızca açıkken uçulabilir.
+  - Boşluğa 0,3 sn içinde iki kez basınca uçuş açılır/kapanır. Uçarken yerçekimi yok; boşluk yukarı, Shift aşağı (saniyede 7,5 blok), yatay hız yürümenin 2,5 katı, Ctrl ile daha hızlı. Yere değince uçuş biter. Uçarken ve uçuştan sonra düşme hasarı yok.
+  - Anahtar kapatılınca uçuş hemen biter.
+- **Kabul ölçütü:** Panelden uçma açılınca iki kez boşlukla havalanılıyor, boşluk/Shift ile yükselip alçalınıyor; yere inince düşme hasarı yok; anahtar kapalıyken iki kez boşluk sadece zıplatıyor.
+- **Bağımlılık:** 3, 51
+
 ---
 
 ## İleride (şimdilik yapılmayacak)

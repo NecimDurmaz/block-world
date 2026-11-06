@@ -45,6 +45,7 @@ function saveGame() {
       safeMode,
       selected,
       inventory: inventory.map(s => s && { key: s.key, count: s.count, ...extraOf(s) }),
+      armor: armor.map(s => s && { key: s.key, count: 1, ...extraOf(s) }),
       time: clock.time,
       day: clock.day,
     }, SAVE_KEY);
@@ -77,6 +78,7 @@ function applySave(save) {
   renderFood();
   // Bilinmeyen eşya anahtarları (eski kayıt) atlanır.
   (save.inventory || []).forEach((s, i) => { inventory[i] = s && ITEMS[s.key] ? { key: s.key, count: s.count, ...extraOf(s) } : null; });
+  (save.armor || []).forEach((s, i) => { armor[i] = s && ITEMS[s.key] ? { ...s } : null; });
   renderInventory();
   selectSlot(save.selected);
   clock.time = save.time;
